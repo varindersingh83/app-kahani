@@ -1,0 +1,138 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: stories
+    description: Story generation operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /stories/generate:
+    post:
+      operationId: generateStory
+      tags: [stories]
+      summary: Generate a child picture book
+      description: Generates a watercolor kids picture book (10-20 pages) for a child character.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateStoryRequest"
+      responses:
+        "200":
+          description: Generated picture book
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneratedStory"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    CharacterInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        photoUri:
+          type: string
+        appearance:
+          type: string
+          description: Optional short appearance description for illustration consistency.
+      required:
+        - name
+    StoryMode:
+      type: string
+      enum:
+        - behavior
+        - random
+    SupportingCharacter:
+      type: object
+      properties:
+        name:
+          type: string
+        relationship:
+          type: string
+      required:
+        - name
+        - relationship
+    GenerateStoryRequest:
+      type: object
+      properties:
+        mode:
+          $ref: "#/components/schemas/StoryMode"
+        prompt:
+          type: string
+          description: Parent-provided behavior focus or story idea.
+        character:
+          $ref: "#/components/schemas/CharacterInput"
+        supportingCharacters:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupportingCharacter"
+          description: Optional list of other characters to include if the story calls for them.
+      required:
+        - mode
+        - character
+    StoryPage:
+      type: object
+      properties:
+        pageNumber:
+          type: integer
+          minimum: 1
+        text:
+          type: string
+          description: 1-3 sentences of simple, age-appropriate story text.
+        illustrationPrompt:
+          type: string
+          description: A short description of what the watercolor illustration on this page should show.
+      required:
+        - pageNumber
+        - text
+        - illustrationPrompt
+    GeneratedStory:
+      type: object
+      properties:
+        title:
+          type: string
+        pages:
+          type: array
+          items:
+            $ref: "#/components/schemas/StoryPage"
+          minItems: 10
+          maxItems: 20
+        reflectionQuestion:
+          type: string
+        coverImageUrl:
+          type: string
+          description: URL of the AI-generated watercolor cover illustration.
+      required:
+        - title
+        - pages
+        - reflectionQuestion
