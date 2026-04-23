@@ -29,8 +29,11 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 const domain = process.env.EXPO_PUBLIC_DOMAIN;
+const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
 
-if (domain) {
+if (apiBaseUrl) {
+  setBaseUrl(apiBaseUrl);
+} else if (domain) {
   setBaseUrl(`https://${domain}`);
 }
 
@@ -92,20 +95,30 @@ export default function RootLayout() {
 
   if (!fontsLoaded && !fontError) return null;
 
+  const app = publishableKey ? (
+    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+      <ClerkLoaded>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <KeyboardProvider>
+            <AuthenticatedRoot />
+          </KeyboardProvider>
+        </GestureHandlerRootView>
+      </ClerkLoaded>
+    </ClerkProvider>
+  ) : (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <KeyboardProvider>
+        <StoryProvider>
+          <RootLayoutNav />
+        </StoryProvider>
+      </KeyboardProvider>
+    </GestureHandlerRootView>
+  );
+
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-            <ClerkLoaded>
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <KeyboardProvider>
-                  <AuthenticatedRoot />
-                </KeyboardProvider>
-              </GestureHandlerRootView>
-            </ClerkLoaded>
-          </ClerkProvider>
-        </QueryClientProvider>
+        <QueryClientProvider client={queryClient}>{app}</QueryClientProvider>
       </ErrorBoundary>
     </SafeAreaProvider>
   );

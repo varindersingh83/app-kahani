@@ -67,6 +67,13 @@ function getDeploymentDomain() {
     return stripProtocol(process.env.EXPO_PUBLIC_DOMAIN);
   }
 
+  if (!process.env.CI) {
+    console.warn(
+      "No deployment domain found. Using localhost:3000 for a local static build.",
+    );
+    return "localhost:3000";
+  }
+
   console.error(
     "ERROR: No deployment domain found. Set REPLIT_INTERNAL_APP_DOMAIN, REPLIT_DEV_DOMAIN, or EXPO_PUBLIC_DOMAIN",
   );
@@ -136,8 +143,13 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
 
   console.log("Starting Metro...");
   console.log(`Setting EXPO_PUBLIC_DOMAIN=${expoPublicDomain}`);
+  const localHome = path.join(workspaceRoot, ".local", "expo-home");
+  fs.mkdirSync(localHome, { recursive: true });
   const env = {
     ...process.env,
+    HOME: localHome,
+    XDG_CONFIG_HOME: path.join(localHome, ".config"),
+    EXPO_NO_TELEMETRY: "1",
     EXPO_PUBLIC_DOMAIN: expoPublicDomain,
     EXPO_PUBLIC_REPL_ID: expoPublicReplId,
     EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.CLERK_PUBLISHABLE_KEY || "",
