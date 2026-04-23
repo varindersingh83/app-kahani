@@ -6,8 +6,19 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./bookEvent";
+export * from "./bookEventList";
+export * from "./bookEventPayloadJson";
+export * from "./bookPageList";
+export * from "./bookPageStatus";
+export * from "./bookPipelineResult";
+export * from "./bookStatus";
 export * from "./characterInput";
 export * from "./generatedStory";
 export * from "./generateStoryRequest";
 export * from "./healthStatus";
+export * from "./qaBook";
+export * from "./qaBookList";
 export * from "./storyMode";
+export * from "./storyPage";
+export * from "./supportingCharacter";

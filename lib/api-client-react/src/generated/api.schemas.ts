@@ -39,18 +39,94 @@ export interface GenerateStoryRequest {
 }
 
 export interface StoryPage {
+  /** @minimum 1 */
   pageNumber: number;
   /** 1-3 sentences of simple, age-appropriate story text. */
   text: string;
   /** A short description of what the watercolor illustration on this page should show. */
   illustrationPrompt: string;
+  /** Optional page image URL produced from slicing the generated sheet image. */
+  imageUrl?: string;
 }
 
 export interface GeneratedStory {
   title: string;
-  /** @minItems 10 @maxItems 20 */
+  /**
+   * @minItems 10
+   * @maxItems 20
+   */
   pages: StoryPage[];
   reflectionQuestion: string;
   /** URL of the AI-generated watercolor cover illustration. */
   coverImageUrl?: string;
+  /** URL of the composite watercolor sheet image that can be sliced into the 12 page images. */
+  sheetImageUrl?: string;
+}
+
+export interface BookPipelineResult {
+  bookId: string;
+  status: string;
+  story: GeneratedStory;
+  flaggedForHuman: boolean;
+  retryTotal: number;
+}
+
+export interface BookStatus {
+  bookId: string;
+  status: string;
+  currentStep: string;
+  title?: string;
+  pageCount: number;
+  flaggedForHuman: boolean;
+  retryTotal: number;
+  story?: GeneratedStory;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BookPageStatus {
+  pageId: string;
+  bookId: string;
+  pageNumber: number;
+  currentStep: string;
+  status: string;
+  text?: string;
+  illustrationPrompt?: string;
+  alignmentScore?: number;
+  retryCount: number;
+  flagForHuman: boolean;
+  failureReason?: string;
+}
+
+export interface BookPageList {
+  items: BookPageStatus[];
+}
+
+export type BookEventPayloadJson = { [key: string]: unknown };
+
+export interface BookEvent {
+  eventId: string;
+  bookId: string;
+  pageId?: string;
+  agent: string;
+  eventType: string;
+  payloadJson: BookEventPayloadJson;
+  createdAt: string;
+}
+
+export interface BookEventList {
+  items: BookEvent[];
+}
+
+export interface QaBook {
+  bookId: string;
+  status: string;
+  currentStep: string;
+  title?: string;
+  flaggedForHuman: boolean;
+  updatedAt: string;
+}
+
+export interface QaBookList {
+  items: QaBook[];
 }

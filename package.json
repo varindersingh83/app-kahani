@@ -4,6 +4,11 @@
   "license": "MIT",
   "scripts": {
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
+    "dev:api": "set -a; [ ! -f .env ] || . ./.env; set +a; PORT=${PORT:-8080} pnpm --filter @workspace/api-server run dev",
+    "dev:mobile": "set -a; [ ! -f .env ] || . ./.env; set +a; HOME=$PWD/.local/expo-home XDG_CONFIG_HOME=$PWD/.local/expo-home/.config EXPO_NO_TELEMETRY=1 EXPO_PUBLIC_API_BASE_URL=${EXPO_PUBLIC_API_BASE_URL:-http://localhost:8080} pnpm --filter @workspace/mobile exec expo start --localhost",
+    "dev:mockup": "set -a; [ ! -f .env ] || . ./.env; set +a; PORT=${MOCKUP_PORT:-8081} BASE_PATH=${BASE_PATH:-/} pnpm --filter @workspace/mockup-sandbox run dev",
+    "db:push": "set -a; [ ! -f .env ] || . ./.env; set +a; pnpm --filter @workspace/db run push",
+    "baseline:stories": "pnpm --filter @workspace/scripts run baseline:stories",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"

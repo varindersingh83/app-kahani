@@ -17,9 +17,14 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  BookEventList,
+  BookPageList,
+  BookPipelineResult,
+  BookStatus,
   GenerateStoryRequest,
   GeneratedStory,
   HealthStatus,
+  QaBookList,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -108,8 +113,8 @@ export function useHealthCheck<
 }
 
 /**
- * Generates a Montessori-inspired story for a selected child character.
- * @summary Generate a child story
+ * Generates a watercolor kids picture book (10-20 pages) for a child character.
+ * @summary Generate a child picture book
  */
 export const getGenerateStoryUrl = () => {
   return `/api/stories/generate`;
@@ -172,7 +177,7 @@ export type GenerateStoryMutationBody = BodyType<GenerateStoryRequest>;
 export type GenerateStoryMutationError = ErrorType<unknown>;
 
 /**
- * @summary Generate a child story
+ * @summary Generate a child picture book
  */
 export const useGenerateStory = <
   TError = ErrorType<unknown>,
@@ -193,3 +198,416 @@ export const useGenerateStory = <
 > => {
   return useMutation(getGenerateStoryMutationOptions(options));
 };
+
+/**
+ * Creates a persistent book job, runs the deterministic pipeline, and returns the packaged result.
+ * @summary Run the book generation pipeline
+ */
+export const getCreateBookUrl = () => {
+  return `/api/books`;
+};
+
+export const createBook = async (
+  generateStoryRequest: GenerateStoryRequest,
+  options?: RequestInit,
+): Promise<BookPipelineResult> => {
+  return customFetch<BookPipelineResult>(getCreateBookUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(generateStoryRequest),
+  });
+};
+
+export const getCreateBookMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBook>>,
+    TError,
+    { data: BodyType<GenerateStoryRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createBook>>,
+  TError,
+  { data: BodyType<GenerateStoryRequest> },
+  TContext
+> => {
+  const mutationKey = ["createBook"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createBook>>,
+    { data: BodyType<GenerateStoryRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createBook(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateBookMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createBook>>
+>;
+export type CreateBookMutationBody = BodyType<GenerateStoryRequest>;
+export type CreateBookMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Run the book generation pipeline
+ */
+export const useCreateBook = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBook>>,
+    TError,
+    { data: BodyType<GenerateStoryRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createBook>>,
+  TError,
+  { data: BodyType<GenerateStoryRequest> },
+  TContext
+> => {
+  return useMutation(getCreateBookMutationOptions(options));
+};
+
+/**
+ * @summary List books flagged for human QA
+ */
+export const getListQaBooksUrl = () => {
+  return `/api/books/qa`;
+};
+
+export const listQaBooks = async (
+  options?: RequestInit,
+): Promise<QaBookList> => {
+  return customFetch<QaBookList>(getListQaBooksUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListQaBooksQueryKey = () => {
+  return [`/api/books/qa`] as const;
+};
+
+export const getListQaBooksQueryOptions = <
+  TData = Awaited<ReturnType<typeof listQaBooks>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listQaBooks>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListQaBooksQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listQaBooks>>> = ({
+    signal,
+  }) => listQaBooks({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listQaBooks>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListQaBooksQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listQaBooks>>
+>;
+export type ListQaBooksQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List books flagged for human QA
+ */
+
+export function useListQaBooks<
+  TData = Awaited<ReturnType<typeof listQaBooks>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listQaBooks>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListQaBooksQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get book pipeline status
+ */
+export const getGetBookUrl = (bookId: string) => {
+  return `/api/books/${bookId}`;
+};
+
+export const getBook = async (
+  bookId: string,
+  options?: RequestInit,
+): Promise<BookStatus> => {
+  return customFetch<BookStatus>(getGetBookUrl(bookId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetBookQueryKey = (bookId: string) => {
+  return [`/api/books/${bookId}`] as const;
+};
+
+export const getGetBookQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBook>>,
+  TError = ErrorType<unknown>,
+>(
+  bookId: string,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getBook>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetBookQueryKey(bookId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getBook>>> = ({
+    signal,
+  }) => getBook(bookId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!bookId,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getBook>>, TError, TData> & {
+    queryKey: QueryKey;
+  };
+};
+
+export type GetBookQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getBook>>
+>;
+export type GetBookQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get book pipeline status
+ */
+
+export function useGetBook<
+  TData = Awaited<ReturnType<typeof getBook>>,
+  TError = ErrorType<unknown>,
+>(
+  bookId: string,
+  options?: {
+    query?: UseQueryOptions<Awaited<ReturnType<typeof getBook>>, TError, TData>;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetBookQueryOptions(bookId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get per-page pipeline state
+ */
+export const getGetBookPagesUrl = (bookId: string) => {
+  return `/api/books/${bookId}/pages`;
+};
+
+export const getBookPages = async (
+  bookId: string,
+  options?: RequestInit,
+): Promise<BookPageList> => {
+  return customFetch<BookPageList>(getGetBookPagesUrl(bookId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetBookPagesQueryKey = (bookId: string) => {
+  return [`/api/books/${bookId}/pages`] as const;
+};
+
+export const getGetBookPagesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBookPages>>,
+  TError = ErrorType<unknown>,
+>(
+  bookId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getBookPages>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetBookPagesQueryKey(bookId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getBookPages>>> = ({
+    signal,
+  }) => getBookPages(bookId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!bookId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBookPages>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetBookPagesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getBookPages>>
+>;
+export type GetBookPagesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get per-page pipeline state
+ */
+
+export function useGetBookPages<
+  TData = Awaited<ReturnType<typeof getBookPages>>,
+  TError = ErrorType<unknown>,
+>(
+  bookId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getBookPages>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetBookPagesQueryOptions(bookId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get structured book events
+ */
+export const getGetBookEventsUrl = (bookId: string) => {
+  return `/api/books/${bookId}/events`;
+};
+
+export const getBookEvents = async (
+  bookId: string,
+  options?: RequestInit,
+): Promise<BookEventList> => {
+  return customFetch<BookEventList>(getGetBookEventsUrl(bookId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetBookEventsQueryKey = (bookId: string) => {
+  return [`/api/books/${bookId}/events`] as const;
+};
+
+export const getGetBookEventsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBookEvents>>,
+  TError = ErrorType<unknown>,
+>(
+  bookId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getBookEvents>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetBookEventsQueryKey(bookId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getBookEvents>>> = ({
+    signal,
+  }) => getBookEvents(bookId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!bookId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBookEvents>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetBookEventsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getBookEvents>>
+>;
+export type GetBookEventsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get structured book events
+ */
+
+export function useGetBookEvents<
+  TData = Awaited<ReturnType<typeof getBookEvents>>,
+  TError = ErrorType<unknown>,
+>(
+  bookId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getBookEvents>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetBookEventsQueryOptions(bookId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}

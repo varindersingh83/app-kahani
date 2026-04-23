@@ -10,4 +10,6 @@ export interface CharacterInput {
   /** @minLength 1 */
   name: string;
   photoUri?: string;
+  /** Optional short appearance description for illustration consistency. */
+  appearance?: string;
 }

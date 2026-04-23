@@ -4,7 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "baseline:stories": "tsx ./src/story-baseline.ts",
+    "book:harness": "tsx ./src/book-harness.ts",
     "hello": "tsx ./src/hello.ts",
+    "slice:sheet": "python3 ./src/slice-sheet.py",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

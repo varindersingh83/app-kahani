@@ -7,11 +7,7 @@
  */
 import type { CharacterInput } from "./characterInput";
 import type { StoryMode } from "./storyMode";
-
-export interface SupportingCharacter {
-  name: string;
-  relationship: string;
-}
+import type { SupportingCharacter } from "./supportingCharacter";
 
 export interface GenerateStoryRequest {
   mode: StoryMode;

@@ -16,7 +16,7 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
- * Generates a watercolor kids picture book for a selected child character.
+ * Generates a watercolor kids picture book (10-20 pages) for a child character.
  * @summary Generate a child picture book
  */
 
@@ -29,7 +29,12 @@ export const GenerateStoryBody = zod.object({
   character: zod.object({
     name: zod.string().min(1),
     photoUri: zod.string().optional(),
-    appearance: zod.string().optional(),
+    appearance: zod
+      .string()
+      .optional()
+      .describe(
+        "Optional short appearance description for illustration consistency.",
+      ),
   }),
   supportingCharacters: zod
     .array(
@@ -38,18 +43,204 @@ export const GenerateStoryBody = zod.object({
         relationship: zod.string(),
       }),
     )
-    .optional(),
+    .optional()
+    .describe(
+      "Optional list of other characters to include if the story calls for them.",
+    ),
 });
 
-const StoryPage = zod.object({
-  pageNumber: zod.number().int().min(1),
-  text: zod.string(),
-  illustrationPrompt: zod.string(),
-});
+export const generateStoryResponsePagesMin = 10;
+export const generateStoryResponsePagesMax = 20;
 
 export const GenerateStoryResponse = zod.object({
   title: zod.string(),
-  pages: zod.array(StoryPage).min(10).max(20),
+  pages: zod
+    .array(
+      zod.object({
+        pageNumber: zod.number().min(1),
+        text: zod
+          .string()
+          .describe("1-3 sentences of simple, age-appropriate story text."),
+        illustrationPrompt: zod
+          .string()
+          .describe(
+            "A short description of what the watercolor illustration on this page should show.",
+          ),
+        imageUrl: zod
+          .string()
+          .optional()
+          .describe(
+            "Optional page image URL produced from slicing the generated sheet image.",
+          ),
+      }),
+    )
+    .min(generateStoryResponsePagesMin)
+    .max(generateStoryResponsePagesMax),
   reflectionQuestion: zod.string(),
-  coverImageUrl: zod.string().optional(),
+  coverImageUrl: zod
+    .string()
+    .optional()
+    .describe("URL of the AI-generated watercolor cover illustration."),
+  sheetImageUrl: zod
+    .string()
+    .optional()
+    .describe(
+      "URL of the composite watercolor sheet image that can be sliced into the 12 page images.",
+    ),
+});
+
+/**
+ * Creates a persistent book job, runs the deterministic pipeline, and returns the packaged result.
+ * @summary Run the book generation pipeline
+ */
+
+export const CreateBookBody = zod.object({
+  mode: zod.enum(["behavior", "random"]),
+  prompt: zod
+    .string()
+    .optional()
+    .describe("Parent-provided behavior focus or story idea."),
+  character: zod.object({
+    name: zod.string().min(1),
+    photoUri: zod.string().optional(),
+    appearance: zod
+      .string()
+      .optional()
+      .describe(
+        "Optional short appearance description for illustration consistency.",
+      ),
+  }),
+  supportingCharacters: zod
+    .array(
+      zod.object({
+        name: zod.string(),
+        relationship: zod.string(),
+      }),
+    )
+    .optional()
+    .describe(
+      "Optional list of other characters to include if the story calls for them.",
+    ),
+});
+
+/**
+ * @summary List books flagged for human QA
+ */
+export const ListQaBooksResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      bookId: zod.string().uuid(),
+      status: zod.string(),
+      currentStep: zod.string(),
+      title: zod.string().optional(),
+      flaggedForHuman: zod.boolean(),
+      updatedAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
+ * @summary Get book pipeline status
+ */
+export const GetBookParams = zod.object({
+  bookId: zod.coerce.string().uuid(),
+});
+
+export const getBookResponseStoryPagesMin = 10;
+export const getBookResponseStoryPagesMax = 20;
+
+export const GetBookResponse = zod.object({
+  bookId: zod.string().uuid(),
+  status: zod.string(),
+  currentStep: zod.string(),
+  title: zod.string().optional(),
+  pageCount: zod.number(),
+  flaggedForHuman: zod.boolean(),
+  retryTotal: zod.number(),
+  story: zod
+    .object({
+      title: zod.string(),
+      pages: zod
+        .array(
+          zod.object({
+            pageNumber: zod.number().min(1),
+            text: zod
+              .string()
+              .describe("1-3 sentences of simple, age-appropriate story text."),
+            illustrationPrompt: zod
+              .string()
+              .describe(
+                "A short description of what the watercolor illustration on this page should show.",
+              ),
+            imageUrl: zod
+              .string()
+              .optional()
+              .describe(
+                "Optional page image URL produced from slicing the generated sheet image.",
+              ),
+          }),
+        )
+        .min(getBookResponseStoryPagesMin)
+        .max(getBookResponseStoryPagesMax),
+      reflectionQuestion: zod.string(),
+      coverImageUrl: zod
+        .string()
+        .optional()
+        .describe("URL of the AI-generated watercolor cover illustration."),
+      sheetImageUrl: zod
+        .string()
+        .optional()
+        .describe(
+          "URL of the composite watercolor sheet image that can be sliced into the 12 page images.",
+        ),
+    })
+    .optional(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Get per-page pipeline state
+ */
+export const GetBookPagesParams = zod.object({
+  bookId: zod.coerce.string().uuid(),
+});
+
+export const GetBookPagesResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      pageId: zod.string().uuid(),
+      bookId: zod.string().uuid(),
+      pageNumber: zod.number(),
+      currentStep: zod.string(),
+      status: zod.string(),
+      text: zod.string().optional(),
+      illustrationPrompt: zod.string().optional(),
+      alignmentScore: zod.number().optional(),
+      retryCount: zod.number(),
+      flagForHuman: zod.boolean(),
+      failureReason: zod.string().optional(),
+    }),
+  ),
+});
+
+/**
+ * @summary Get structured book events
+ */
+export const GetBookEventsParams = zod.object({
+  bookId: zod.coerce.string().uuid(),
+});
+
+export const GetBookEventsResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      eventId: zod.string().uuid(),
+      bookId: zod.string().uuid(),
+      pageId: zod.string().uuid().optional(),
+      agent: zod.string(),
+      eventType: zod.string(),
+      payloadJson: zod.record(zod.string(), zod.unknown()),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
 });

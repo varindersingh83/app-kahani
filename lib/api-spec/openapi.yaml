@@ -45,7 +45,88 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GeneratedStory"
+  /books:
+    post:
+      operationId: createBook
+      tags: [stories]
+      summary: Run the book generation pipeline
+      description: Creates a persistent book job, runs the deterministic pipeline, and returns the packaged result.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateStoryRequest"
+      responses:
+        "201":
+          description: Completed or QA-flagged book pipeline result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookPipelineResult"
+  /books/qa:
+    get:
+      operationId: listQaBooks
+      tags: [stories]
+      summary: List books flagged for human QA
+      responses:
+        "200":
+          description: QA queue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QaBookList"
+  /books/{bookId}:
+    get:
+      operationId: getBook
+      tags: [stories]
+      summary: Get book pipeline status
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "200":
+          description: Book status and packaged story
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookStatus"
+  /books/{bookId}/pages:
+    get:
+      operationId: getBookPages
+      tags: [stories]
+      summary: Get per-page pipeline state
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "200":
+          description: Book page states
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookPageList"
+  /books/{bookId}/events:
+    get:
+      operationId: getBookEvents
+      tags: [stories]
+      summary: Get structured book events
+      parameters:
+        - $ref: "#/components/parameters/BookId"
+      responses:
+        "200":
+          description: Book event log
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookEventList"
 components:
+  parameters:
+    BookId:
+      name: bookId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
   schemas:
     HealthStatus:
       type: object
@@ -112,6 +193,9 @@ components:
         illustrationPrompt:
           type: string
           description: A short description of what the watercolor illustration on this page should show.
+        imageUrl:
+          type: string
+          description: Optional page image URL produced from slicing the generated sheet image.
       required:
         - pageNumber
         - text
@@ -132,7 +216,179 @@ components:
         coverImageUrl:
           type: string
           description: URL of the AI-generated watercolor cover illustration.
+        sheetImageUrl:
+          type: string
+          description: URL of the composite watercolor sheet image that can be sliced into the 12 page images.
       required:
         - title
         - pages
         - reflectionQuestion
+    BookPipelineResult:
+      type: object
+      properties:
+        bookId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        story:
+          $ref: "#/components/schemas/GeneratedStory"
+        flaggedForHuman:
+          type: boolean
+        retryTotal:
+          type: integer
+      required:
+        - bookId
+        - status
+        - story
+        - flaggedForHuman
+        - retryTotal
+    BookStatus:
+      type: object
+      properties:
+        bookId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        currentStep:
+          type: string
+        title:
+          type: string
+        pageCount:
+          type: integer
+        flaggedForHuman:
+          type: boolean
+        retryTotal:
+          type: integer
+        story:
+          $ref: "#/components/schemas/GeneratedStory"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - bookId
+        - status
+        - currentStep
+        - pageCount
+        - flaggedForHuman
+        - retryTotal
+        - createdAt
+        - updatedAt
+    BookPageStatus:
+      type: object
+      properties:
+        pageId:
+          type: string
+          format: uuid
+        bookId:
+          type: string
+          format: uuid
+        pageNumber:
+          type: integer
+        currentStep:
+          type: string
+        status:
+          type: string
+        text:
+          type: string
+        illustrationPrompt:
+          type: string
+        alignmentScore:
+          type: number
+        retryCount:
+          type: integer
+        flagForHuman:
+          type: boolean
+        failureReason:
+          type: string
+      required:
+        - pageId
+        - bookId
+        - pageNumber
+        - currentStep
+        - status
+        - retryCount
+        - flagForHuman
+    BookPageList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BookPageStatus"
+      required:
+        - items
+    BookEvent:
+      type: object
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        bookId:
+          type: string
+          format: uuid
+        pageId:
+          type: string
+          format: uuid
+        agent:
+          type: string
+        eventType:
+          type: string
+        payloadJson:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - eventId
+        - bookId
+        - agent
+        - eventType
+        - payloadJson
+        - createdAt
+    BookEventList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BookEvent"
+      required:
+        - items
+    QaBook:
+      type: object
+      properties:
+        bookId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        currentStep:
+          type: string
+        title:
+          type: string
+        flaggedForHuman:
+          type: boolean
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - bookId
+        - status
+        - currentStep
+        - flaggedForHuman
+        - updatedAt
+    QaBookList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/QaBook"
+      required:
+        - items

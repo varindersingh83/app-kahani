@@ -31,28 +31,55 @@ pnpm install
 
 ## Environment Variables
 
-Most commands are run by setting environment variables inline. For local development, these are the important ones:
+Copy the example file before starting local development:
 
 ```sh
-# Required by the API server process.
+cp .env.example .env
+```
+
+The root dev scripts load `.env` automatically. For local development, these are the important values:
+
+```sh
+# API server
 PORT=8080
 
-# Required for Drizzle database commands and any code that imports lib/db.
-DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/kahani
+# Database
+DATABASE_URL=postgresql://localhost:5432/kahani
 
 # Required only for AI story generation.
 AI_INTEGRATIONS_OPENAI_BASE_URL=https://api.openai.com/v1
 AI_INTEGRATIONS_OPENAI_API_KEY=your-api-key
+AI_INTEGRATIONS_OPENAI_MODEL=gpt-4o
+AI_INTEGRATIONS_OPENAI_IMAGE_MODEL=dall-e-3
+
+# Optional when using OpenRouter.
+OPENROUTER_SITE_URL=http://localhost:8080
+OPENROUTER_APP_TITLE=Kahani
 
 # Required only for Clerk auth flows.
 CLERK_PUBLISHABLE_KEY=your-clerk-publishable-key
 CLERK_SECRET_KEY=your-clerk-secret-key
 ```
 
+For OpenRouter, keep the same internal env names and point the OpenAI-compatible base URL at OpenRouter:
+
+```sh
+AI_INTEGRATIONS_OPENAI_BASE_URL=https://openrouter.ai/api/v1
+AI_INTEGRATIONS_OPENAI_API_KEY=your-openrouter-api-key
+AI_INTEGRATIONS_OPENAI_MODEL=google/gemini-3-flash-preview
+AI_INTEGRATIONS_OPENAI_IMAGE_MODEL=google/gemini-3.1-flash-image-preview
+OPENROUTER_SITE_URL=http://localhost:8080
+OPENROUTER_APP_TITLE=Kahani
+```
+
+`OPENROUTER_SITE_URL` and `OPENROUTER_APP_TITLE` are optional attribution headers. The text and image models must be OpenRouter model IDs, usually with a provider prefix such as `google/gemini-3-flash-preview`, `google/gemini-3.1-flash-image-preview`, or whichever models you choose in OpenRouter.
+
+The story text generation uses the OpenAI-compatible chat completions API. For OpenRouter image generation, the route uses chat completions with image output modalities and returns the generated cover image as a base64 data URL when available. If image generation fails, the API logs a warning and returns the story without a cover image.
+
 The mockup sandbox also requires:
 
 ```sh
-PORT=8081
+MOCKUP_PORT=8081
 BASE_PATH=/
 ```
 
@@ -61,7 +88,7 @@ The Expo mobile `dev` script is currently Replit-oriented and expects Replit dom
 ## Run The API Server
 
 ```sh
-PORT=8080 pnpm --filter @workspace/api-server run dev
+pnpm run dev:api
 ```
 
 Then smoke test it:
@@ -76,12 +103,14 @@ Expected response:
 {"status":"ok"}
 ```
 
-Story generation is available at `POST /api/stories/generate`, but it requires `AI_INTEGRATIONS_OPENAI_BASE_URL` and `AI_INTEGRATIONS_OPENAI_API_KEY`.
+Story generation is available at `POST /api/stories/generate`, but it requires `AI_INTEGRATIONS_OPENAI_BASE_URL` and `AI_INTEGRATIONS_OPENAI_API_KEY`. Set `AI_INTEGRATIONS_OPENAI_MODEL` to choose the text model; it defaults to `gpt-4o` when unset. Set `AI_INTEGRATIONS_OPENAI_IMAGE_MODEL` to choose the cover image model; it defaults to `dall-e-3` when unset.
+
+For the persistent book pipeline, use `POST /api/books`. The created book can be fetched later with `GET /api/books/:bookId`, and the per-page progress and events live at `GET /api/books/:bookId/pages` and `GET /api/books/:bookId/events`.
 
 ## Run The Mockup Sandbox
 
 ```sh
-PORT=8081 BASE_PATH=/ pnpm --filter @workspace/mockup-sandbox run dev
+pnpm run dev:mockup
 ```
 
 Open `http://localhost:8081/`.
@@ -97,17 +126,19 @@ PORT=18115 pnpm --filter @workspace/mobile run dev
 For a normal local Expo session, this is usually easier:
 
 ```sh
-pnpm --filter @workspace/mobile exec expo start --localhost
+pnpm run dev:mobile
 ```
 
-If you need Clerk auth in the mobile app, set `CLERK_PUBLISHABLE_KEY` before starting Expo. The app maps that value to `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` in the Replit-oriented `dev` script.
+`dev:mobile` points the app at the local API server with `EXPO_PUBLIC_API_BASE_URL=http://localhost:8080`. When `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` is not set, the mobile app skips the Clerk sign-in screen for local development and opens the app directly.
+
+If you need Clerk auth in the mobile app, set `CLERK_PUBLISHABLE_KEY` before starting the Replit-oriented `dev` script. That script maps the value to `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`.
 
 ## Database Tasks
 
 Push the Drizzle schema to a development database:
 
 ```sh
-DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/kahani pnpm --filter @workspace/db run push
+pnpm run db:push
 ```
 
 Use `push-force` only when you intentionally want Drizzle to apply potentially destructive schema changes in development.
@@ -146,11 +177,71 @@ Recommended smoke tests:
 - Mobile: start Expo and confirm the app loads in a simulator, browser, or Expo Go.
 - Story generation: with AI env vars set, send a valid `POST /api/stories/generate` request and confirm it returns a generated story JSON payload.
 
+Harness for the new book pipeline:
+
+```sh
+pnpm --filter @workspace/scripts run book:harness
+```
+
+That command posts a sample parent request to `POST /api/books`, prints the final `bookId`, and writes the response to `artifacts/book-runs/<timestamp>/book.json` and `book.md`.
+It also writes `book.html`, which shows the cover and the page text together in a browser-friendly layout. Open that file in your browser if you want the closest thing to a book preview; most browsers can print it to PDF.
+
+If you want to send your own input directly with `curl`, use:
+
+```sh
+curl -sS http://localhost:8080/api/books \
+  -H 'Content-Type: application/json' \
+  -d '{"mode":"behavior","prompt":"My child is learning to share.","character":{"name":"Ava","photoUri":"file:///parent/uploads/ava.jpg"},"supportingCharacters":[{"name":"Leo","relationship":"little brother"}]}'
+```
+
+The response includes a `bookId`. Use it to fetch the saved book:
+
+```sh
+curl -sS http://localhost:8080/api/books/<bookId>
+curl -sS http://localhost:8080/api/books/<bookId>/pages
+curl -sS http://localhost:8080/api/books/<bookId>/events
+```
+
+To watch live API logs in a second terminal, start the API server with:
+
+```sh
+pnpm run dev:api | tee /tmp/kahani-api.log
+```
+
+Then follow the log file while the harness runs:
+
+```sh
+tail -f /tmp/kahani-api.log
+```
+
+If you want to watch just the book-specific event stream, poll:
+
+```sh
+curl -sS http://localhost:8080/api/books/<bookId>/events
+```
+
+To test the single-sheet slicing idea from an attachment like the one you sent, run:
+
+```sh
+pnpm --filter @workspace/scripts run slice:sheet -- "/Users/varindernagra/Downloads/ChatGPT Image Apr 23, 2026, 03_11_54 PM.png"
+```
+
+That assumes a 3x4 grid of 12 pages. The script writes 12 cropped page images plus a `manifest.json` into a sibling `*-slices` folder. Adjust `--rows`, `--cols`, and `--inset` if the image layout changes.
+
 ## Useful Workspace Commands
 
 ```sh
 # Full typecheck across libraries, artifacts, and scripts.
 pnpm run typecheck
+
+# Start the local API server on port 8080.
+pnpm run dev:api
+
+# Start Expo against the local API server.
+pnpm run dev:mobile
+
+# Start the Vite mockup sandbox on port 8081.
+pnpm run dev:mockup
 
 # Typecheck, then build all packages with build scripts.
 pnpm run build
