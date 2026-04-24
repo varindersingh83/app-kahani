@@ -4,10 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "bedtime:prompt-test": "tsx ./src/bedtime-prompt-test.ts",
     "baseline:stories": "tsx ./src/story-baseline.ts",
     "book:harness": "tsx ./src/book-harness.ts",
     "faces:test-data": "python3 ./src/face-test-data.py",
     "hello": "tsx ./src/hello.ts",
+    "sheet:json-test": "tsx ./src/sheet-json-test.ts",
+    "story:sheet-run": "tsx ./src/story-sheet-run.ts",
     "slice:sheet": "python3 ./src/slice-sheet.py",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

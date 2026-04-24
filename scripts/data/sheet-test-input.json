@@ -1,0 +1,91 @@
+{
+  "title": "Hands That Pause",
+  "child_name": "Noah",
+  "behavior": "Hitting other kids when upset",
+  "pages": [
+    {
+      "page": 1,
+      "text": "Noah crouches low in the sandbox, a blue shovel carving soft hills.",
+      "scene": "child kneeling in sandbox, holding blue plastic shovel, small piles of sand around",
+      "composition": "wide shot, child centered in sandbox, sand piles in foreground",
+      "emotion": "focused"
+    },
+    {
+      "page": 2,
+      "text": "A red truck rolls in, wheels crunching, stopping right by his mound.",
+      "scene": "toy red truck pushed by another child into the sandbox near the sand pile",
+      "composition": "medium shot, truck entering from right, Noah on left",
+      "emotion": "alert"
+    },
+    {
+      "page": 3,
+      "text": "Small hands reach for the shovel, quick and close.",
+      "scene": "second child leaning forward, hand reaching toward the shovel in Noah’s grip",
+      "composition": "close-up on both hands near the shovel",
+      "emotion": "tense"
+    },
+    {
+      "page": 4,
+      "text": "The sand breaks. The hill falls. Noah’s arm swings fast.",
+      "scene": "Noah’s arm moving toward the other child, sand pile collapsing beside them",
+      "composition": "medium shot, action centered, sand falling in foreground",
+      "emotion": "explosive"
+    },
+    {
+      "page": 5,
+      "text": "A soft thud, then stillness. The truck tips onto its side.",
+      "scene": "other child stepping back or sitting down, red truck lying sideways in sand",
+      "composition": "wide shot, truck in foreground, children mid-frame",
+      "emotion": "shocked"
+    },
+    {
+      "page": 6,
+      "text": "Noah’s hand stays in the air, fingers curled, breath loud in his chest.",
+      "scene": "child frozen with raised hand, chest lifted, looking toward the other child",
+      "composition": "medium shot, child centered with empty space around",
+      "emotion": "rigid"
+    },
+    {
+      "page": 7,
+      "text": "A parent walks over, slow steps, shadow stretching across the sand.",
+      "scene": "adult approaching from behind, long shadow cast over sandbox",
+      "composition": "wide shot, parent entering from background, child in foreground",
+      "emotion": "steady"
+    },
+    {
+      "page": 8,
+      "text": "They kneel beside him, close enough to touch, but hands resting quiet.",
+      "scene": "adult kneeling next to child, hands resting on their own knees, both near sandbox",
+      "composition": "medium shot, both figures side by side, centered",
+      "emotion": "calm"
+    },
+    {
+      "page": 9,
+      "text": "The parent turns the truck upright, brushing sand from its wheels.",
+      "scene": "adult hand lifting the red truck and brushing sand off",
+      "composition": "close-up on hands and toy truck",
+      "emotion": "gentle"
+    },
+    {
+      "page": 10,
+      "text": "Noah watches, his arm lowering, fingers slowly opening.",
+      "scene": "child lowering hand, fingers uncurling, eyes on the truck",
+      "composition": "medium shot, child centered, truck in lower frame",
+      "emotion": "hesitant"
+    },
+    {
+      "page": 11,
+      "text": "He presses the shovel into the sand, then nudges the truck closer.",
+      "scene": "child using shovel to push sand, then lightly pushing truck toward the other child",
+      "composition": "wide shot, both children visible, objects between them",
+      "emotion": "soft"
+    },
+    {
+      "page": 12,
+      "text": "The wheels turn again, slow and steady, under the quiet afternoon sun.",
+      "scene": "two children sitting near each other in sandbox, truck rolling gently between them, parent nearby",
+      "composition": "wide shot, children low center, parent in background, open sky above",
+      "emotion": "calm"
+    }
+  ]
+}

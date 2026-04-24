@@ -49,8 +49,7 @@ test("sheet plan combines the brief into one storyboard-sheet prompt", () => {
   assert.equal(plan.cols, 3);
   assert.equal(plan.inset, 12);
   assert.equal(plan.tiles.length, 12);
-  assert.match(plan.sheetPrompt, /also return the canonical 12-page story text in structured JSON alongside the image/i);
-  assert.match(plan.sheetPrompt, /Canonical page text to keep aligned with the sheet/);
+  assert.match(plan.sheetPrompt, /canonical 12-page story text in structured JSON/i);
   assert.match(plan.sheetPrompt, /do not include narrative text, page numbers, speech bubbles, captions, watermarks, logos, or extra borders inside the art/i);
   assert.match(plan.sheetPrompt, /Panel 1 \(1x1\)/);
   assert.match(plan.sheetPrompt, /Panel 12 \(4x3\)/);
@@ -70,7 +69,7 @@ test("sheet prompt follows the master storyboard structure", () => {
   assert.match(plan.sheetPrompt, /thin white borders separating each panel/i);
   assert.match(plan.sheetPrompt, /same young child character across all panels/i);
   assert.match(plan.sheetPrompt, /story progression across panels from top left to bottom right/i);
-  assert.match(plan.sheetPrompt, /Canonical page text to keep aligned with the sheet/i);
+  assert.match(plan.sheetPrompt, /canonical 12-page story text in structured JSON/i);
   assert.match(plan.sheetPrompt, /Panel 1 \(1x1\): Page 1:/i);
   assert.match(plan.sheetPrompt, /each panel should use a simple background/i);
   assert.match(plan.sheetPrompt, /do not include narrative text/i);

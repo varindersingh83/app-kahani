@@ -6,6 +6,7 @@ export type ReviewedPage = PipelineStoryPage & {
   failureReason?: string;
   flagForHuman: boolean;
   reviewNotes: string[];
+  sheetPlacement?: StoryPlanPage["sheetPlacement"];
 };
 
 export type StoryReview = {

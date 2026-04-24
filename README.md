@@ -47,10 +47,10 @@ PORT=8080
 DATABASE_URL=postgresql://localhost:5432/kahani
 
 # Required only for AI story generation.
-AI_INTEGRATIONS_OPENAI_BASE_URL=https://api.openai.com/v1
-AI_INTEGRATIONS_OPENAI_API_KEY=your-api-key
-AI_INTEGRATIONS_OPENAI_MODEL=gpt-4o
-AI_INTEGRATIONS_OPENAI_IMAGE_MODEL=dall-e-3
+AI_INTEGRATIONS_OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+AI_INTEGRATIONS_OPENROUTER_API_KEY=your-api-key
+AI_INTEGRATIONS_OPENROUTER_MODEL=openai/gpt-5.4-nano
+AI_INTEGRATIONS_OPENROUTER_IMAGE_MODEL=google/gemini-3.1-flash-image-preview
 
 # Optional when using OpenRouter.
 OPENROUTER_SITE_URL=http://localhost:8080
@@ -64,17 +64,17 @@ CLERK_SECRET_KEY=your-clerk-secret-key
 For OpenRouter, keep the same internal env names and point the OpenAI-compatible base URL at OpenRouter:
 
 ```sh
-AI_INTEGRATIONS_OPENAI_BASE_URL=https://openrouter.ai/api/v1
-AI_INTEGRATIONS_OPENAI_API_KEY=your-openrouter-api-key
-AI_INTEGRATIONS_OPENAI_MODEL=google/gemini-3-flash-preview
-AI_INTEGRATIONS_OPENAI_IMAGE_MODEL=google/gemini-3.1-flash-image-preview
+AI_INTEGRATIONS_OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+AI_INTEGRATIONS_OPENROUTER_API_KEY=your-openrouter-api-key
+AI_INTEGRATIONS_OPENROUTER_MODEL=google/gemini-3-flash-preview
+AI_INTEGRATIONS_OPENROUTER_IMAGE_MODEL=google/gemini-3.1-flash-image-preview
 OPENROUTER_SITE_URL=http://localhost:8080
 OPENROUTER_APP_TITLE=Kahani
 ```
 
-`OPENROUTER_SITE_URL` and `OPENROUTER_APP_TITLE` are optional attribution headers. The text and image models must be OpenRouter model IDs, usually with a provider prefix such as `google/gemini-3-flash-preview`, `google/gemini-3.1-flash-image-preview`, or whichever models you choose in OpenRouter.
+`OPENROUTER_SITE_URL` and `OPENROUTER_APP_TITLE` are optional attribution headers. The image model must be an OpenRouter model ID, usually with a provider prefix such as `google/gemini-3.1-flash-image-preview`, or whichever model you choose in OpenRouter.
 
-The story text generation uses the OpenAI-compatible chat completions API. For OpenRouter image generation, the route uses chat completions with image output modalities and returns the generated cover image as a base64 data URL when available. If image generation fails, the API logs a warning and returns the story without a cover image.
+The current book pipeline uses the image model twice: once for the cover, and once for the full 3x4 storyboard sheet. The storyboard-sheet call returns the canonical story text plus the sheet image, and the server slices that sheet into page images before packaging the final book. If cover generation fails, the pipeline can still continue without a cover image.
 
 The mockup sandbox also requires:
 
@@ -103,7 +103,7 @@ Expected response:
 {"status":"ok"}
 ```
 
-Story generation is available at `POST /api/stories/generate`, but it requires `AI_INTEGRATIONS_OPENAI_BASE_URL` and `AI_INTEGRATIONS_OPENAI_API_KEY`. Set `AI_INTEGRATIONS_OPENAI_MODEL` to choose the text model; it defaults to `gpt-4o` when unset. Set `AI_INTEGRATIONS_OPENAI_IMAGE_MODEL` to choose the cover image model; it defaults to `dall-e-3` when unset.
+Story generation is available at `POST /api/stories/generate`, but it requires `AI_INTEGRATIONS_OPENROUTER_BASE_URL` and `AI_INTEGRATIONS_OPENROUTER_API_KEY`. Set `AI_INTEGRATIONS_OPENROUTER_IMAGE_MODEL` to choose the image model used for both the cover and storyboard-sheet calls; it defaults to `google/gemini-3.1-flash-image-preview` when unset. The older `AI_INTEGRATIONS_OPENAI_*` variables still work as backwards-compatible fallbacks.
 
 For the persistent book pipeline, use `POST /api/books`. The created book can be fetched later with `GET /api/books/:bookId`, and the per-page progress and events live at `GET /api/books/:bookId/pages` and `GET /api/books/:bookId/events`.
 
@@ -227,6 +227,14 @@ pnpm --filter @workspace/scripts run slice:sheet -- "/Users/varindernagra/Downlo
 ```
 
 That assumes a 3x4 grid of 12 pages. The script writes 12 cropped page images plus a `manifest.json` into a sibling `*-slices` folder. Adjust `--rows`, `--cols`, and `--inset` if the image layout changes.
+
+To turn the face contact sheet into reusable test assets, run:
+
+```sh
+pnpm --filter @workspace/scripts run faces:test-data -- "/Users/varindernagra/Downloads/ChatGPT Image Apr 23, 2026, 10_18_36 PM.png"
+```
+
+That slices the sheet into `men/`, `women/`, and `kids/` folders, writes 45 cropped portraits, and exports `manifest.json` plus `role-combinations.json` so you can quickly pick dad / mom / kid / sibling / friend combinations in tests.
 
 ## Useful Workspace Commands
 

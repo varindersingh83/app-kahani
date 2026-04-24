@@ -1,0 +1,56 @@
+Create one single square storyboard contact sheet at exactly 4096 x 4096 pixels.
+
+Layout:
+- 4 columns x 4 rows
+- 16 panels total
+- each panel is exactly 1024 x 1024 pixels
+- perfectly aligned grid
+- no perspective skew
+- no uneven spacing
+- no rounded panel corners
+- no overlapping panels
+- no outer margin
+- thin clean white grid lines only on the boundaries between panels
+- grid boundaries must fall exactly at x=1024, x=2048, x=3072 and y=1024, y=2048, y=3072
+
+Input JSON:
+{{JSON_INPUT}}
+
+Panel structure:
+Row 1:
+Panel 1: book cover, display only the book title from JSON title
+Panel 2: ownership page, display only: "This book belongs to [child_name]"
+Panel 3: end page, display only: "The End"
+Panel 4: blank page, empty soft background, no text, no objects
+
+Rows 2-4:
+Use JSON pages 1-12 in order, left to right, top to bottom.
+
+Critical text rule:
+- Text is allowed only in panels 1, 2, and 3.
+- No text anywhere else.
+- No page numbers.
+- No captions.
+- No panel labels.
+- No emotion labels.
+- No speech bubbles.
+- No watermark.
+- No logo.
+
+Style:
+watercolor children's storybook illustration, hand-painted, soft pastel palette, warm tones, visible brush strokes, textured paper grain, matte finish, gentle lighting, minimal contrast, soft edges, simple backgrounds, uncluttered scenes
+
+Character consistency:
+- Main child from JSON child_name must have same face, hair, clothing, and proportions across all panels.
+- Second child, if present, must have same face, hair, clothing, and clothing color across all panels.
+- Parent, if present, must have same appearance and outfit across all panels.
+- Objects must remain consistent across panels.
+
+Scene rules:
+- Use each JSON page scene as the physical visual action.
+- Use composition for camera framing.
+- Use emotion only for posture and facial expression.
+- Do not render the page text in story panels.
+
+Negative prompt:
+text outside panels 1-3, captions, page numbers, panel labels, emotion labels, words, letters, numbers, watermark, logo, speech bubbles, uneven grid, warped grid, irregular panel sizes, borders inside panels, inconsistent characters, clothing changes, color drift, extra limbs, distorted hands, photorealism, clutter

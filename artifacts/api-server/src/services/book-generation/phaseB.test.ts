@@ -47,6 +47,7 @@ test("Phase B storyboard prompt builds a 3x4 sheet brief with page slots", () =>
   assert.match(prompt, /thin white borders separating each panel/);
   assert.match(prompt, /Panel 1 \(1x1\)/);
   assert.match(prompt, /Panel 12 \(4x3\)/);
+  assert.match(prompt, /canonical 12-page story text in structured JSON/i);
 });
 
 test("Phase B storyboard sheet plan preserves the deterministic page map", () => {
@@ -64,6 +65,7 @@ test("Phase B storyboard sheet plan preserves the deterministic page map", () =>
   assert.equal(plan.tiles[11]?.pageNumber, 12);
   assert.match(plan.sheetPrompt, /do not include narrative text/i);
   assert.match(plan.sheetPrompt, /story progression across panels from top left to bottom right/i);
+  assert.match(plan.sheetPrompt, /canonical 12-page story text in structured JSON/i);
 });
 
 test("Sheet helper still emits a deterministic 3x4 grid prompt", () => {
@@ -75,7 +77,7 @@ test("Sheet helper still emits a deterministic 3x4 grid prompt", () => {
 
   assert.equal(plan.tiles.length, 12);
   assert.match(plan.sheetPrompt, /the image must be a single 3x4 storyboard sheet that can be sliced into 12 page images/i);
-  assert.match(plan.sheetPrompt, /Panel 1:/);
-  assert.match(plan.sheetPrompt, /Panel 12:/);
+  assert.match(plan.sheetPrompt, /Panel 1 \(1x1\):/);
+  assert.match(plan.sheetPrompt, /Panel 12 \(4x3\):/);
   assert.match(plan.tiles[0]!.beat, /Ava is introduced/);
 });

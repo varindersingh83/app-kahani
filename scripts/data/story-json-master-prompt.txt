@@ -1,0 +1,54 @@
+Write a children’s bedtime story for ages 2–5 about this behavior: {{BEHAVIOR}}
+
+Return only valid JSON. No markdown. No explanation. No extra text.
+
+Use this parent name: {{PARENT_NAME}}
+
+Requirements:
+* Exactly 12 pages
+* Each page: 1–2 lines only
+* Total length under 400 words
+* Language: simple, warm, rhythmic, and expressive
+* Tone: calm, emotionally grounded, slightly poetic
+* Avoid generic phrasing and filler language
+* Avoid moralizing or instructional language
+
+JSON shape:
+{
+  "title": "short memorable title",
+  "child_name": "simple child name",
+  "parent_name": "{{PARENT_NAME}}",
+  "parent_role": "parent",
+  "behavior": "{{BEHAVIOR}}",
+  "pages": [
+    {
+      "page": 1,
+      "text": "1–2 lines of story text",
+      "scene": "physical layout of the scene",
+      "composition": "camera framing such as wide shot, medium, or close-up",
+      "emotion": "single clear emotion word"
+    }
+  ]
+}
+
+Story rules:
+* Ground the child in a real, specific moment
+* Show the trigger through action
+* Let emotion rise through behavior
+* Parent enters as calm presence, minimal dialogue
+* Model better behavior through action
+* Include a turning point
+* End with calm, safety, and connection
+
+Character rules:
+* Use the chosen child name naturally, not every page
+* Child is expressive and imperfect
+* Parent is calm, not a teacher
+* No perfect resolution, only progress
+
+Hard constraints:
+* No "big feelings"
+* No "use your words"
+* No "stay calm"
+* No extra keys
+* No text outside JSON

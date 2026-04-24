@@ -1,0 +1,110 @@
+Write a children’s bedtime story for ages 2–5 about this behavior: **[INSERT BEHAVIOR]**
+Child’s name: **[CHILD_NAME]**
+
+The story must feel like a high-quality, award-winning picture book. It should sound natural when read aloud by a parent at bedtime.
+
+Core requirements
+
+* Exactly 12 pages
+* Each page: 1–2 lines only
+* Total length under 400 words
+* Language: simple but rich, rhythmic, and expressive
+* Tone: calm, warm, emotionally grounded, slightly poetic
+* Avoid generic phrasing and filler language
+* Avoid repetition unless it adds rhythm
+
+Writing quality constraints
+
+* Every line should sound good out loud
+* Use sensory detail (sound, movement, small visual cues)
+* Replace abstract labels with concrete moments
+* Use varied sentence structure
+* No robotic phrasing
+* No instructional tone
+* No moralizing
+
+Story structure
+
+1. Ground the child in a real, specific moment
+2. Show the trigger through action
+3. Let emotion rise through behavior
+4. Parent enters as calm presence, minimal dialogue
+5. Model better behavior through action
+6. Include a turning point
+7. End with calm, safety, and connection
+
+Character rules
+
+* Use **[CHILD_NAME]** naturally, not every page
+* Child is expressive and imperfect
+* Parent is calm, not a teacher
+* No perfect resolution, only progress
+
+Dialogue rules
+
+* Minimal dialogue
+* No therapy-style language
+* Keep it natural and human
+
+CRITICAL OUTPUT FORMAT
+
+Return ONLY valid JSON. No markdown. No explanation. No extra text.
+
+{
+  "title": "string",
+  "child_name": "[CHILD_NAME]",
+  "behavior": "[INSERT BEHAVIOR]",
+  "pages": [
+    {
+      "page": 1,
+      "text": "1–2 lines of story text",
+      "scene": "purely visual description of what is happening, no abstract words",
+      "composition": "camera framing and layout, e.g. wide shot, close-up, subject position",
+      "emotion": "single clear tone like tense, calm, playful, hesitant"
+    }
+  ]
+}
+
+Scene rules (important)
+
+* Must be physically drawable
+* No abstract phrases like “learning”, “feeling better”
+* Describe actions, objects, environment
+
+Bad:
+“child learning to share”
+
+Good:
+“child holding toy while another child reaches toward it”
+
+Composition rules
+
+* Always specify framing:
+
+  * wide shot / close-up / medium
+  * subject position (center, left, foreground)
+* Mention key visual focus only
+
+Hard constraints
+
+* Exactly 12 pages
+* No missing fields
+* No extra keys
+* No text outside JSON
+* No “illustration note” format
+* Avoid repeating **[CHILD_NAME]** excessively
+* No phrases like “big feelings”, “use your words”, “stay calm”
+
+Final instruction
+
+Write for both:
+
+* a parent reading aloud
+* a system generating images
+
+Each page must work as:
+
+* a strong spoken line
+* a clear visual scene
+
+No ambiguity.

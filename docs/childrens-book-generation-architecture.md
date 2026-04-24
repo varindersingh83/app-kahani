@@ -56,49 +56,43 @@ Step 1 -> Step 2 -> Step 3 -> Step 4 -> Step 5
 | Step | Agent                       | Type                          |
 | ---- | --------------------------- | ----------------------------- |
 | 1    | Input Agent                 | AI + deterministic validation |
-| 2    | Story Spine Agent           | AI                            |
-| 3    | Story Writer Agent          | AI                            |
-| 4    | Storyboard Agent            | AI                            |
-| 5    | Character Consistency Agent | deterministic + AI assist     |
+| 2    | Story Brief Agent           | deterministic + AI assist     |
+| 3    | Character Consistency Agent | deterministic + AI assist     |
+| 4    | Sheet Slot Agent            | deterministic                 |
+| 5    | Prompt Prep Agent           | deterministic                 |
 
-Phase A also assigns each page a fixed sheet slot in a 3-column by 4-row layout so the later image sheet can be sliced deterministically into 12 page images.
+Phase A now builds the reusable brief, character lock, and fixed 3-column by 4-row page-slot map that the image model uses for both the cover and storyboard sheet calls.
 
-### Phase B. Page Production (Parallel)
-
-For each page:
+### Phase B. Image Generation and Slicing (Sequential)
 
 ```text
-Step 6 -> Step 7 -> Step 8 -> Step 9
+Step 6 -> Step 7 -> Step 8
 ```
 
-| Step | Agent                | Type          |
-| ---- | -------------------- | ------------- |
-| 6    | Prompt Builder Agent | hybrid        |
-| 7    | Illustration Agent   | AI            |
-| 8    | Alignment Agent      | AI            |
-| 9    | Iteration Controller | deterministic |
+| Step | Agent                  | Type                        |
+| ---- | ---------------------- | --------------------------- |
+| 6    | Cover Image Agent      | AI                          |
+| 7    | Storyboard Sheet Agent | AI                          |
+| 8    | Sheet Slicer Agent     | deterministic               |
 
-Parallelization rule:
-
-- All pages run independently
-- Failures affect only that page
-
-The illustration stage now produces one composite watercolor sheet for the whole 12-page book, using the page-level prompts and sheet slots from Phase A. A deterministic slicer then cuts that single sheet into 12 page images, one per page slot, before Phase C packages the final book.
+The cover image call returns the cover art.
+The storyboard-sheet call returns both the full 3x4 watercolor sheet and the canonical story text for all 12 pages.
+A deterministic slicer then cuts that sheet into 12 page images, one per page slot.
 
 ### Phase C. Final Assembly (Sequential)
 
 ```text
-Step 10 -> Step 11 -> Step 12 -> Human QA
+Step 9 -> Step 10 -> Step 11 -> Human QA
 ```
 
 | Step | Agent           | Type                        |
 | ---- | --------------- | --------------------------- |
-| 10   | Layout Agent    | deterministic + optional AI |
-| 11   | Editor Agent    | AI                          |
-| 12   | Packaging Agent | deterministic               |
-| 13   | Human QA        | human                       |
+| 9    | Layout Agent    | deterministic + optional AI |
+| 10   | Editor Agent    | AI                          |
+| 11   | Packaging Agent | deterministic               |
+| 12   | Human QA        | human                       |
 
-Phase C consumes the sliced page images, preserves their page order, and packages the text, page image URLs, and optional sheet image URL into the final book record.
+Phase C consumes the sliced page images, preserves their page order, and packages the text, page image URLs, cover image URL, and storyboard sheet image URL into the final book record.
 
 ## 5. Orchestration Layer
 
@@ -109,26 +103,27 @@ Master Orchestrator responsibilities:
    - Manage transitions
    - Prevent invalid execution paths
 2. Parallel execution
-   - Spawn page workers after Step 5
-   - Track each page independently
+   - Track artifact-level retries for the cover and storyboard sheet
 3. State management
    - Book-level state
-   - Page-level state
+   - Sheet-level state
    - Retry counters
    - Flags
 4. Retry enforcement
 
 ```text
 max_retries = 3
-if retries >= 3:
-    advance_with_flag = true
+if cover_retries >= 3:
+    continue_without_cover = true
+if sheet_retries >= 3:
+    fail_or_escalate = true
 ```
 
 5. Event logging
    - Every action is logged as structured data.
 6. Human escalation
-   - Triggered when retry limit reached
-   - low alignment score persists
+   - Triggered when storyboard validation fails
+   - triggered when retries are exhausted on the sheet call
    - QA rejects output
 
 ## 6. Deterministic vs AI Responsibilities

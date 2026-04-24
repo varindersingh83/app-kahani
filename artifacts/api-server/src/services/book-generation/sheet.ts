@@ -24,6 +24,7 @@ export function buildSheetPlan(input: {
   storyPlan?: StoryPlan;
 }): SheetPlan {
   const storyPages = input.storyPlan?.pages;
+  const storyJson = input.storyPlan ? buildCanonicalStoryJson(input.brief, input.storyPlan) : undefined;
   const tiles = [...input.pageSlots]
     .sort((a, b) => a.pageNumber - b.pageNumber)
     .map((slot) => {
@@ -45,8 +46,8 @@ export function buildSheetPlan(input: {
   );
 
   const sheetPrompt = [
-    "watercolor children's storybook illustration, hand-painted, soft pastel palette, warm tones, visible brush strokes, textured paper grain, imperfect edges, matte finish, gentle lighting, minimal contrast, whimsical and emotional tone, consistent character design across all panels",
-    "3x4 storyboard grid layout, 3 columns and 4 rows, 12 panels total, each panel perfectly square, thin white borders separating each panel, clean evenly spaced grid, no overlap, no distortion, all panels aligned",
+    `watercolor children's storybook illustration, hand-painted, soft pastel palette, warm tones, visible brush strokes, textured paper grain, imperfect edges, matte finish, gentle lighting, minimal contrast, whimsical and emotional tone, consistent character design across all panels`,
+    `3x4 storyboard grid layout, 3 columns and 4 rows, 12 panels total, each panel perfectly square, thin white borders separating each panel, clean evenly spaced grid, no overlap, no distortion, all panels aligned`,
     `same young child character across all panels: ${input.characterLock.stylePrompt}`,
     `Character details: ${input.characterLock.appearance}`,
     `Child name: ${input.brief.childName}`,
@@ -54,19 +55,15 @@ export function buildSheetPlan(input: {
     `Behavior context: ${input.brief.behaviorContext}`,
     `Supporting cast: ${input.brief.supportingCastContext}`,
     input.brief.learningHints ? `Learning hints: ${input.brief.learningHints}` : undefined,
-    "story progression across panels from top left to bottom right:",
+    `story progression across panels from top left to bottom right:`,
     ...panelLines,
-    storyPages?.length
-      ? "Canonical page text to keep aligned with the sheet:"
+    storyJson
+      ? `canonical 12-page story text in structured JSON:\n${storyJson}`
       : undefined,
-    ...(storyPages?.map(
-      (page) =>
-        `Page ${page.pageNumber}: ${page.text} | Illustration prompt: ${page.illustrationPrompt} | Sheet slot: ${page.sheetPlacement.panelLabel}`,
-    ) ?? []),
-    "each panel should use a simple background, soft environment, no clutter, consistent lighting style, emotional continuity across frames, cinematic composition but flat storybook perspective",
-    "do not include narrative text, page numbers, speech bubbles, captions, watermarks, logos, or extra borders inside the art",
-    "the image must be a single 3x4 storyboard sheet that can be sliced into 12 page images",
-    "also return the canonical 12-page story text in structured JSON alongside the image",
+    `each panel should use a simple background, soft environment, no clutter, consistent lighting style, emotional continuity across frames, cinematic composition but flat storybook perspective`,
+    `do not include narrative text, page numbers, speech bubbles, captions, watermarks, logos, or extra borders inside the art`,
+    `the image must be a single 3x4 storyboard sheet that can be sliced into 12 page images`,
+    `also return the canonical 12-page story text in structured JSON alongside the image`,
     `Negative prompt: ${input.characterLock.negativePrompt}`,
   ].filter(Boolean).join("\n");
 
@@ -118,4 +115,46 @@ function buildPanelVisualFocus(brief: BookBrief, pageNumber: number) {
   ];
 
   return `Panel ${pageNumber}: ${focus[pageNumber - 1]}`;
+}
+
+export function buildCanonicalStoryJson(
+  brief: BookBrief,
+  storyPlan: Pick<StoryPlan, "title" | "reflectionQuestion" | "pages">,
+) {
+  return JSON.stringify(
+    {
+      title: storyPlan.title,
+      child_name: brief.childName,
+      behavior: brief.prompt ?? "",
+      pages: storyPlan.pages.map((page) => ({
+        page: page.pageNumber,
+        text: page.text,
+        scene: page.visualFocus,
+        composition: suggestComposition(page.pageNumber, page.sheetPlacement.panelLabel),
+        emotion: page.emotion,
+      })),
+      reflection_question: storyPlan.reflectionQuestion,
+    },
+    null,
+    2,
+  );
+}
+
+function suggestComposition(pageNumber: number, panelLabel: string) {
+  const compositions = [
+    "wide shot, child centered in frame",
+    "medium shot, child left of center",
+    "close-up, focus on hands and face",
+    "medium shot, action centered in frame",
+    "wide shot, child low in frame",
+    "close-up, focus on the key object",
+    "wide shot, child in foreground",
+    "medium shot, two figures side by side",
+    "close-up, emotional detail in the face",
+    "medium shot, movement leading to resolution",
+    "wide shot, calm ending with open space",
+    "wide shot, peaceful closing scene",
+  ];
+
+  return `${compositions[pageNumber - 1] ?? "medium shot, balanced framing"} (${panelLabel})`;
 }

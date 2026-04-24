@@ -111,8 +111,8 @@ test("Phase A story plan creates a canonical 12-page story before image generati
   assert.match(storyPlan.title, /Ava and the My child is learning to ask for a turn/);
   assert.match(storyPlan.reflectionQuestion, /What can Ava try/);
   assert.match(storyPlan.storySpine.beginning, /Ava/);
-  assert.match(storyPlan.masterSheetPrompt, /Use the following page plan as the canonical narrative order and visual direction/i);
-  assert.match(storyPlan.masterSheetPrompt, /Canonical page text to keep aligned with the sheet/i);
-  assert.match(storyPlan.masterSheetPrompt, /Page 1:/);
+  assert.match(storyPlan.masterSheetPrompt, /canonical 12-page story text in structured JSON/i);
+  assert.match(storyPlan.masterSheetPrompt, /story progression across panels from top left to bottom right/i);
+  assert.match(storyPlan.masterSheetPrompt, /Panel 1 \(1x1\)/);
   assert.match(storyPlan.pages[0]!.text, /Ava/);
 });

@@ -1,5 +1,5 @@
 import type { BookBrief, BookSetup, StoryPlan, StoryPlanPage, StoryRequest, StorySpine } from "./types";
-import { getSheetPlacement } from "./sheet";
+import { buildCanonicalStoryJson, getSheetPlacement } from "./sheet";
 
 export function runInputAgent(request: StoryRequest) {
   return {
@@ -58,7 +58,11 @@ export function buildStoryPlan(setup: BookSetup): StoryPlan {
   const title = buildStoryTitle(setup.brief);
   const reflectionQuestion = buildReflectionQuestion(setup.brief);
   const storySpine = buildStorySpine(setup.brief, pages);
-  const masterSheetPrompt = buildMasterSheetPrompt(setup.brief, setup.characterLock.stylePrompt, pages);
+  const masterSheetPrompt = buildMasterSheetPrompt(setup.brief, setup.characterLock.stylePrompt, {
+    title,
+    reflectionQuestion,
+    pages,
+  });
 
   return {
     title,
@@ -102,25 +106,32 @@ function buildStorySpine(brief: BookBrief, pages: StoryPlanPage[]): StorySpine {
   };
 }
 
-function buildMasterSheetPrompt(brief: BookBrief, stylePrompt: string, pages: StoryPlanPage[]) {
+function buildMasterSheetPrompt(
+  brief: BookBrief,
+  stylePrompt: string,
+  storyPlan: Pick<StoryPlan, "title" | "reflectionQuestion" | "pages">,
+) {
   return [
-    "Create a single 3x4 watercolor storyboard sheet for a children's picture book.",
-    "The sheet will be printed once and sliced into 12 page images.",
-    `Child: ${brief.childName}.`,
-    brief.prompt ? `Story theme: ${brief.prompt}.` : "",
-    `Visual style: ${stylePrompt}`,
-    brief.behaviorContext,
-    brief.supportingCastContext,
-    brief.learningHints ? `Learning hints: ${brief.learningHints}` : "",
-    "Use the following page plan as the canonical narrative order and visual direction:",
-    "Canonical page text to keep aligned with the sheet:",
-    ...pages.map(
+    `watercolor children's storybook illustration, hand-painted, soft pastel palette, warm tones, visible brush strokes, textured paper grain, imperfect edges, matte finish, gentle lighting, minimal contrast, whimsical and emotional tone, consistent character design across all panels`,
+    `3x4 storyboard grid layout, 3 columns and 4 rows, 12 panels total, each panel perfectly square, thin white borders separating each panel, clean evenly spaced grid, no overlap, no distortion, all panels aligned`,
+    `same young child character across all panels: ${stylePrompt}`,
+    `Character details: ${brief.childName} appears consistently throughout the story.`,
+    `Child name: ${brief.childName}`,
+    brief.prompt ? `Story premise: ${brief.prompt}` : undefined,
+    `Behavior context: ${brief.behaviorContext}`,
+    brief.supportingCastContext ? `Supporting cast: ${brief.supportingCastContext}` : undefined,
+    brief.learningHints ? `Learning hints: ${brief.learningHints}` : undefined,
+    `story progression across panels from top left to bottom right:`,
+    ...storyPlan.pages.map(
       (page) =>
-        `Page ${page.pageNumber}: ${page.text} | Illustration prompt: ${page.illustrationPrompt} | Sheet slot: ${page.sheetPlacement.panelLabel}`,
+        `Panel ${page.pageNumber} (${page.sheetPlacement.row}x${page.sheetPlacement.col}): ${page.beat} | Visual focus: ${page.visualFocus} | Emotion: ${page.emotion}`,
     ),
-    "No text, captions, speech bubbles, page numbers, watermarks, or logos inside the art.",
-    "Keep the child character visually consistent across all panels.",
-    "The image must be readable as one storyboard sheet before slicing.",
+    `canonical 12-page story text in structured JSON:\n${buildCanonicalStoryJson(brief, storyPlan)}`,
+    `each panel should use a simple background, soft environment, no clutter, consistent lighting style, emotional continuity across frames, cinematic composition but flat storybook perspective`,
+    `do not include narrative text, page numbers, speech bubbles, captions, watermarks, logos, or extra borders inside the art`,
+    `the image must be a single 3x4 storyboard sheet that can be sliced into 12 page images`,
+    `also return the canonical 12-page story text in structured JSON alongside the image`,
+    `Negative prompt: No scary imagery, no harsh lighting, no inconsistent character traits, no text in image.`,
   ]
     .filter(Boolean)
     .join("\n");
