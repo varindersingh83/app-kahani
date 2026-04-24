@@ -15,6 +15,46 @@ export type PipelineStoryPage = StoryPage & {
   imageUrl?: string;
 };
 
+export type BookBrief = {
+  mode: string;
+  prompt?: string;
+  childName: string;
+  behaviorContext: string;
+  supportingCastContext: string;
+  learningHints: string;
+};
+
+export type BookSetup = {
+  brief: BookBrief;
+  characterLock: CharacterLock;
+  pageSlots: SheetPlacement[];
+};
+
+export type StorySpine = {
+  beginning: string;
+  middle: string;
+  ending: string;
+  emotionalArc: string;
+};
+
+export type StoryPlanPage = {
+  pageNumber: number;
+  text: string;
+  illustrationPrompt: string;
+  sheetPlacement: SheetPlacement;
+  beat: string;
+  visualFocus: string;
+  emotion: string;
+};
+
+export type StoryPlan = {
+  title: string;
+  reflectionQuestion: string;
+  storySpine: StorySpine;
+  masterSheetPrompt: string;
+  pages: StoryPlanPage[];
+};
+
 export type AiConfig = {
   baseUrl: string;
   apiKey: string;
@@ -56,23 +96,6 @@ export type SheetPlan = {
   tiles: SheetTile[];
 };
 
-export type StorySetup = {
-  spine: {
-    beginning: string;
-    middle: string;
-    ending: string;
-    emotionalArc: string;
-  };
-  storyboard: Array<{
-    pageNumber: number;
-    beat: string;
-    visualFocus: string;
-    emotion: string;
-    sheetPlacement: SheetPlacement;
-  }>;
-  characterLock: CharacterLock;
-};
-
 export type PageCandidate = PipelineStoryPage & {
   alignmentScore: number;
   failureReason?: string;
@@ -82,6 +105,20 @@ export type PageCandidate = PipelineStoryPage & {
 export type ValidationResult = {
   ok: boolean;
   failures: string[];
+};
+
+export type SheetSliceManifestEntry = {
+  pageNumber: number;
+  row: number;
+  col: number;
+  source: string;
+  output: string;
+  crop: {
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+  };
 };
 
 export type PipelineResult = {

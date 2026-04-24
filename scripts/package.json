@@ -6,6 +6,7 @@
   "scripts": {
     "baseline:stories": "tsx ./src/story-baseline.ts",
     "book:harness": "tsx ./src/book-harness.ts",
+    "faces:test-data": "python3 ./src/face-test-data.py",
     "hello": "tsx ./src/hello.ts",
     "slice:sheet": "python3 ./src/slice-sheet.py",
     "typecheck": "tsc -p tsconfig.json --noEmit"

@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { PipelineStory, StoryRequest } from "./types";
-import { buildBookSetup, runInputAgent, runStoryWriterValidation } from "./phaseA";
-import { runIterationController, runPageProductionAttempt, runSheetArtDirectionAgent } from "./phaseB";
-import { runHumanQaGate, runPackagingAgent } from "./phaseC";
+import { buildBookSetup, runInputAgent } from "./phaseA";
+import { buildCoverPrompt, buildStoryboardSheetPlan, buildStoryboardSheetPrompt } from "./phaseB";
+import { runHumanQaGate, runLayoutAgent, runPackagingAgent } from "./phaseC";
+import type { ProducedPage } from "./phaseC";
 
-test("book generation integration moves from parent input through Phase A, Phase B, and Phase C output", () => {
-  const parentInput: StoryRequest = {
-    mode: "behavior",
+test("book generation integration combines the brief, cover prompt, storyboard prompt, and packaged output", () => {
+  const parentInput = {
+    mode: "behavior" as const,
     prompt: "My child is learning to ask for a turn instead of grabbing toys.",
     character: {
       name: " Ava ",
@@ -21,88 +21,64 @@ test("book generation integration moves from parent input through Phase A, Phase
     ],
   };
 
-  const storyWriterOutput: PipelineStory = {
+  const normalizedInput = runInputAgent(parentInput);
+  const setup = buildBookSetup(normalizedInput, "Use warm, short, reassuring language.");
+  const coverPrompt = buildCoverPrompt({
+    brief: setup.brief,
+    characterLock: setup.characterLock,
+  });
+  const storyboardPrompt = buildStoryboardSheetPrompt({
+    brief: setup.brief,
+    characterLock: setup.characterLock,
+    pageSlots: setup.pageSlots,
+  });
+  const storyboardPlan = buildStoryboardSheetPlan({
+    brief: setup.brief,
+    characterLock: setup.characterLock,
+    pageSlots: setup.pageSlots,
+  });
+
+  const slicePages: ProducedPage[] = Array.from({ length: 12 }, (_, index) => ({
+    pageNumber: index + 1,
+    text:
+      index === 0
+        ? "Ava sees Leo roll the shiny train."
+        : index === 5
+          ? "Ava feels upset, then takes a slow breath."
+          : index === 11
+            ? "Ava feels proud when they play together."
+            : "Ava asks Leo for a turn.",
+    illustrationPrompt: `Warm watercolor scene with Ava and Leo near the shiny train on page ${index + 1}.`,
+    imageUrl: `file:///tmp/page-${index + 1}.png`,
+    retryCount: 0,
+    flagForHuman: false,
+  }));
+
+  const layout = runLayoutAgent(slicePages, storyboardPlan);
+  const packaged = runPackagingAgent({
     title: "Ava Waits for the Shiny Train",
     reflectionQuestion: "What can Ava say when she wants a turn?",
-    pages: Array.from({ length: 12 }, (_, index) => ({
-      pageNumber: index + 1,
-      text:
-        index === 0
-          ? "Ava sees Leo roll the shiny train."
-          : index === 5
-            ? "Ava feels upset, then takes a slow breath."
-            : index === 11
-              ? "Ava feels proud when they play together."
-              : "Ava asks Leo for a turn.",
-      illustrationPrompt: `Warm watercolor scene with Ava and Leo near the shiny train on page ${index + 1}.`,
-    })),
-  };
-
-  const normalizedInput = runInputAgent(parentInput);
-  const storyValidation = runStoryWriterValidation(storyWriterOutput);
-  const phaseAOutput = buildBookSetup(normalizedInput, storyWriterOutput);
-  const sheetPlan = runSheetArtDirectionAgent({
-    story: storyWriterOutput,
-    setup: phaseAOutput,
-    characterLock: phaseAOutput.characterLock,
+    pages: slicePages,
+    coverImageUrl: "file:///tmp/cover.png",
+    sheetImageUrl: "file:///tmp/storyboard-sheet.png",
+    sheetPlan: storyboardPlan,
   });
+  const qaGate = runHumanQaGate(slicePages);
 
   assert.equal(normalizedInput.character.name, "Ava");
-  assert.equal(storyValidation.ok, true);
-  assert.equal(phaseAOutput.storyboard.length, 12);
-  assert.equal(phaseAOutput.characterLock.name, "Ava");
-  assert.match(phaseAOutput.characterLock.stylePrompt, /uploaded reference photo/);
-  assert.equal(phaseAOutput.storyboard[0]?.sheetPlacement.panelLabel, "Panel 1 (1x1)");
-  assert.equal(sheetPlan.tiles.length, 12);
-  assert.match(sheetPlan.sheetPrompt, /sliced into 12 individual page images/);
-
-  const producedPages = storyWriterOutput.pages.map((page) => {
-    const storyboardBeat = phaseAOutput.storyboard.find((beat) => beat.pageNumber === page.pageNumber);
-    assert.ok(storyboardBeat);
-
-    const candidate = runPageProductionAttempt({
-      page,
-      storyboardBeat,
-      characterLock: phaseAOutput.characterLock,
-      childName: normalizedInput.character.name,
-      retryCount: 0,
-    });
-    const decision = runIterationController({ candidates: [candidate] });
-
-    assert.equal(decision.status, "completed");
-    assert.equal(decision.flagForHuman, false);
-
-    return {
-      pageNumber: candidate.pageNumber,
-      text: candidate.text,
-      illustrationPrompt: candidate.illustrationPrompt,
-      retryCount: decision.retryCount,
-      flagForHuman: decision.flagForHuman,
-      alignmentScore: candidate.alignmentScore,
-      failureReason: decision.failureReason,
-    };
-  });
-
-  const phaseCOutput = runPackagingAgent({
-    title: storyWriterOutput.title,
-    reflectionQuestion: storyWriterOutput.reflectionQuestion,
-    pages: producedPages,
-    sheetPlan,
-  });
-  const qaGate = runHumanQaGate(producedPages);
-
-  assert.equal(qaGate.status, "completed");
-  assert.equal(qaGate.flaggedForHuman, false);
-  assert.equal(qaGate.retryTotal, 0);
-  assert.equal(phaseCOutput.title, "Ava Waits for the Shiny Train");
-  assert.equal(phaseCOutput.reflectionQuestion, "What can Ava say when she wants a turn?");
-  assert.equal(phaseCOutput.pages.length, 12);
+  assert.match(setup.brief.behaviorContext, /ask for a turn/);
+  assert.match(coverPrompt, /No text on the image/);
+  assert.match(storyboardPrompt, /canonical story text for all 12 pages/);
+  assert.equal(storyboardPlan.tiles.length, 12);
+  assert.equal(layout.pageCount, 12);
+  assert.equal(packaged.title, "Ava Waits for the Shiny Train");
+  assert.equal(packaged.pages.length, 12);
   assert.deepEqual(
-    phaseCOutput.pages.map((page) => page.pageNumber),
+    packaged.pages.map((page) => page.pageNumber),
     [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
   );
-  assert.match(phaseCOutput.pages[0]?.text ?? "", /Ava/);
-  assert.match(phaseCOutput.pages[0]?.illustrationPrompt ?? "", /Warm watercolor/);
-  assert.match(phaseCOutput.pages[0]?.illustrationPrompt ?? "", /Ava appears consistently throughout/);
-  assert.deepEqual(phaseCOutput.pages[0]?.imageUrl, undefined);
+  assert.equal(packaged.coverImageUrl, "file:///tmp/cover.png");
+  assert.equal(packaged.sheetImageUrl, "file:///tmp/storyboard-sheet.png");
+  assert.equal(qaGate.status, "completed");
+  assert.equal(qaGate.flaggedForHuman, false);
 });

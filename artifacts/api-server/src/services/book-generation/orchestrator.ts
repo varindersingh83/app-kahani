@@ -1,18 +1,17 @@
 import { GenerateStoryResponse } from "@workspace/api-zod";
-import type { AiConfig, CharacterLock, PageCandidate, PipelineResult, PipelineStory, PipelineStoryPage, StoryRequest } from "./types";
-import { generateCoverImage, generateInitialStory, rewritePage } from "./aiClient";
-import {
-  buildBehaviorContext,
-  buildBookSetup,
-  buildSupportingCastContext,
-  runInputAgent,
-  runStorySpineAgent,
-  runStoryWriterValidation,
-} from "./phaseA";
-import { runSheetArtDirectionAgent } from "./phaseB";
-import type { SheetPlan } from "./types";
-import { runHumanQaGate, runPackagingAgent } from "./phaseC";
-import { buildRetryLearningLesson } from "./learning";
+import type {
+  AiConfig,
+  PipelineResult,
+  PipelineStory,
+  PipelineStoryPage,
+  SheetSliceManifestEntry,
+  StoryPlan,
+  StoryRequest,
+} from "./types";
+import { generateCoverImage, generateStoryboardSheetImage } from "./aiClient";
+import { buildBookSetup, buildStoryPlan, runInputAgent } from "./phaseA";
+import { buildCoverPrompt, buildStoryboardSheetPlan, buildStoryboardSheetPrompt } from "./phaseB";
+import { runHumanQaGate, runLayoutAgent, runPackagingAgent } from "./phaseC";
 import {
   createBookRecord,
   createPageRecord,
@@ -26,13 +25,15 @@ import {
   updateBookRecord,
   updatePageRecord,
 } from "./repository";
-import { selectBestCandidate, validateAlignment, validatePage } from "./validation";
+import { reviewStoryPages } from "./review";
+import { sliceStoryboardSheet } from "./imageSlicer";
+import { validateStory } from "./validation";
 
 const PAGE_COUNT = 12;
 const MAX_RETRIES = 3;
 
 export async function runBookPipeline(request: StoryRequest, config: AiConfig): Promise<PipelineResult> {
-  const childName = request.character.name;
+  const childName = request.character.name.trim();
   const book = await createBookRecord({
     mode: request.mode,
     theme: request.prompt,
@@ -51,7 +52,7 @@ export async function runBookPipeline(request: StoryRequest, config: AiConfig): 
 
   try {
     await updateBookRecord(book.id, { status: "running", currentStep: "input" });
-    await logAgentRun({
+    const normalizedInput = await logAgentRun({
       agentName: "InputAgent",
       bookId: book.id,
       inputJson: request as unknown as Record<string, unknown>,
@@ -66,101 +67,158 @@ export async function runBookPipeline(request: StoryRequest, config: AiConfig): 
       payloadJson: { hasHints: Boolean(learningHints) },
     });
 
-    await updateBookRecord(book.id, { currentStep: "story_writer" });
-    const story = await logAgentRun({
-      agentName: "StoryWriterAgent",
+    await updateBookRecord(book.id, { currentStep: "book_setup" });
+    const setup = await logAgentRun({
+      agentName: "BookSetupAgent",
       bookId: book.id,
-      inputJson: { mode: request.mode, prompt: request.prompt, learningHints },
-      run: async () =>
-        generateInitialStory(
-          config,
-          childName,
-          buildBehaviorContext(request),
-          buildSupportingCastContext(request),
-          learningHints,
-        ),
+      inputJson: { normalizedInput, learningHints },
+      run: async () => buildBookSetup(normalizedInput, learningHints),
     });
 
-    const storyValidation = runStoryWriterValidation(story);
+    await updateBookRecord(book.id, { currentStep: "story_creation" });
+    const storyPlan = await logAgentRun<StoryPlan>({
+      agentName: "StoryCreationAgent",
+      bookId: book.id,
+      inputJson: { setup },
+      run: async () => buildStoryPlan(setup),
+    });
+
+    await updateBookRecord(book.id, {
+      setupJson: { ...setup, storyPlan } as unknown as Record<string, unknown>,
+      characterLock: setup.characterLock as unknown as Record<string, unknown>,
+    });
+
+    const coverPrompt = buildCoverPrompt({
+      brief: setup.brief,
+      characterLock: setup.characterLock,
+    });
+    await updateBookRecord(book.id, { currentStep: "cover_image" });
+    const coverImageUrl = await runWithRetries<string | undefined>({
+      agentName: "CoverImageAgent",
+      bookId: book.id,
+      inputJson: { prompt: coverPrompt },
+      run: () => generateCoverImage(config, coverPrompt, request.character.photoUri),
+      retryLabel: "cover image generation",
+      allowUndefinedFinalValue: true,
+    });
+
+    const storyboardSheetPrompt = buildStoryboardSheetPrompt({
+      brief: setup.brief,
+      characterLock: setup.characterLock,
+      pageSlots: setup.pageSlots,
+      storyPlan,
+    });
+    const sheetPlan = buildStoryboardSheetPlan({
+      brief: setup.brief,
+      characterLock: setup.characterLock,
+      pageSlots: setup.pageSlots,
+      storyPlan,
+    });
+
+    await updateBookRecord(book.id, { currentStep: "storyboard_sheet" });
+    const sheetImageUrl = await runWithRetries<string | undefined>({
+      agentName: "StoryboardSheetAgent",
+      bookId: book.id,
+      inputJson: { prompt: storyboardSheetPrompt },
+      run: () =>
+        generateStoryboardSheetImage(config, {
+          prompt: storyboardSheetPrompt,
+          referenceImageUri: request.character.photoUri,
+        }),
+      retryLabel: "storyboard sheet generation",
+    });
+
+    const storyValidation = validateStory(
+      GenerateStoryResponse.parse({
+        title: storyPlan.title,
+        pages: storyPlan.pages.map((page) => ({
+          pageNumber: page.pageNumber,
+          text: page.text,
+          illustrationPrompt: page.illustrationPrompt,
+        })),
+        reflectionQuestion: storyPlan.reflectionQuestion,
+      }),
+    );
     if (!storyValidation.ok) {
       await recordLearningEvent({
         bookId: book.id,
-        agent: "StoryWriterAgent",
+        agent: "StoryboardSheetAgent",
         failureType: "story_schema_validation",
-        lesson: `Initial story failed validation: ${storyValidation.failures.slice(0, 3).join("; ")}`,
+        lesson: `Storyboard sheet failed validation: ${storyValidation.failures.slice(0, 3).join("; ")}`,
         payloadJson: { failures: storyValidation.failures },
       });
       await logEvent({
         bookId: book.id,
-        agent: "StoryWriterAgent",
+        agent: "StoryboardSheetAgent",
         eventType: "validation_failed",
         payloadJson: { failures: storyValidation.failures },
       });
     }
 
-    const setup = buildBookSetup(request, story);
-    const sheetPlan = runSheetArtDirectionAgent({
-      story,
-      setup,
-      characterLock: setup.characterLock,
-    });
-    await updateBookRecord(book.id, {
-      currentStep: "character_consistency",
-      setupJson: { ...setup, sheetPlan } as unknown as Record<string, unknown>,
-      characterLock: setup.characterLock as unknown as Record<string, unknown>,
-    });
-    await logAgentRun({
-      agentName: "StorySpineAgent",
+    await updateBookRecord(book.id, { currentStep: "slice_sheet" });
+    const slicedSheet = await logAgentRun({
+      agentName: "SheetSlicerAgent",
       bookId: book.id,
-      run: async () => runStorySpineAgent(story),
-    });
-    await logAgentRun({
-      agentName: "StoryboardAgent",
-      bookId: book.id,
-      run: async () => ({ storyboard: setup.storyboard }),
-    });
-    await logAgentRun({
-      agentName: "CharacterConsistencyAgent",
-      bookId: book.id,
-      run: async () => setup.characterLock,
-    });
-    await logAgentRun({
-      agentName: "SheetArtDirectionAgent",
-      bookId: book.id,
-      run: async () => sheetPlan,
+      inputJson: { sheetImageUrl },
+      run: async () => sliceStoryboardSheet(sheetImageUrl ?? ""),
     });
 
-    await updateBookRecord(book.id, { currentStep: "page_production" });
-    const pages = await Promise.all(
-      Array.from({ length: PAGE_COUNT }, (_, index) =>
-        runPageWorker({
-          bookId: book.id,
-          pageNumber: index + 1,
-          childName,
-          story,
-          characterLock: setup.characterLock,
-          sheetPlan,
-          config,
-        }),
-      ),
-    );
-
-    const qaGate = runHumanQaGate(pages);
-    const finalStory = GenerateStoryResponse.parse({
-      title: story.title,
-      pages: [...pages].sort((a, b) => a.pageNumber - b.pageNumber).map((page) => ({
+    const review = reviewStoryPages({
+      childName: setup.brief.childName,
+      pages: storyPlan.pages,
+      slices: slicedSheet.entries,
+    });
+    const pages = review.pages.map((page) => {
+      const slice = slicedSheet.entries.find((entry) => entry.pageNumber === page.pageNumber);
+      return {
         pageNumber: page.pageNumber,
         text: page.text,
         illustrationPrompt: page.illustrationPrompt,
+        imageUrl: slice?.output,
+        retryCount: page.flagForHuman ? 3 : page.reviewNotes.length,
+        flagForHuman: page.flagForHuman,
+        alignmentScore: page.alignmentScore,
+        failureReason: page.failureReason,
+        sheetPlacement: page.sheetPlacement,
+      };
+    });
+
+    const qaGate = runHumanQaGate(
+      pages,
+      !storyValidation.ok || !coverImageUrl || slicedSheet.entries.length !== PAGE_COUNT || review.shouldEscalate,
+    );
+    const finalStory = GenerateStoryResponse.parse({
+      title: storyPlan.title,
+      pages: pages.map((page) => ({
+        pageNumber: page.pageNumber,
+        text: page.text,
+        illustrationPrompt: page.illustrationPrompt,
+        imageUrl: page.imageUrl,
       })),
-      reflectionQuestion: story.reflectionQuestion,
+      reflectionQuestion: storyPlan.reflectionQuestion,
+      coverImageUrl,
+      sheetImageUrl,
     });
 
     await updateBookRecord(book.id, { currentStep: "layout" });
-    await logAgentRun({
+    const layout = await logAgentRun({
       agentName: "LayoutAgent",
       bookId: book.id,
-      run: async () => ({ pageCount: finalStory.pages.length, format: "mobile_picture_book" }),
+      run: async () =>
+        runLayoutAgent(
+          pages.map((page) => ({
+            pageNumber: page.pageNumber,
+            text: page.text,
+            illustrationPrompt: page.illustrationPrompt,
+            imageUrl: page.imageUrl,
+            retryCount: page.retryCount,
+            flagForHuman: page.flagForHuman,
+            alignmentScore: page.alignmentScore,
+            failureReason: page.failureReason,
+            sheetPlacement: page.sheetPlacement,
+          })),
+          sheetPlan,
+        ),
     });
 
     await updateBookRecord(book.id, { currentStep: "editor" });
@@ -169,24 +227,65 @@ export async function runBookPipeline(request: StoryRequest, config: AiConfig): 
       bookId: book.id,
       run: async () => ({
         readability: "age_2_5",
-        note: "Editor pass accepted deterministic page outputs for v1.",
+        note: "Editor pass accepted the story-first storyboard-sheet outputs for v3.",
       }),
     });
-
-    let coverImageUrl: string | undefined;
-    try {
-      coverImageUrl = await generateCoverImage(config, childName, finalStory);
-    } catch {
-      coverImageUrl = undefined;
-    }
 
     const packagedStory = runPackagingAgent({
       title: finalStory.title,
       reflectionQuestion: finalStory.reflectionQuestion,
-      pages,
+      pages: pages.map((page) => ({
+        pageNumber: page.pageNumber,
+        text: page.text,
+        illustrationPrompt: page.illustrationPrompt,
+        imageUrl: page.imageUrl,
+        retryCount: page.retryCount,
+        flagForHuman: page.flagForHuman,
+        alignmentScore: page.alignmentScore,
+        failureReason: page.failureReason,
+        sheetPlacement: page.sheetPlacement,
+      })),
       coverImageUrl,
-      sheetPlan,
+      sheetImageUrl,
+      sheetPlan: layout.sheetPlan
+        ? {
+            rows: layout.sheetPlan.rows,
+            cols: layout.sheetPlan.cols,
+            inset: layout.sheetPlan.inset,
+            sheetPrompt: layout.sheetPlan.sheetPrompt,
+            tiles: layout.sheetPlan.tiles,
+          }
+        : undefined,
     });
+
+    await Promise.all(
+      pages.map((page) =>
+          createPageRecord({
+            bookId: book.id,
+            pageNumber: page.pageNumber,
+            text: page.text,
+            illustrationPrompt: page.illustrationPrompt,
+            promptJson: {
+              storyPlanPage: storyPlan.pages.find((storyPage) => storyPage.pageNumber === page.pageNumber),
+              sheetImageUrl,
+              pageImageUrl: page.imageUrl,
+              reviewNotes: page.flagForHuman ? ["flagged for human review"] : page.retryCount > 0 ? ["rewritten during review"] : [],
+            },
+          }).then((record) =>
+            updatePageRecord(record.id, {
+              currentStep: "completed",
+              status: "completed",
+              text: page.text,
+              illustrationPrompt: page.illustrationPrompt,
+              retryCount: page.retryCount,
+              flagForHuman: page.flagForHuman,
+              failureReason: page.failureReason,
+              alignmentScore: page.alignmentScore,
+            }),
+          ),
+        ),
+    );
+
     await updateBookRecord(book.id, {
       status: qaGate.status,
       currentStep: "packaging",
@@ -194,7 +293,13 @@ export async function runBookPipeline(request: StoryRequest, config: AiConfig): 
       reflectionQuestion: packagedStory.reflectionQuestion,
       coverImageUrl,
       flaggedForHuman: qaGate.flaggedForHuman,
-      packageJson: packagedStory as unknown as Record<string, unknown>,
+      packageJson: {
+        ...packagedStory,
+        storyPlan,
+        sheetPrompt: storyboardSheetPrompt,
+        sliceManifest: slicedSheet.entries,
+        review,
+      } as unknown as Record<string, unknown>,
     });
     await logAgentRun({
       agentName: "PackagingAgent",
@@ -206,7 +311,12 @@ export async function runBookPipeline(request: StoryRequest, config: AiConfig): 
       bookId: book.id,
       agent: "MasterOrchestrator",
       eventType: "book_completed",
-      payloadJson: { flaggedForHuman: qaGate.flaggedForHuman, retryTotal: qaGate.retryTotal },
+      payloadJson: {
+        flaggedForHuman: qaGate.flaggedForHuman,
+        retryTotal: qaGate.retryTotal,
+        sheetSlices: slicedSheet.entries.length,
+        flaggedPages: review.flaggedPages,
+      },
     });
 
     return {
@@ -243,6 +353,8 @@ export async function readBookStatus(bookId: string) {
     flaggedForHuman: result.book.flaggedForHuman,
     retryTotal: result.pages.reduce((total, page) => total + page.retryCount, 0),
     story: result.book.packageJson,
+    setupJson: result.book.setupJson,
+    packageJson: result.book.packageJson,
     createdAt: result.book.createdAt.toISOString(),
     updatedAt: result.book.updatedAt.toISOString(),
   };
@@ -289,177 +401,44 @@ export async function readQaQueue() {
   }));
 }
 
-async function runPageWorker(input: {
+async function runWithRetries<T>(input: {
+  agentName: string;
   bookId: string;
-  pageNumber: number;
-  childName: string;
-  story: PipelineStory;
-  characterLock: CharacterLock;
-  sheetPlan: SheetPlan;
-  config: AiConfig;
-}) {
-  const sheetTile = input.sheetPlan.tiles.find((tile) => tile.pageNumber === input.pageNumber);
-  const originalPage = input.story.pages.find((page) => page.pageNumber === input.pageNumber) ?? {
-    pageNumber: input.pageNumber,
-    text: "",
-    illustrationPrompt: "",
-  };
-  const page = await createPageRecord({
-    bookId: input.bookId,
-    pageNumber: input.pageNumber,
-    text: originalPage.text,
-    illustrationPrompt: originalPage.illustrationPrompt,
-    promptJson: {
-      sheetPlacement: sheetTile ?? null,
-      sheetPrompt: input.sheetPlan.sheetPrompt,
-    },
-  });
-
-  await logEvent({
-    bookId: input.bookId,
-    pageId: page.id,
-    agent: "PromptBuilderAgent",
-    eventType: "page_started",
-    payloadJson: { pageNumber: input.pageNumber },
-  });
-
-  let bestPage: PipelineStoryPage = originalPage;
-  let bestScore = 0;
-  let retryCount = 0;
-  let flagForHuman = false;
-  let failureReason: string | undefined;
-  const candidates: Array<PageCandidate & { retryCount: number; failures: string[] }> = [];
-
-  while (retryCount <= MAX_RETRIES) {
-    const pageValidation = validatePage(bestPage);
-    const alignment = validateAlignment(bestPage, input.childName);
-    bestScore = Math.max(bestScore, alignment.score);
-    const failures = [...pageValidation.failures, ...alignment.failures];
-    candidates.push({
-      retryCount,
-      ...bestPage,
-      alignmentScore: alignment.score,
-      failureReason: failures.join("; ") || undefined,
-      failures,
-      sheetPlacement: sheetTile
-        ? {
-            pageNumber: input.pageNumber,
-            row: sheetTile.row,
-            col: sheetTile.col,
-            panelLabel: sheetTile.panelLabel,
-          }
-        : undefined,
-    });
-
-    await updatePageRecord(page.id, {
-      currentStep: "alignment",
-      status: failures.length === 0 ? "accepted" : "retrying",
-      text: bestPage.text,
-      illustrationPrompt: bestPage.illustrationPrompt,
-      alignmentScore: alignment.score,
-      retryCount,
-      candidatesJson: candidates as unknown as Array<Record<string, unknown>>,
-      failureReason: failures.join("; ") || undefined,
-    });
-    await logEvent({
-      bookId: input.bookId,
-      pageId: page.id,
-      agent: "AlignmentAgent",
-      eventType: "score_generated",
-      payloadJson: {
-        score: alignment.score,
-        status: failures.length === 0 ? "accepted" : "retry",
-        failures,
-      },
-    });
-
-    if (failures.length === 0) {
-      failureReason = undefined;
-      break;
-    }
-
-    failureReason = failures.join("; ");
-    await recordLearningEvent({
-      bookId: input.bookId,
-      pageId: page.id,
-      agent: "IterationController",
-      failureType: "page_validation_or_alignment",
-      lesson: buildRetryLearningLesson({
-        pageNumber: input.pageNumber,
-        failures,
-        retryCount,
-      }),
-      payloadJson: { pageNumber: input.pageNumber, failures, retryCount },
-    });
-
-    if (retryCount >= MAX_RETRIES) {
-      flagForHuman = true;
+  inputJson?: Record<string, unknown>;
+  run: () => Promise<T>;
+  retryLabel: string;
+  allowUndefinedFinalValue?: boolean;
+}): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt += 1) {
+    try {
+      return await logAgentRun({
+        agentName: input.agentName,
+        bookId: input.bookId,
+        inputJson: { ...input.inputJson, attempt },
+        run: input.run,
+      });
+    } catch (error) {
+      lastError = error;
       await logEvent({
         bookId: input.bookId,
-        pageId: page.id,
-        agent: "IterationController",
-        eventType: "max_retries_reached",
-        payloadJson: { retryCount, failureReason },
+        agent: input.agentName,
+        eventType: "attempt_failed",
+        payloadJson: {
+          attempt,
+          retryLabel: input.retryLabel,
+          error: error instanceof Error ? error.message : String(error),
+        },
       });
-      break;
-    }
 
-    retryCount += 1;
-    await logEvent({
-      bookId: input.bookId,
-      pageId: page.id,
-      agent: "IterationController",
-      eventType: "retry_scheduled",
-      payloadJson: { retryCount, failures },
-    });
-
-    bestPage = await logAgentRun({
-      agentName: "PromptBuilderAgent",
-      bookId: input.bookId,
-      pageId: page.id,
-      inputJson: { failures, retryCount },
-      run: async () =>
-        rewritePage(
-          input.config,
-          input.story,
-          input.pageNumber,
-          input.childName,
-          input.characterLock.stylePrompt,
-          failures,
-        ),
-    });
-  }
-
-  if (flagForHuman) {
-    const selected = selectBestCandidate(candidates);
-    if (selected) {
-      bestPage = {
-        pageNumber: selected.pageNumber,
-        text: selected.text,
-        illustrationPrompt: selected.illustrationPrompt,
-      };
-      bestScore = selected.alignmentScore;
-      failureReason = selected.failureReason;
+      if (attempt === MAX_RETRIES) {
+        if (input.allowUndefinedFinalValue) {
+          return undefined as T;
+        }
+        throw error;
+      }
     }
   }
 
-  await updatePageRecord(page.id, {
-    currentStep: "iteration_controller",
-    status: flagForHuman ? "qa_required" : "completed",
-    text: bestPage.text,
-    illustrationPrompt: bestPage.illustrationPrompt,
-    alignmentScore: bestScore,
-    retryCount,
-    flagForHuman,
-    failureReason,
-    candidatesJson: candidates as unknown as Array<Record<string, unknown>>,
-  });
-
-  return {
-    ...bestPage,
-    alignmentScore: bestScore,
-    retryCount,
-    flagForHuman,
-    failureReason,
-  };
+  throw lastError instanceof Error ? lastError : new Error(`Failed to complete ${input.retryLabel}.`);
 }

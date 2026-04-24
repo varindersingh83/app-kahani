@@ -65,13 +65,14 @@ export function runPackagingAgent(input: {
   return GenerateStoryResponse.parse(story);
 }
 
-export function runHumanQaGate(pages: ProducedPage[]) {
+export function runHumanQaGate(pages: ProducedPage[], bookFlagForHuman = false) {
   const flaggedPages = pages.filter((page) => page.flagForHuman).map((page) => page.pageNumber);
   const retryTotal = pages.reduce((total, page) => total + page.retryCount, 0);
+  const flaggedForHuman = bookFlagForHuman || flaggedPages.length > 0;
 
   return {
-    status: flaggedPages.length > 0 ? "qa_required" : "completed",
-    flaggedForHuman: flaggedPages.length > 0,
+    status: flaggedForHuman ? "qa_required" : "completed",
+    flaggedForHuman,
     flaggedPages,
     retryTotal,
   };

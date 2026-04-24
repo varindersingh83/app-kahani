@@ -86,8 +86,8 @@ def main() -> int:
                     "pageNumber": index + 1,
                     "row": row + 1,
                     "col": col + 1,
-                    "source": str(args.input),
-                    "output": str(out_path),
+                    "source": args.input.as_uri(),
+                    "output": out_path.as_uri(),
                     "crop": {
                         "left": left,
                         "top": top,

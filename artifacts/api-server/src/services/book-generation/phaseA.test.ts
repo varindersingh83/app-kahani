@@ -1,210 +1,118 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { PipelineStory, StoryRequest } from "./types";
+import type { StoryRequest } from "./types";
 import {
   buildBehaviorContext,
   buildBookSetup,
+  buildStoryPlan,
   buildSupportingCastContext,
   runCharacterConsistencyAgent,
   runInputAgent,
-  runStoryboardAgent,
-  runStorySpineAgent,
-  runStoryWriterValidation,
 } from "./phaseA";
+import { getSheetPlacement } from "./sheet";
 
-const request: StoryRequest = {
-  mode: "behavior",
-  prompt: " sharing toys kindly ",
-  character: {
-    name: " Mia ",
-    appearance: "curly brown hair, yellow rain boots",
-  },
-  supportingCharacters: [
-    {
-      name: "Dad",
-      relationship: "father",
-    },
-  ],
-};
-
-const story: PipelineStory = {
-  title: "Mia Shares the Sunny Blocks",
-  reflectionQuestion: "What helped Mia share?",
-  pages: Array.from({ length: 12 }, (_, index) => ({
-    pageNumber: index + 1,
-    text:
-      index === 0
-        ? "Mia smiles at the sunny blocks."
-        : index === 6
-          ? "Mia feels proud when Dad notices her kind turn."
-          : index === 11
-            ? "Mia feels calm and happy."
-            : "Mia takes a gentle turn.",
-    illustrationPrompt: `Warm watercolor scene with Mia and sunny blocks on page ${index + 1}.`,
-  })),
-};
-
-test("Phase A Step 1 InputAgent normalizes parent input without inventing fields", () => {
-  const normalized = runInputAgent(request);
-
-  assert.equal(normalized.mode, "behavior");
-  assert.equal(normalized.prompt, "sharing toys kindly");
-  assert.equal(normalized.character.name, "Mia");
-  assert.equal(normalized.character.appearance, "curly brown hair, yellow rain boots");
-  assert.deepEqual(normalized.supportingCharacters, [{ name: "Dad", relationship: "father" }]);
-});
-
-test("Phase A Step 1 context builders preserve behavior intent and supporting cast", () => {
-  const behaviorContext = buildBehaviorContext(request);
-  const castContext = buildSupportingCastContext(request);
-
-  assert.match(behaviorContext, /sharing toys kindly/);
-  assert.match(behaviorContext, /Never shame the child/);
-  assert.match(castContext, /Dad \(father\)/);
-  assert.match(castContext, /do not force them/);
-});
-
-test("Phase A Step 2 StorySpineAgent derives beginning, middle, ending, and emotional arc", () => {
-  const spine = runStorySpineAgent(story);
-
-  assert.equal(spine.beginning, "Mia smiles at the sunny blocks.");
-  assert.equal(spine.middle, "Mia feels proud when Dad notices her kind turn.");
-  assert.equal(spine.ending, "Mia feels calm and happy.");
-  assert.equal(spine.emotionalArc, "curious to challenged to confident");
-});
-
-test("Phase A Step 3 StoryWriterAgent validation accepts a complete 12-page story", () => {
-  const validation = runStoryWriterValidation(story);
-
-  assert.equal(validation.ok, true);
-  assert.deepEqual(validation.failures, []);
-});
-
-test("Phase A Step 3 StoryWriterAgent validation rejects malformed story output", () => {
-  const validation = runStoryWriterValidation({
-    ...story,
-    pages: story.pages.slice(0, 11),
-  });
-
-  assert.equal(validation.ok, false);
-  assert.match(validation.failures.join("\n"), /expected 12 pages/);
-  assert.match(validation.failures.join("\n"), /missing page 12/);
-});
-
-test("Phase A Step 4 StoryboardAgent creates one visual beat per page in order", () => {
-  const storyboard = runStoryboardAgent(story);
-
-  assert.equal(storyboard.length, 12);
-  assert.equal(storyboard[0]?.pageNumber, 1);
-  assert.equal(storyboard[11]?.pageNumber, 12);
-  assert.equal(storyboard[0]?.beat, "Mia smiles at the sunny blocks.");
-  assert.match(storyboard[0]?.visualFocus ?? "", /Warm watercolor scene/);
-  assert.equal(storyboard[6]?.emotion, "proud");
-  assert.deepEqual(storyboard[0]?.sheetPlacement, {
-    pageNumber: 1,
-    row: 1,
-    col: 1,
-    panelLabel: "Panel 1 (1x1)",
-  });
-  assert.deepEqual(storyboard[11]?.sheetPlacement, {
-    pageNumber: 12,
-    row: 4,
-    col: 3,
-    panelLabel: "Panel 12 (4x3)",
-  });
-});
-
-test("Phase A Step 5 CharacterConsistencyAgent locks identity and style constraints", () => {
-  const lock = runCharacterConsistencyAgent(request);
-
-  assert.equal(lock.name, "Mia");
-  assert.equal(lock.appearance, "curly brown hair, yellow rain boots");
-  assert.match(lock.stylePrompt, /curly brown hair, yellow rain boots/);
-  assert.match(lock.stylePrompt, /Warm watercolor/);
-  assert.match(lock.negativePrompt, /No scary imagery/);
-  assert.match(lock.negativePrompt, /no inconsistent character traits/);
-});
-
-test("Phase A setup combines spine, storyboard, and character lock", () => {
-  const setup = buildBookSetup(request, story);
-
-  assert.equal(setup.spine.beginning, story.pages[0]?.text);
-  assert.equal(setup.storyboard.length, 12);
-  assert.equal(setup.characterLock.appearance, "curly brown hair, yellow rain boots");
-});
-
-test("Phase A integration turns parent input and story output into the expected setup artifact", () => {
-  const parentInput: StoryRequest = {
+test("Phase A input agent trims and normalizes parent input", () => {
+  const normalized = runInputAgent({
     mode: "behavior",
-    prompt:
-      "My child is learning to stop grabbing toys and ask for a turn with her little brother.",
+    prompt: "  My child is learning to ask for a turn.  ",
     character: {
       name: " Ava ",
-      photoUri: "file:///parent/ava.jpg",
+      photoUri: "file:///parent/uploads/ava.jpg",
+    },
+  });
+
+  assert.equal(normalized.mode, "behavior");
+  assert.equal(normalized.prompt, "My child is learning to ask for a turn.");
+  assert.equal(normalized.character.name, "Ava");
+});
+
+test("Phase A contexts build a reusable story brief for the image model", () => {
+  const request: StoryRequest = {
+    mode: "behavior",
+    prompt: "My child is learning to ask for a turn instead of grabbing toys.",
+    character: {
+      name: "Ava",
+      photoUri: "file:///parent/uploads/ava.jpg",
     },
     supportingCharacters: [
       {
         name: "Leo",
         relationship: "little brother",
       },
-      {
-        name: "Mom",
-        relationship: "mother",
-      },
     ],
   };
 
-  const storyWriterOutput: PipelineStory = {
-    title: "Ava's Gentle Turn",
-    reflectionQuestion: "What can Ava say when she wants a turn?",
-    pages: Array.from({ length: 12 }, (_, index) => ({
-      pageNumber: index + 1,
-      text:
-        index === 0
-          ? "Ava sees Leo holding the shiny train."
-          : index === 5
-            ? "Ava feels upset, then takes a slow breath."
-            : index === 11
-              ? "Ava feels proud when she and Leo play together."
-              : "Ava asks for a turn with gentle words.",
-      illustrationPrompt: `Warm watercolor scene of Ava in a red cardigan with Leo and the shiny train, page ${
-        index + 1
-      }.`,
-    })),
-  };
+  const behaviorContext = buildBehaviorContext(request);
+  const supportingCastContext = buildSupportingCastContext(request);
 
-  const normalizedInput = runInputAgent(parentInput);
-  const behaviorContext = buildBehaviorContext(normalizedInput);
-  const supportingCast = buildSupportingCastContext(normalizedInput);
-  const storyValidation = runStoryWriterValidation(storyWriterOutput);
-  const setup = buildBookSetup(normalizedInput, storyWriterOutput);
+  assert.match(behaviorContext, /gentle behavior-support story/);
+  assert.match(behaviorContext, /never shame the child/i);
+  assert.match(supportingCastContext, /Leo \(little brother\)/);
+});
 
-  assert.equal(normalizedInput.character.name, "Ava");
-  assert.equal(normalizedInput.prompt, parentInput.prompt);
-  assert.match(behaviorContext, /stop grabbing toys and ask for a turn/);
-  assert.match(supportingCast, /Leo \(little brother\)/);
-  assert.match(supportingCast, /Mom \(mother\)/);
+test("Phase A character consistency agent locks the child appearance and style", () => {
+  const lock = runCharacterConsistencyAgent({
+    mode: "random",
+    character: {
+      name: "Noah",
+      appearance: "curly hair, yellow raincoat, blue boots",
+    },
+  });
 
-  assert.equal(storyValidation.ok, true);
-  assert.equal(setup.spine.beginning, "Ava sees Leo holding the shiny train.");
-  assert.equal(setup.spine.middle, "Ava asks for a turn with gentle words.");
-  assert.equal(setup.spine.ending, "Ava feels proud when she and Leo play together.");
+  assert.equal(lock.name, "Noah");
+  assert.match(lock.stylePrompt, /warm watercolor children's book style/i);
+  assert.match(lock.negativePrompt, /No scary imagery/);
+});
 
-  assert.equal(setup.storyboard.length, 12);
-  assert.deepEqual(
-    setup.storyboard.map((page) => page.pageNumber),
-    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+test("Phase A setup combines the brief, character lock, and fixed 3x4 sheet slots", () => {
+  const setup = buildBookSetup(
+    {
+      mode: "behavior",
+      prompt: "My child is learning to wait their turn.",
+      character: {
+        name: "Ava",
+        photoUri: "file:///parent/uploads/ava.jpg",
+      },
+    },
+    "Prioritize calm, short sentences.",
   );
-  assert.match(setup.storyboard[0]?.visualFocus ?? "", /Warm watercolor scene of Ava/);
-  assert.equal(setup.storyboard[5]?.emotion, "supported");
-  assert.equal(setup.storyboard[11]?.emotion, "proud");
 
+  assert.equal(setup.brief.childName, "Ava");
+  assert.match(setup.brief.behaviorContext, /wait their turn/);
+  assert.match(setup.brief.learningHints, /calm, short sentences/);
+  assert.equal(setup.pageSlots.length, 12);
+  assert.deepEqual(setup.pageSlots[0], getSheetPlacement(1));
+  assert.deepEqual(setup.pageSlots[11], getSheetPlacement(12));
   assert.equal(setup.characterLock.name, "Ava");
-  assert.equal(
-    setup.characterLock.appearance,
-    "consistent child appearance based on the uploaded reference photo",
+});
+
+test("Phase A story plan creates a canonical 12-page story before image generation", () => {
+  const setup = buildBookSetup(
+    {
+      mode: "behavior",
+      prompt: "My child is learning to ask for a turn.",
+      character: {
+        name: "Ava",
+        photoUri: "file:///parent/uploads/ava.jpg",
+      },
+      supportingCharacters: [
+        {
+          name: "Leo",
+          relationship: "little brother",
+        },
+      ],
+    },
+    "Keep the tone calm and reassuring.",
   );
-  assert.match(setup.characterLock.stylePrompt, /Ava appears consistently throughout/);
-  assert.match(setup.characterLock.stylePrompt, /uploaded reference photo/);
-  assert.match(setup.characterLock.negativePrompt, /no inconsistent character traits/);
+
+  const storyPlan = buildStoryPlan(setup);
+
+  assert.equal(storyPlan.pages.length, 12);
+  assert.match(storyPlan.title, /Ava and the My child is learning to ask for a turn/);
+  assert.match(storyPlan.reflectionQuestion, /What can Ava try/);
+  assert.match(storyPlan.storySpine.beginning, /Ava/);
+  assert.match(storyPlan.masterSheetPrompt, /Use the following page plan as the canonical narrative order and visual direction/i);
+  assert.match(storyPlan.masterSheetPrompt, /Canonical page text to keep aligned with the sheet/i);
+  assert.match(storyPlan.masterSheetPrompt, /Page 1:/);
+  assert.match(storyPlan.pages[0]!.text, /Ava/);
 });
