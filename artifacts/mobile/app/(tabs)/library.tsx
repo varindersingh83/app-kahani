@@ -12,7 +12,10 @@ export default function LibraryScreen() {
 
   const handleRead = (story: (typeof savedStories)[number]) => {
     openStory(story);
-    router.push("/book-reader");
+    router.push({
+      pathname: "/book-reader",
+      params: { storyId: story.id },
+    });
   };
 
   return (
@@ -69,7 +72,11 @@ export default function LibraryScreen() {
                 <Text style={[styles.bookFor, { color: colors.primary }]}>
                   For {story.characterName}
                 </Text>
-                <Text style={[styles.bookTitle, { color: colors.foreground }]} numberOfLines={2}>
+                <Text
+                  onPress={() => handleRead(story)}
+                  style={[styles.bookTitle, { color: colors.foreground }]}
+                  numberOfLines={2}
+                >
                   {story.title}
                 </Text>
                 <Text style={[styles.bookPreview, { color: colors.mutedForeground }]} numberOfLines={3}>

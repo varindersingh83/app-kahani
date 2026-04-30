@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React, { useRef, useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Dimensions,
   FlatList,
@@ -35,11 +35,26 @@ type PageItem =
 
 export default function BookReaderScreen() {
   const insets = useSafeAreaInsets();
-  const { currentStory, saveCurrentStory, savedStories } = useStoryStudio();
+  const { currentStory, openStoryById, saveCurrentStory, savedStories } = useStoryStudio();
+  const { storyId } = useLocalSearchParams<{ storyId?: string }>();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
+  const requestedStoryId = typeof storyId === "string" ? storyId : undefined;
+  const routeStory = useMemo(
+    () =>
+      requestedStoryId
+        ? savedStories.find((savedStory) => savedStory.id === requestedStoryId) ?? null
+        : null,
+    [requestedStoryId, savedStories],
+  );
+  const story = routeStory ?? currentStory;
 
-  if (!currentStory) {
+  useEffect(() => {
+    if (!requestedStoryId || currentStory?.id === requestedStoryId) return;
+    openStoryById(requestedStoryId);
+  }, [currentStory?.id, openStoryById, requestedStoryId]);
+
+  if (!story) {
     return (
       <View style={[styles.center, { backgroundColor: "#FFFCF6" }]}>
         <Text style={styles.noStory}>No story loaded. Go generate one!</Text>
@@ -52,11 +67,11 @@ export default function BookReaderScreen() {
 
   const items: PageItem[] = [
     { type: "cover" },
-    ...currentStory.pages.map((page) => ({ type: "page" as const, page })),
+    ...story.pages.map((page) => ({ type: "page" as const, page })),
     { type: "end" },
   ];
 
-  const isSaved = savedStories.some((s) => s.id === currentStory.id);
+  const isSaved = savedStories.some((s) => s.id === story.id);
 
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -80,9 +95,9 @@ export default function BookReaderScreen() {
 
   const renderCover = () => (
     <View style={[styles.page, { backgroundColor: "#2C1B0E" }]}>
-      {currentStory.coverImageUrl ? (
+      {story.coverImageUrl ? (
         <Image
-          source={{ uri: currentStory.coverImageUrl }}
+          source={{ uri: story.coverImageUrl }}
           style={styles.coverImage}
           resizeMode="cover"
         />
@@ -91,9 +106,9 @@ export default function BookReaderScreen() {
           <View style={[styles.blob, { backgroundColor: "rgba(191,216,196,0.25)", top: -60, left: -40, width: 260, height: 200 }]} />
           <View style={[styles.blob, { backgroundColor: "rgba(242,201,183,0.25)", top: 20, right: -40, width: 220, height: 180 }]} />
           <View style={[styles.blob, { backgroundColor: "rgba(207,228,232,0.20)", bottom: 40, left: 20, width: 240, height: 190 }]} />
-          {currentStory.characterPhotoUri ? (
+          {story.characterPhotoUri ? (
             <Image
-              source={{ uri: currentStory.characterPhotoUri }}
+              source={{ uri: story.characterPhotoUri }}
               style={styles.coverCharacterPhoto}
               resizeMode="cover"
             />
@@ -106,10 +121,10 @@ export default function BookReaderScreen() {
       )}
       <View style={styles.coverOverlay}>
         <Text style={styles.coverFor}>A story for</Text>
-        <Text style={styles.coverName}>{currentStory.characterName}</Text>
+        <Text style={styles.coverName}>{story.characterName}</Text>
         <View style={styles.coverDivider} />
-        <Text style={styles.coverTitle}>{currentStory.title}</Text>
-        <Text style={styles.coverSubtitle}>A Kahani story · {currentStory.pages.length} pages</Text>
+        <Text style={styles.coverTitle}>{story.title}</Text>
+        <Text style={styles.coverSubtitle}>A Kahani story · {story.pages.length} pages</Text>
       </View>
     </View>
   );
@@ -124,10 +139,10 @@ export default function BookReaderScreen() {
         </View>
 
         <View style={[styles.pageContent, { paddingTop: insets.top + 28 }]}>
-          {currentStory.characterPhotoUri ? (
+          {story.characterPhotoUri ? (
             <View style={styles.characterFrame}>
               <Image
-                source={{ uri: currentStory.characterPhotoUri }}
+                source={{ uri: story.characterPhotoUri }}
                 style={styles.characterPhoto}
                 resizeMode="cover"
               />
@@ -148,7 +163,7 @@ export default function BookReaderScreen() {
           </View>
 
           <Text style={styles.pageNumber}>
-            {page.pageNumber} / {currentStory.pages.length}
+            {page.pageNumber} / {story.pages.length}
           </Text>
         </View>
       </View>
@@ -165,11 +180,11 @@ export default function BookReaderScreen() {
       <View style={[styles.pageContent, { paddingTop: insets.top + 40, justifyContent: "center", alignItems: "center" }]}>
         <Text style={styles.endEmoji}>✨</Text>
         <Text style={styles.endTitle}>The End</Text>
-        <Text style={styles.endName}>{currentStory.title}</Text>
+        <Text style={styles.endName}>{story.title}</Text>
 
         <View style={styles.reflectionCard}>
           <Text style={styles.reflectionLabel}>Talk about it together</Text>
-          <Text style={styles.reflectionText}>{currentStory.reflectionQuestion}</Text>
+          <Text style={styles.reflectionText}>{story.reflectionQuestion}</Text>
         </View>
 
         {!isSaved && (

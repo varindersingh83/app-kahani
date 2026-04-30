@@ -29,7 +29,7 @@ export default function StudioScreen() {
     selectedCharacterId,
     selectCharacter,
     currentStory,
-    setGeneratedStory,
+    createGeneratedStory,
     saveCurrentStory,
     savedStories,
   } = useStoryStudio();
@@ -38,8 +38,8 @@ export default function StudioScreen() {
 
   const mutation = useGenerateStory({
     mutation: {
-      onSuccess: (story) => {
-        setGeneratedStory({
+      onSuccess: async (story) => {
+        await createGeneratedStory({
           title: story.title,
           pages: story.pages,
           reflectionQuestion: story.reflectionQuestion,
@@ -269,7 +269,16 @@ export default function StudioScreen() {
               <Text style={[styles.bookFor, { color: colors.primary }]}>
                 For {currentStory.characterName}
               </Text>
-              <Text style={[styles.bookTitle, { color: colors.foreground }]} numberOfLines={3}>
+              <Text
+                onPress={() =>
+                  router.push({
+                    pathname: "/book-reader",
+                    params: { storyId: currentStory.id },
+                  })
+                }
+                style={[styles.bookTitle, { color: colors.foreground }]}
+                numberOfLines={3}
+              >
                 {currentStory.title}
               </Text>
               <Text style={[styles.bookPageCount, { color: colors.mutedForeground }]}>
@@ -296,7 +305,12 @@ export default function StudioScreen() {
 
           {/* Actions */}
           <Pressable
-            onPress={() => router.push("/book-reader")}
+            onPress={() =>
+              router.push({
+                pathname: "/book-reader",
+                params: { storyId: currentStory.id },
+              })
+            }
             style={({ pressed }) => [
               styles.openButton,
               { backgroundColor: colors.primary, opacity: pressed ? 0.82 : 1 },
