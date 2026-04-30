@@ -41,7 +41,9 @@ type StoryContextValue = {
   removeCharacter: (id: string) => Promise<void>;
   selectCharacter: (id: string) => Promise<void>;
   setGeneratedStory: (story: Omit<Story, "id" | "createdAt">) => void;
+  createGeneratedStory: (story: Omit<Story, "id" | "createdAt">) => Promise<Story>;
   openStory: (story: Story) => void;
+  openStoryById: (id: string) => Story | null;
   saveCurrentStory: () => Promise<void>;
   removeStory: (id: string) => Promise<void>;
 };
@@ -130,9 +132,36 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const createGeneratedStory = useCallback(
+    async (story: Omit<Story, "id" | "createdAt">) => {
+      const generatedStory: Story = {
+        ...story,
+        id: createId(),
+        createdAt: new Date().toISOString(),
+      };
+      const nextStories = [generatedStory, ...savedStories];
+      setCurrentStory(generatedStory);
+      setSavedStories(nextStories);
+      await persist({ savedStories: nextStories });
+      return generatedStory;
+    },
+    [persist, savedStories],
+  );
+
   const openStory = useCallback((story: Story) => {
     setCurrentStory(story);
   }, []);
+
+  const openStoryById = useCallback(
+    (id: string) => {
+      const story = savedStories.find((savedStory) => savedStory.id === id) ?? null;
+      if (story) {
+        setCurrentStory(story);
+      }
+      return story;
+    },
+    [savedStories],
+  );
 
   const saveCurrentStory = useCallback(async () => {
     if (!currentStory) return;
@@ -167,15 +196,19 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
       removeCharacter,
       selectCharacter,
       setGeneratedStory,
+      createGeneratedStory,
       openStory,
+      openStoryById,
       saveCurrentStory,
       removeStory,
     }),
     [
       addCharacter,
       characters,
+      createGeneratedStory,
       currentStory,
       openStory,
+      openStoryById,
       removeCharacter,
       removeStory,
       saveCurrentStory,
