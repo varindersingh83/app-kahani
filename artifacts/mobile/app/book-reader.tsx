@@ -33,6 +33,16 @@ type PageItem =
   | { type: "page"; page: StoryPage }
   | { type: "end" };
 
+const ids = {
+  screen: "book-reader-screen",
+  pages: "book-reader-pages",
+  closeButton: "book-reader-close-button",
+  previousButton: "book-reader-previous-button",
+  nextButton: "book-reader-next-button",
+  saveButton: "book-reader-save-button",
+  progressDots: "book-reader-progress-dots",
+};
+
 export default function BookReaderScreen() {
   const insets = useSafeAreaInsets();
   const { currentStory, saveCurrentStory, savedStories } = useStoryStudio();
@@ -43,7 +53,12 @@ export default function BookReaderScreen() {
     return (
       <View style={[styles.center, { backgroundColor: "#FFFCF6" }]}>
         <Text style={styles.noStory}>No story loaded. Go generate one!</Text>
-        <Pressable onPress={() => router.back()} style={styles.closeBtn}>
+        <Pressable
+          testID={ids.closeButton}
+          nativeID={ids.closeButton}
+          onPress={() => router.back()}
+          style={styles.closeBtn}
+        >
           <Feather name="x" color="#8B7B5A" size={22} />
         </Pressable>
       </View>
@@ -79,7 +94,7 @@ export default function BookReaderScreen() {
   };
 
   const renderCover = () => (
-    <View style={[styles.page, { backgroundColor: "#2C1B0E" }]}>
+    <View testID="book-reader-cover" nativeID="book-reader-cover" style={[styles.page, { backgroundColor: "#2C1B0E" }]}>
       {currentStory.coverImageUrl ? (
         <Image
           source={{ uri: currentStory.coverImageUrl }}
@@ -99,7 +114,7 @@ export default function BookReaderScreen() {
             />
           ) : (
             <View style={styles.coverIconWrap}>
-              <Text style={styles.coverBookEmoji}>📖</Text>
+              <Feather name="book-open" color="rgba(255,230,195,0.8)" size={68} />
             </View>
           )}
         </View>
@@ -156,14 +171,16 @@ export default function BookReaderScreen() {
   };
 
   const renderEnd = () => (
-    <View style={[styles.page, { backgroundColor: "#F8F2EA" }]}>
+    <View testID="book-reader-end" nativeID="book-reader-end" style={[styles.page, { backgroundColor: "#F8F2EA" }]}>
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
         <View style={[styles.blob, { backgroundColor: "rgba(191,216,196,0.50)", top: -80, left: -60, width: 300, height: 240 }]} />
         <View style={[styles.blob, { backgroundColor: "rgba(255,230,195,0.50)", bottom: -40, right: -50, width: 280, height: 220 }]} />
       </View>
 
       <View style={[styles.pageContent, { paddingTop: insets.top + 40, justifyContent: "center", alignItems: "center" }]}>
-        <Text style={styles.endEmoji}>✨</Text>
+        <View style={styles.endIcon}>
+          <Feather name="star" color="#8B7B5A" size={30} />
+        </View>
         <Text style={styles.endTitle}>The End</Text>
         <Text style={styles.endName}>{currentStory.title}</Text>
 
@@ -174,6 +191,8 @@ export default function BookReaderScreen() {
 
         {!isSaved && (
           <Pressable
+            testID={ids.saveButton}
+            nativeID={ids.saveButton}
             onPress={saveCurrentStory}
             style={({ pressed }) => [styles.saveBtn, { opacity: pressed ? 0.8 : 1 }]}
           >
@@ -192,8 +211,10 @@ export default function BookReaderScreen() {
   );
 
   return (
-    <View style={styles.root}>
+    <View testID={ids.screen} nativeID={ids.screen} style={styles.root}>
       <FlatList
+        testID={ids.pages}
+        nativeID={ids.pages}
         ref={flatListRef}
         data={items}
         horizontal
@@ -211,6 +232,8 @@ export default function BookReaderScreen() {
 
       {/* Close button */}
       <Pressable
+        testID={ids.closeButton}
+        nativeID={ids.closeButton}
         onPress={() => router.back()}
         style={[styles.closeButton, { top: insets.top + 16 }]}
       >
@@ -220,6 +243,8 @@ export default function BookReaderScreen() {
       {/* Navigation arrows */}
       {currentIndex > 0 && (
         <Pressable
+          testID={ids.previousButton}
+          nativeID={ids.previousButton}
           onPress={goPrev}
           style={[styles.navButton, styles.navLeft, { top: SCREEN_HEIGHT / 2 - 22 }]}
         >
@@ -228,6 +253,8 @@ export default function BookReaderScreen() {
       )}
       {currentIndex < items.length - 1 && (
         <Pressable
+          testID={ids.nextButton}
+          nativeID={ids.nextButton}
           onPress={goNext}
           style={[styles.navButton, styles.navRight, { top: SCREEN_HEIGHT / 2 - 22 }]}
         >
@@ -236,7 +263,7 @@ export default function BookReaderScreen() {
       )}
 
       {/* Progress dots */}
-      <View style={[styles.dots, { bottom: insets.bottom + 24 }]}>
+      <View testID={ids.progressDots} nativeID={ids.progressDots} style={[styles.dots, { bottom: insets.bottom + 24 }]}>
         {items.map((_, i) => (
           <View
             key={i}
@@ -299,11 +326,15 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   coverCharacterPhoto: {
-    width: 220,
-    height: 220,
+    width: 250,
+    height: 250,
     borderRadius: 999,
-    borderWidth: 6,
-    borderColor: "rgba(255,230,195,0.5)",
+    borderWidth: 7,
+    borderColor: "rgba(255,230,195,0.55)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
   },
   coverIconWrap: {
     width: 160,
@@ -313,9 +344,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  coverBookEmoji: {
-    fontSize: 72,
-  },
   coverOverlay: {
     position: "absolute",
     bottom: 0,
@@ -324,7 +352,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
     paddingHorizontal: 28,
     paddingTop: 40,
-    backgroundColor: "rgba(20,12,6,0.72)",
+    backgroundColor: "rgba(20,12,6,0.76)",
     alignItems: "center",
     gap: 8,
   },
@@ -364,9 +392,9 @@ const styles = StyleSheet.create({
 
   // Story page
   characterFrame: {
-    width: 180,
-    height: 180,
-    borderRadius: 50,
+    width: 190,
+    height: 190,
+    borderRadius: 56,
     overflow: "hidden",
     borderWidth: 4,
     borderColor: "rgba(255,255,255,0.7)",
@@ -434,8 +462,13 @@ const styles = StyleSheet.create({
   },
 
   // End page
-  endEmoji: {
-    fontSize: 52,
+  endIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "rgba(255,230,195,0.7)",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 4,
   },
   endTitle: {
@@ -506,7 +539,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(0,0,0,0.42)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -520,7 +553,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "rgba(0,0,0,0.28)",
+    backgroundColor: "rgba(0,0,0,0.34)",
     alignItems: "center",
     justifyContent: "center",
   },

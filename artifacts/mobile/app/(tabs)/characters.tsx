@@ -17,6 +17,16 @@ import {
 import { useStoryStudio } from "@/context/StoryContext";
 import { useColors } from "@/hooks/useColors";
 
+const ids = {
+  screen: "add-character-screen",
+  photoPreview: "add-character-photo-preview",
+  takePhoto: "add-character-take-photo",
+  uploadPhoto: "add-character-upload-photo",
+  nameInput: "add-character-name-input",
+  saveButton: "add-character-save-button",
+  savedList: "add-character-saved-list",
+};
+
 export default function CharactersScreen() {
   const colors = useColors();
   const { characters, addCharacter, removeCharacter, selectCharacter, selectedCharacterId } =
@@ -67,10 +77,12 @@ export default function CharactersScreen() {
     }
   };
 
-  const ready = name.trim().length > 0;
+  const ready = name.trim().length > 0 && Boolean(photoUri);
 
   return (
     <ScrollView
+      testID={ids.screen}
+      nativeID={ids.screen}
       style={styles.root}
       contentContainerStyle={[styles.content, { paddingTop: Platform.OS === "web" ? 84 : 22 }]}
       keyboardShouldPersistTaps="handled"
@@ -80,17 +92,23 @@ export default function CharactersScreen() {
         <View style={[styles.blob, styles.blobSage]} />
         <View style={[styles.blob, styles.blobPeach]} />
         <View style={[styles.blob, styles.blobCream]} />
+        <View style={[styles.blob, styles.blobMint]} />
       </View>
 
       {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.kicker, { color: colors.primary }]}>Characters</Text>
         <Text style={[styles.title, { color: colors.foreground }]}>Add a little one</Text>
+        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+          A photo and name make each story feel like it was made just for them.
+        </Text>
       </View>
 
       {/* Photo area */}
       <View style={styles.avatarSection}>
         <Pressable
+          testID={ids.photoPreview}
+          nativeID={ids.photoPreview}
           onPress={photoUri ? takeSelfie : undefined}
           style={[
             styles.avatarCircle,
@@ -115,7 +133,7 @@ export default function CharactersScreen() {
 
         <View style={[styles.tagPill, photoUri ? styles.tagPillDone : styles.tagPillDefault]}>
           <Text style={[styles.tagText, { color: photoUri ? "#5E7A60" : "#B8A882" }]}>
-            {photoUri ? "Looking great! ✨" : "A selfie or photo works perfectly"}
+            {photoUri ? "Looking great" : "A selfie or photo works perfectly"}
           </Text>
         </View>
       </View>
@@ -123,6 +141,8 @@ export default function CharactersScreen() {
       {/* Photo buttons */}
       <View style={styles.photoButtons}>
         <Pressable
+          testID={ids.takePhoto}
+          nativeID={ids.takePhoto}
           onPress={takeSelfie}
           style={({ pressed }) => [styles.photoBtn, styles.photoBtnBlush, { opacity: pressed ? 0.75 : 1 }]}
         >
@@ -131,6 +151,8 @@ export default function CharactersScreen() {
         </Pressable>
 
         <Pressable
+          testID={ids.uploadPhoto}
+          nativeID={ids.uploadPhoto}
           onPress={pickPhoto}
           style={({ pressed }) => [styles.photoBtn, styles.photoBtnSky, { opacity: pressed ? 0.75 : 1 }]}
         >
@@ -151,6 +173,8 @@ export default function CharactersScreen() {
         <Text style={[styles.inputLabel, { color: colors.primary }]}>THEIR NAME</Text>
         <View style={styles.inputWrap}>
           <TextInput
+            testID={ids.nameInput}
+            nativeID={ids.nameInput}
             value={name}
             onChangeText={setName}
             placeholder="e.g. Mia, Zayan, Lily…"
@@ -170,6 +194,8 @@ export default function CharactersScreen() {
 
       {/* Save button */}
       <Pressable
+        testID={ids.saveButton}
+        nativeID={ids.saveButton}
         onPress={save}
         disabled={!ready}
         style={({ pressed }) => [
@@ -180,7 +206,7 @@ export default function CharactersScreen() {
       >
         <Feather name="arrow-right" color="white" size={19} />
         <Text style={styles.saveText}>
-          {name.trim() ? `Add ${name.trim()} to Kahani` : "Add to Kahani"}
+          {ready ? `Add ${name.trim()} to Kahani` : "Add selfie and name first"}
         </Text>
       </Pressable>
 
@@ -190,7 +216,7 @@ export default function CharactersScreen() {
 
       {/* Saved characters list */}
       {characters.length > 0 && (
-        <View style={styles.savedList}>
+        <View testID={ids.savedList} nativeID={ids.savedList} style={styles.savedList}>
           <Text style={[styles.savedLabel, { color: colors.primary }]}>YOUR LITTLE ONES</Text>
           {characters.map((character) => {
             const selected = character.id === selectedCharacterId;
@@ -198,6 +224,8 @@ export default function CharactersScreen() {
               <Pressable
                 key={character.id}
                 onPress={() => selectCharacter(character.id)}
+                testID={`add-character-row-${character.id}`}
+                nativeID={`add-character-row-${character.id}`}
                 style={[
                   styles.characterRow,
                   {
@@ -219,7 +247,12 @@ export default function CharactersScreen() {
                     <Feather name="check" color={colors.primary} size={14} />
                   </View>
                 )}
-                <Pressable onPress={() => removeCharacter(character.id)} hitSlop={14}>
+                <Pressable
+                  onPress={() => removeCharacter(character.id)}
+                  hitSlop={14}
+                  testID={`add-character-remove-${character.id}`}
+                  nativeID={`add-character-remove-${character.id}`}
+                >
                   <Feather name="trash-2" color="#C8B89A" size={17} />
                 </Pressable>
               </Pressable>
@@ -272,8 +305,16 @@ const styles = StyleSheet.create({
     right: -50,
     transform: [{ rotate: "-14deg" }],
   },
+  blobMint: {
+    width: 260,
+    height: 190,
+    backgroundColor: "rgba(207,228,201,0.32)",
+    bottom: 250,
+    left: -86,
+    transform: [{ rotate: "8deg" }],
+  },
   header: {
-    marginBottom: 28,
+    marginBottom: 24,
   },
   kicker: {
     fontFamily: "Inter_700Bold",
@@ -286,6 +327,13 @@ const styles = StyleSheet.create({
     fontSize: 30,
     letterSpacing: -0.8,
     marginTop: 6,
+  },
+  subtitle: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 8,
+    maxWidth: 320,
   },
   avatarSection: {
     alignItems: "center",
@@ -302,6 +350,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(244,238,228,0.95)",
+    shadowColor: "#8B774A",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    elevation: 4,
   },
   avatarImage: {
     width: "100%",
@@ -320,12 +373,17 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 10,
     right: 10,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: "#8B7B5A",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 4,
   },
   tagPill: {
     paddingHorizontal: 16,
@@ -360,6 +418,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 20,
     borderWidth: 1.5,
+    shadowColor: "#8B774A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   photoBtnBlush: {
     backgroundColor: "#FFF2EC",
@@ -409,6 +472,10 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     fontSize: 17,
     backgroundColor: "rgba(255,252,246,0.95)",
+    shadowColor: "#8B774A",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
   },
   checkBadge: {
     position: "absolute",
@@ -433,6 +500,11 @@ const styles = StyleSheet.create({
   },
   saveButtonActive: {
     backgroundColor: "#8B7B5A",
+    shadowColor: "#8B7B5A",
+    shadowOffset: { width: 0, height: 7 },
+    shadowOpacity: 0.24,
+    shadowRadius: 18,
+    elevation: 5,
   },
   saveButtonMuted: {
     backgroundColor: "rgba(200,184,154,0.45)",
@@ -466,6 +538,11 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderRadius: 22,
     padding: 12,
+    shadowColor: "#8B774A",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2,
   },
   rowPhoto: {
     width: 52,

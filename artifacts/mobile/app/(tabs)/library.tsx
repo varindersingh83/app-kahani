@@ -6,6 +6,12 @@ import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "
 import { useStoryStudio } from "@/context/StoryContext";
 import { useColors } from "@/hooks/useColors";
 
+const ids = {
+  screen: "library-screen",
+  shelf: "library-story-shelf",
+  emptyState: "library-empty-state",
+};
+
 export default function LibraryScreen() {
   const colors = useColors();
   const { savedStories, removeStory, openStory } = useStoryStudio();
@@ -17,6 +23,8 @@ export default function LibraryScreen() {
 
   return (
     <ScrollView
+      testID={ids.screen}
+      nativeID={ids.screen}
       style={[styles.root, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.content}
     >
@@ -26,9 +34,9 @@ export default function LibraryScreen() {
         A calm shelf for stories your family wants to revisit.
       </Text>
 
-      <View style={styles.grid}>
+      <View testID={ids.shelf} nativeID={ids.shelf} style={styles.grid}>
         {savedStories.length === 0 ? (
-          <View style={[styles.empty, { borderColor: colors.border }]}>
+          <View testID={ids.emptyState} nativeID={ids.emptyState} style={[styles.empty, { borderColor: colors.border }]}>
             <Feather name="book" color={colors.mutedForeground} size={26} />
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
               Generate a story and save it to build your family library.
@@ -38,6 +46,8 @@ export default function LibraryScreen() {
           savedStories.map((story) => (
             <View
               key={story.id}
+              testID={`library-story-card-${story.id}`}
+              nativeID={`library-story-card-${story.id}`}
               style={[styles.bookCard, { backgroundColor: colors.card, borderColor: colors.border }]}
             >
               {/* Cover thumbnail */}
@@ -78,6 +88,8 @@ export default function LibraryScreen() {
 
                 <View style={styles.bookActions}>
                   <Pressable
+                    testID={`library-read-${story.id}`}
+                    nativeID={`library-read-${story.id}`}
                     onPress={() => handleRead(story)}
                     style={({ pressed }) => [
                       styles.readButton,
@@ -88,6 +100,8 @@ export default function LibraryScreen() {
                     <Text style={styles.readButtonText}>Read</Text>
                   </Pressable>
                   <Pressable
+                    testID={`library-remove-${story.id}`}
+                    nativeID={`library-remove-${story.id}`}
                     onPress={() => removeStory(story.id)}
                     style={({ pressed }) => [styles.removeButton, { opacity: pressed ? 0.6 : 1 }]}
                     hitSlop={12}
@@ -138,6 +152,7 @@ const styles = StyleSheet.create({
     padding: 34,
     alignItems: "center",
     gap: 10,
+    backgroundColor: "rgba(255,252,246,0.55)",
   },
   emptyText: {
     fontFamily: "Inter_500Medium",
@@ -150,9 +165,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     overflow: "hidden",
     minHeight: 180,
+    shadowColor: "#8B774A",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 3,
   },
   coverThumb: {
-    width: 96,
+    width: 108,
     position: "relative",
     overflow: "hidden",
   },
@@ -192,7 +212,7 @@ const styles = StyleSheet.create({
   },
   bookBody: {
     flex: 1,
-    padding: 16,
+    padding: 17,
     gap: 6,
   },
   bookFor: {
@@ -226,6 +246,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 9,
     borderRadius: 14,
+    shadowColor: "#8B7B5A",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
+    elevation: 2,
   },
   readButtonText: {
     fontFamily: "Inter_700Bold",
