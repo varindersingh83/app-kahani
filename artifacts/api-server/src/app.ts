@@ -31,7 +31,10 @@ app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 app.use(cors({ credentials: true, origin: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(clerkMiddleware());
+
+if (process.env.CLERK_PUBLISHABLE_KEY || process.env.NODE_ENV === "production") {
+  app.use(clerkMiddleware());
+}
 
 app.use("/api", router);
 
