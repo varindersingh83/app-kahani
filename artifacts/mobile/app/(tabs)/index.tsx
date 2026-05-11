@@ -147,7 +147,7 @@ export default function StudioScreen() {
           placeholder={
             mode === "behavior"
               ? "sharing toys, bedtime resistance, using gentle hands"
-              : "Optional idea, theme, animal, or place"
+              : "picnic with parents, drive home from school, rainy day adventure"
           }
           placeholderTextColor={colors.mutedForeground}
           style={[
