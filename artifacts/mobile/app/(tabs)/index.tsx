@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import { useGenerateStory } from "@workspace/api-client-react";
+import { GeneratedStory, useGenerateStory } from "@workspace/api-client-react";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import React, { useState } from "react";
@@ -16,11 +16,11 @@ import {
 import {
   CharacterAvatar,
   KahaniButton,
-  KahaniHeader,
   KahaniScreen,
   SectionTitle,
   SegmentedControl,
   StoryCard,
+  ThemeToggle,
   cardShadow,
   serifFamily,
 } from "@/components/KahaniDesign";
@@ -51,7 +51,7 @@ export default function StudioScreen() {
 
   const mutation = useGenerateStory({
     mutation: {
-      onSuccess: (story) => {
+      onSuccess: (story: GeneratedStory) => {
         setGeneratedStory({
           title: story.title,
           pages: story.pages,
@@ -94,39 +94,32 @@ export default function StudioScreen() {
 
   const storyTitle = currentStory?.title ?? SAMPLE_TITLE;
   const storyText = currentStory?.pages[0]?.text ?? SAMPLE_TEXT;
-  const characterName = selectedCharacter?.name ?? "Maya";
+  const visibleCharacters = characters.slice(0, 3);
 
   return (
-    <KahaniScreen>
-      <KahaniHeader greeting="Good morning," title={characterName} />
+    <KahaniScreen withLeaves={false}>
+      <View style={styles.topControls}>
+        <ThemeToggle />
+      </View>
 
       <SectionTitle>Choose a character</SectionTitle>
       <View style={styles.characterRow}>
-        {[0, 1, 2, 3].map((slot) => {
-          const character = characters[slot];
-          if (character) {
-            return (
-              <CharacterAvatar
-                key={character.id}
-                label={character.name}
-                imageUri={character.photoUri}
-                selected={character.id === selectedCharacterId}
-                onPress={() => selectCharacter(character.id)}
-              />
-            );
-          }
-          if (slot === characters.length) {
-            return (
-              <CharacterAvatar
-                key="add-character"
-                label="Add"
-                icon="plus"
-                onPress={() => router.push("/(tabs)/characters")}
-              />
-            );
-          }
-          return <CharacterAvatar key={`empty-${slot}`} label=".." icon="more-horizontal" />;
-        })}
+        {visibleCharacters.map((character) => (
+          <CharacterAvatar
+            key={character.id}
+            label={character.name}
+            imageUri={character.photoUri}
+            selected={character.id === selectedCharacterId}
+            onPress={() => selectCharacter(character.id)}
+          />
+        ))}
+        <CharacterAvatar
+          key="add-character"
+          label="Add child"
+          icon="plus"
+          muted
+          onPress={() => router.push("/(tabs)/characters")}
+        />
       </View>
 
       <SectionTitle>Story type</SectionTitle>
@@ -159,19 +152,24 @@ export default function StudioScreen() {
               : "Optional idea, theme, animal, or place"
           }
           placeholderTextColor={colors.mutedForeground}
-          style={[styles.promptInput, { color: colors.foreground }]}
+          style={[
+            styles.promptInput,
+            { color: colors.foreground, outlineColor: "transparent" },
+          ]}
         />
       </View>
 
-      <KahaniButton
-        label={mutation.isPending ? "Writing your story..." : "Generate picture book"}
-        icon="zap"
-        onPress={generate}
-        disabled={mutation.isPending}
-      />
-      {mutation.isPending ? (
-        <ActivityIndicator style={styles.loader} color={colors.primary} />
-      ) : null}
+      <View style={styles.ctaBlock}>
+        <KahaniButton
+          label={mutation.isPending ? "Writing your story..." : "Generate book"}
+          icon="zap"
+          onPress={generate}
+          disabled={mutation.isPending}
+        />
+        {mutation.isPending ? (
+          <ActivityIndicator style={styles.loader} color={colors.primary} />
+        ) : null}
+      </View>
 
       <View style={styles.sectionHeader}>
         <Text style={[styles.cardSectionTitle, { color: colors.foreground }]}>
@@ -205,26 +203,34 @@ export default function StudioScreen() {
 }
 
 const styles = StyleSheet.create({
+  topControls: {
+    alignItems: "flex-end",
+    marginBottom: 22,
+  },
   characterRow: {
     flexDirection: "row",
     gap: 12,
-    marginBottom: 28,
+    flexWrap: "wrap",
+    marginBottom: 24,
   },
   promptBox: {
-    minHeight: 110,
+    minHeight: 128,
     borderWidth: 1,
-    borderRadius: 24,
-    marginTop: 18,
-    marginBottom: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    borderRadius: 20,
+    marginTop: 16,
+    marginBottom: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
   },
   promptInput: {
-    minHeight: 76,
+    minHeight: 96,
     fontFamily: tokens.typography.sansMedium,
-    fontSize: 19,
-    lineHeight: 29,
+    fontSize: 17,
+    lineHeight: 25,
     textAlignVertical: "top",
+  },
+  ctaBlock: {
+    marginBottom: 2,
   },
   loader: {
     marginTop: 12,
@@ -233,7 +239,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 28,
+    marginTop: 52,
     marginBottom: 14,
   },
   cardSectionTitle: {

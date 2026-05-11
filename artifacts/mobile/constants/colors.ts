@@ -109,8 +109,8 @@ const colors = {
   },
   spacing: {
     screenX: 24,
-    screenTop: 64,
-    screenBottom: 126,
+    screenTop: 40,
+    screenBottom: 40,
     gap: 16,
   },
   typography: {

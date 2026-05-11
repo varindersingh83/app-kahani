@@ -3,6 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Tabs } from "expo-router";
 import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import tokens from "@/constants/colors";
 import { useKahaniTheme } from "@/context/ThemeContext";
@@ -37,7 +38,9 @@ function TabIcon({
 
 export default function TabLayout() {
   const { colors } = useKahaniTheme();
+  const insets = useSafeAreaInsets();
   const isDark = colors.scheme === "dark";
+  const tabBarBottom = Math.max(insets.bottom + 10, Platform.OS === "ios" ? 18 : 12);
 
   return (
     <Tabs
@@ -47,28 +50,27 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.mutedForeground,
         tabBarLabelStyle: {
           fontFamily: tokens.typography.serif,
-          fontSize: 14,
-          marginTop: 0,
+          fontSize: 12,
+          lineHeight: 15,
+          marginTop: -2,
         },
         tabBarItemStyle: {
-          paddingVertical: 8,
+          paddingVertical: 4,
         },
         tabBarStyle: {
-          position: "absolute",
-          left: 24,
-          right: 24,
-          bottom: Platform.OS === "ios" ? 24 : 18,
-          height: 96,
+          marginHorizontal: 20,
+          marginBottom: tabBarBottom,
+          height: 82,
           borderTopWidth: 0,
-          borderRadius: 48,
-          paddingTop: 10,
-          paddingBottom: Platform.OS === "ios" ? 16 : 10,
+          borderRadius: 34,
+          paddingTop: 8,
+          paddingBottom: 10,
           overflow: "hidden",
           backgroundColor: colors.wood,
           borderWidth: 1,
           borderColor: isDark ? colors.goldMuted : "#F3C892",
           shadowColor: colors.shadow,
-          shadowOffset: { width: 0, height: 14 },
+          shadowOffset: { width: 0, height: 10 },
           shadowOpacity: 0.28,
           shadowRadius: 24,
           elevation: 8,
@@ -114,9 +116,9 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   iconWrap: {
-    width: 58,
-    height: 44,
-    borderRadius: 18,
+    width: 48,
+    height: 34,
+    borderRadius: 15,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",

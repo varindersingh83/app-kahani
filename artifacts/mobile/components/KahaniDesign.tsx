@@ -5,6 +5,8 @@ import React from "react";
 import {
   Image,
   ImageSourcePropType,
+  Animated,
+  Easing,
   Platform,
   Pressable,
   ScrollView,
@@ -136,6 +138,20 @@ export function KahaniHeader({
 export function ThemeToggle() {
   const { colors, scheme, toggleScheme } = useKahaniTheme();
   const isDark = scheme === "dark";
+  const thumbProgress = React.useRef(new Animated.Value(isDark ? 1 : 0)).current;
+  const thumbTranslateX = thumbProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 68],
+  });
+
+  React.useEffect(() => {
+    Animated.timing(thumbProgress, {
+      toValue: isDark ? 1 : 0,
+      duration: 240,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [isDark, thumbProgress]);
 
   return (
     <Pressable
@@ -149,10 +165,10 @@ export function ThemeToggle() {
       ]}
       accessibilityLabel="Toggle theme"
     >
-      <View
+      <Animated.View
         style={[
           styles.themeThumb,
-          !isDark ? styles.themeThumbLeft : styles.themeThumbRight,
+          { transform: [{ translateX: thumbTranslateX }] },
           { backgroundColor: colors.card, borderColor: colors.border },
           cardShadow(colors.shadow),
         ]}
@@ -162,7 +178,7 @@ export function ThemeToggle() {
           color={isDark ? colors.gold : colors.gold}
           size={22}
         />
-      </View>
+      </Animated.View>
       <Feather name="sun" color={colors.goldMuted} size={18} />
       <Feather name="moon" color={colors.bark} size={18} />
     </Pressable>
@@ -342,31 +358,40 @@ export function CharacterAvatar({
   selected,
   onPress,
   icon = "user",
+  muted = false,
 }: {
   label: string;
   imageUri?: string;
   selected?: boolean;
   onPress?: () => void;
   icon?: keyof typeof Feather.glyphMap;
+  muted?: boolean;
 }) {
   const { colors } = useKahaniTheme();
   const initial = label.trim()[0]?.toUpperCase();
+  const showIcon = !imageUri && icon !== "user";
 
   return (
-    <Pressable onPress={onPress} style={styles.avatarSlot}>
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={[styles.avatarSlot, muted && styles.avatarMuted]}
+    >
       <View
         style={[
           styles.avatarBox,
           {
-            backgroundColor: colors.secondary,
+            backgroundColor: selected ? colors.card : colors.secondary,
             borderColor: selected ? colors.primary : colors.border,
-            borderWidth: selected ? 2 : 1,
+            borderWidth: selected ? 3 : 1,
           },
           selected && cardShadow(colors.glow),
         ]}
       >
         {imageUri ? (
           <Image source={{ uri: imageUri }} style={styles.fill} />
+        ) : showIcon ? (
+          <Feather name={icon} color={colors.bark} size={28} />
         ) : initial ? (
           <Text style={[styles.avatarInitial, { color: colors.bark }]}>
             {initial}
@@ -374,6 +399,11 @@ export function CharacterAvatar({
         ) : (
           <Feather name={icon} color={colors.bark} size={30} />
         )}
+        {selected ? (
+          <View style={[styles.avatarCheck, { backgroundColor: colors.primary }]}>
+            <Feather name="check" color={colors.primaryForeground} size={13} />
+          </View>
+        ) : null}
       </View>
       <Text
         numberOfLines={1}
@@ -632,14 +662,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: tokens.spacing.screenX,
   },
   headerWrap: {
-    marginBottom: 26,
+    marginBottom: 22,
   },
   headerTop: {
     minHeight: 52,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 22,
+    marginBottom: 16,
   },
   greeting: {
     fontFamily: serifFamily(),
@@ -672,6 +702,7 @@ const styles = StyleSheet.create({
   themeThumb: {
     position: "absolute",
     top: -1,
+    left: -1,
     width: 58,
     height: 58,
     borderRadius: 29,
@@ -679,12 +710,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     zIndex: 2,
-  },
-  themeThumbLeft: {
-    left: -1,
-  },
-  themeThumbRight: {
-    right: -1,
   },
   iconButton: {
     width: 54,
@@ -695,8 +720,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   primaryButton: {
-    minHeight: 64,
-    borderRadius: 24,
+    minHeight: 60,
+    borderRadius: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -705,7 +730,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontFamily: tokens.typography.sansBold,
-    fontSize: 19,
+    fontSize: 17,
   },
   segmentRow: {
     flexDirection: "row",
@@ -713,8 +738,8 @@ const styles = StyleSheet.create({
   },
   segment: {
     flex: 1,
-    minHeight: 58,
-    borderRadius: 22,
+    minHeight: 54,
+    borderRadius: 20,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
@@ -738,17 +763,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   avatarSlot: {
-    flex: 1,
+    width: 76,
     alignItems: "center",
     gap: 8,
+  },
+  avatarMuted: {
+    opacity: 0.72,
   },
   avatarBox: {
     width: 72,
     height: 72,
-    borderRadius: 26,
+    borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
+  },
+  avatarCheck: {
+    position: "absolute",
+    right: 5,
+    bottom: 5,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarInitial: {
     fontFamily: tokens.typography.sansBold,
@@ -888,7 +926,7 @@ const styles = StyleSheet.create({
     right: -20,
   },
   bottomLeaf: {
-    bottom: 112,
+    bottom: 210,
     left: -28,
   },
   stem: {
