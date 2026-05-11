@@ -1,0 +1,32 @@
+{
+  "name": "tech-manager",
+  "version": "0.1.0",
+  "description": "A home-local Codex plugin for manager-led delegation across frontend, backend, QA, BA, and PM roles.",
+  "author": {
+    "name": "Local Codex Setup",
+    "email": "local@example.com",
+    "url": "https://example.com/local-codex"
+  },
+  "homepage": "https://example.com/local-codex/tech-manager",
+  "repository": "https://example.com/local-codex/tech-manager",
+  "license": "MIT",
+  "keywords": ["codex", "agents", "manager", "delegation", "workflow"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Tech Manager",
+    "shortDescription": "Manager-led delegation for multi-role Codex work",
+    "longDescription": "Adds a technology-manager operating mode that decomposes work, delegates to sub-agents, and reports back at a high level.",
+    "developerName": "Local Codex Setup",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Write"],
+    "websiteURL": "https://example.com/local-codex/tech-manager",
+    "privacyPolicyURL": "https://example.com/privacy",
+    "termsOfServiceURL": "https://example.com/terms",
+    "defaultPrompt": [
+      "Act as my technology manager and break this project into delegated work.",
+      "Use frontend, backend, QA, and BA sub-agents to execute this feature.",
+      "Review this request, clarify gaps, and assign tasks across the team."
+    ],
+    "brandColor": "#1F6F5F"
+  }
+}

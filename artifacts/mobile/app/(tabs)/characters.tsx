@@ -7,37 +7,40 @@ import {
   Image,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
 
+import {
+  KahaniButton,
+  KahaniHeader,
+  KahaniScreen,
+  LeafSprig,
+  OptionPill,
+  cardShadow,
+  serifFamily,
+} from "@/components/KahaniDesign";
+import tokens from "@/constants/colors";
 import { useStoryStudio } from "@/context/StoryContext";
-import { useColors } from "@/hooks/useColors";
+import { useKahaniTheme } from "@/context/ThemeContext";
+
+const hairColors = ["#6F471F", "#9B5A1B", "#C4934A", "#2D2A22", "#A74B0A", "#EADDC7"];
+const skinTones = ["#F3BE8F", "#E7AD73", "#C9904F", "#A76732", "#70421E"];
 
 export default function CharactersScreen() {
-  const colors = useColors();
-  const { characters, addCharacter, removeCharacter, selectCharacter, selectedCharacterId } =
-    useStoryStudio();
-  const [name, setName] = useState("");
+  const { colors } = useKahaniTheme();
+  const { addCharacter } = useStoryStudio();
+  const [name, setName] = useState("Maya");
   const [photoUri, setPhotoUri] = useState<string | undefined>();
-
-  const takeSelfie = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert("Camera needed", "Allow camera access to take a photo.");
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [1, 1],
-      cameraType: ImagePicker.CameraType.front,
-      quality: 0.8,
-    });
-    if (!result.canceled) setPhotoUri(result.assets[0]?.uri);
-  };
+  const [avatar, setAvatar] = useState("boy");
+  const [age, setAge] = useState("6-8");
+  const [gender, setGender] = useState("child");
+  const [hair, setHair] = useState(hairColors[0]);
+  const [skin, setSkin] = useState(skinTones[0]);
+  const [outfit, setOutfit] = useState("overalls");
+  const [personality, setPersonality] = useState("Kind, curious, loves nature...");
 
   const pickPhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -60,435 +63,366 @@ export default function CharactersScreen() {
       return;
     }
     await addCharacter(name.trim(), photoUri);
-    setName("");
-    setPhotoUri(undefined);
     if (Platform.OS !== "web") {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
   };
 
-  const ready = name.trim().length > 0;
-
   return (
-    <ScrollView
-      style={styles.root}
-      contentContainerStyle={[styles.content, { paddingTop: Platform.OS === "web" ? 84 : 22 }]}
-      keyboardShouldPersistTaps="handled"
-    >
-      {/* Watercolor background blobs */}
-      <View pointerEvents="none" style={styles.blobContainer}>
-        <View style={[styles.blob, styles.blobSage]} />
-        <View style={[styles.blob, styles.blobPeach]} />
-        <View style={[styles.blob, styles.blobCream]} />
-      </View>
+    <KahaniScreen>
+      <KahaniHeader
+        back
+        title="Add Character"
+        subtitle="Create a character for your story"
+      />
+      <LeafSprig style={styles.extraLeaf} />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.kicker, { color: colors.primary }]}>Characters</Text>
-        <Text style={[styles.title, { color: colors.foreground }]}>Add a little one</Text>
-      </View>
+      <FormStep title="1. Choose avatar">
+        <View style={styles.avatarChoices}>
+          {[
+            { id: "boy", label: "Boy", icon: "smile" as const },
+            { id: "girl", label: "Girl", icon: "user" as const },
+            { id: "bunny", label: "Bunny", icon: "heart" as const },
+          ].map((item) => (
+            <Pressable
+              key={item.id}
+              onPress={() => setAvatar(item.id)}
+              style={[
+                styles.avatarChoice,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: avatar === item.id ? colors.primary : colors.border,
+                },
+                avatar === item.id && cardShadow(colors.glow),
+              ]}
+            >
+              {photoUri && avatar === item.id ? (
+                <Image source={{ uri: photoUri }} style={styles.fill} />
+              ) : (
+                <>
+                  <Feather name={item.icon} color={colors.bark} size={44} />
+                  <Text style={[styles.avatarChoiceText, { color: colors.bark }]}>
+                    {item.label}
+                  </Text>
+                </>
+              )}
+            </Pressable>
+          ))}
+          <Pressable
+            onPress={pickPhoto}
+            style={[
+              styles.avatarChoice,
+              { backgroundColor: colors.secondary, borderColor: colors.border },
+            ]}
+          >
+            <Feather name="plus" color={colors.bark} size={42} />
+            <Text style={[styles.avatarChoiceText, { color: colors.bark }]}>
+              Custom
+            </Text>
+          </Pressable>
+        </View>
+      </FormStep>
 
-      {/* Photo area */}
-      <View style={styles.avatarSection}>
-        <Pressable
-          onPress={photoUri ? takeSelfie : undefined}
+      <FormStep title="2. Customize character">
+        <View
           style={[
-            styles.avatarCircle,
-            { borderColor: photoUri ? colors.primary : "#C8B89A" },
-            photoUri && { borderStyle: "solid", borderWidth: 3 },
+            styles.customPanel,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+            cardShadow(colors.shadow),
           ]}
         >
-          {photoUri ? (
-            <Image source={{ uri: photoUri }} style={styles.avatarImage} />
-          ) : (
-            <View style={styles.avatarEmpty}>
-              <Feather name="user" color="#C8B89A" size={38} />
-              <Text style={styles.avatarHint}>Add photo</Text>
+          <ControlRow label="Name">
+            <View
+              style={[
+                styles.nameInputWrap,
+                { borderColor: colors.border, backgroundColor: colors.background },
+              ]}
+            >
+              <TextInput
+                value={name}
+                onChangeText={setName}
+                placeholder="Maya"
+                placeholderTextColor={colors.mutedForeground}
+                style={[styles.nameInput, { color: colors.foreground }]}
+              />
+              <Feather name="feather" color={colors.bark} size={18} />
             </View>
-          )}
-          {photoUri && (
-            <View style={styles.editBadge}>
-              <Feather name="edit-2" color="white" size={13} />
-            </View>
-          )}
-        </Pressable>
+          </ControlRow>
 
-        <View style={[styles.tagPill, photoUri ? styles.tagPillDone : styles.tagPillDefault]}>
-          <Text style={[styles.tagText, { color: photoUri ? "#5E7A60" : "#B8A882" }]}>
-            {photoUri ? "Looking great! ✨" : "A selfie or photo works perfectly"}
-          </Text>
+          <ControlRow label="Age">
+            <View style={styles.inlineOptions}>
+              {["3-5", "6-8", "9-12"].map((item) => (
+                <OptionPill
+                  key={item}
+                  label={item}
+                  selected={age === item}
+                  onPress={() => setAge(item)}
+                />
+              ))}
+            </View>
+          </ControlRow>
+
+          <ControlRow label="Gender">
+            <View style={styles.inlineOptions}>
+              {["child", "girl", "boy"].map((item) => (
+                <OptionPill
+                  key={item}
+                  selected={gender === item}
+                  onPress={() => setGender(item)}
+                >
+                  <Feather
+                    name={item === "child" ? "smile" : "user"}
+                    color={gender === item ? colors.primaryForeground : colors.bark}
+                    size={20}
+                  />
+                </OptionPill>
+              ))}
+            </View>
+          </ControlRow>
+
+          <ControlRow label="Hair">
+            <Swatches values={hairColors} value={hair} onChange={setHair} />
+          </ControlRow>
+          <ControlRow label="Skin tone">
+            <Swatches values={skinTones} value={skin} onChange={setSkin} />
+          </ControlRow>
+          <ControlRow label="Outfit" last>
+            <View style={styles.inlineOptions}>
+              {["overalls", "vest", "hoodie", "tee"].map((item) => (
+                <OptionPill
+                  key={item}
+                  selected={outfit === item}
+                  onPress={() => setOutfit(item)}
+                >
+                  <Feather
+                    name="shield"
+                    color={outfit === item ? colors.primaryForeground : colors.bark}
+                    size={19}
+                  />
+                </OptionPill>
+              ))}
+            </View>
+          </ControlRow>
         </View>
-      </View>
+      </FormStep>
 
-      {/* Photo buttons */}
-      <View style={styles.photoButtons}>
-        <Pressable
-          onPress={takeSelfie}
-          style={({ pressed }) => [styles.photoBtn, styles.photoBtnBlush, { opacity: pressed ? 0.75 : 1 }]}
+      <FormStep title="3. Personality (optional)">
+        <View
+          style={[
+            styles.personalityBox,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
         >
-          <Feather name="camera" color="#9F6B54" size={19} />
-          <Text style={[styles.photoBtnText, { color: "#9F6B54" }]}>Take photo</Text>
-        </Pressable>
-
-        <Pressable
-          onPress={pickPhoto}
-          style={({ pressed }) => [styles.photoBtn, styles.photoBtnSky, { opacity: pressed ? 0.75 : 1 }]}
-        >
-          <Feather name="upload" color="#517A8C" size={19} />
-          <Text style={[styles.photoBtnText, { color: "#517A8C" }]}>Upload</Text>
-        </Pressable>
-      </View>
-
-      {/* Divider */}
-      <View style={styles.dividerRow}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerLabel}>then</Text>
-        <View style={styles.dividerLine} />
-      </View>
-
-      {/* Name input */}
-      <View style={styles.nameSection}>
-        <Text style={[styles.inputLabel, { color: colors.primary }]}>THEIR NAME</Text>
-        <View style={styles.inputWrap}>
           <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="e.g. Mia, Zayan, Lily…"
-            placeholderTextColor="#C8B89A"
-            style={[
-              styles.nameInput,
-              { borderColor: name ? colors.primary : "#DDD1BC", color: colors.foreground },
-            ]}
+            value={personality}
+            onChangeText={setPersonality}
+            multiline
+            placeholder="Kind, curious, loves nature..."
+            placeholderTextColor={colors.mutedForeground}
+            style={[styles.personalityInput, { color: colors.foreground }]}
           />
-          {name.length > 0 && (
-            <View style={styles.checkBadge}>
-              <Feather name="check" color="#5E7A60" size={14} />
-            </View>
-          )}
+          <Feather name="feather" color={colors.bark} size={20} />
         </View>
+      </FormStep>
+
+      <View style={styles.tip}>
+        <Feather name="feather" color={colors.leaf} size={17} />
+        <Text style={[styles.tipText, { color: colors.mutedForeground }]}>
+          Tip: Adding personality helps create more engaging stories.
+        </Text>
       </View>
 
-      {/* Save button */}
-      <Pressable
-        onPress={save}
-        disabled={!ready}
-        style={({ pressed }) => [
-          styles.saveButton,
-          ready ? styles.saveButtonActive : styles.saveButtonMuted,
-          { opacity: pressed ? 0.82 : 1 },
-        ]}
-      >
-        <Feather name="arrow-right" color="white" size={19} />
-        <Text style={styles.saveText}>
-          {name.trim() ? `Add ${name.trim()} to Kahani` : "Add to Kahani"}
-        </Text>
-      </Pressable>
+      <KahaniButton label="Save Character" onPress={save} disabled={!name.trim()} />
+    </KahaniScreen>
+  );
+}
 
-      <Text style={styles.footnote}>
-        Stories will be personalised for this little one.{"\n"}You can always edit or remove them later.
-      </Text>
+function FormStep({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  const { colors } = useKahaniTheme();
+  return (
+    <View style={styles.step}>
+      <Text style={[styles.stepTitle, { color: colors.foreground }]}>{title}</Text>
+      {children}
+    </View>
+  );
+}
 
-      {/* Saved characters list */}
-      {characters.length > 0 && (
-        <View style={styles.savedList}>
-          <Text style={[styles.savedLabel, { color: colors.primary }]}>YOUR LITTLE ONES</Text>
-          {characters.map((character) => {
-            const selected = character.id === selectedCharacterId;
-            return (
-              <Pressable
-                key={character.id}
-                onPress={() => selectCharacter(character.id)}
-                style={[
-                  styles.characterRow,
-                  {
-                    backgroundColor: selected ? "rgba(191,216,196,0.28)" : "rgba(255,252,246,0.9)",
-                    borderColor: selected ? colors.primary : "#DDD1BC",
-                  },
-                ]}
-              >
-                {character.photoUri ? (
-                  <Image source={{ uri: character.photoUri }} style={styles.rowPhoto} />
-                ) : (
-                  <View style={[styles.rowPhoto, styles.rowPhotoEmpty]}>
-                    <Feather name="user" color={colors.primary} size={20} />
-                  </View>
-                )}
-                <Text style={[styles.rowName, { color: colors.foreground }]}>{character.name}</Text>
-                {selected && (
-                  <View style={styles.selectedDot}>
-                    <Feather name="check" color={colors.primary} size={14} />
-                  </View>
-                )}
-                <Pressable onPress={() => removeCharacter(character.id)} hitSlop={14}>
-                  <Feather name="trash-2" color="#C8B89A" size={17} />
-                </Pressable>
-              </Pressable>
-            );
-          })}
-        </View>
-      )}
-    </ScrollView>
+function ControlRow({
+  label,
+  children,
+  last,
+}: {
+  label: string;
+  children: React.ReactNode;
+  last?: boolean;
+}) {
+  const { colors } = useKahaniTheme();
+  return (
+    <View
+      style={[
+        styles.controlRow,
+        { borderBottomColor: colors.border },
+        last && { borderBottomWidth: 0 },
+      ]}
+    >
+      <Text style={[styles.controlLabel, { color: colors.foreground }]}>{label}</Text>
+      <View style={styles.controlValue}>{children}</View>
+    </View>
+  );
+}
+
+function Swatches({
+  values,
+  value,
+  onChange,
+}: {
+  values: string[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const { colors } = useKahaniTheme();
+  return (
+    <View style={styles.swatches}>
+      {values.map((item) => (
+        <Pressable
+          key={item}
+          onPress={() => onChange(item)}
+          style={[
+            styles.swatch,
+            {
+              backgroundColor: item,
+              borderColor: value === item ? colors.primary : colors.border,
+              borderWidth: value === item ? 3 : 1,
+            },
+          ]}
+        />
+      ))}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: "#FFFCF6",
+  extraLeaf: {
+    top: 122,
+    right: 4,
   },
-  content: {
-    padding: 24,
-    paddingBottom: 120,
-  },
-  blobContainer: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: "hidden",
-  },
-  blob: {
-    position: "absolute",
-    borderRadius: 999,
-  },
-  blobSage: {
-    width: 260,
-    height: 200,
-    backgroundColor: "rgba(191,216,196,0.38)",
-    top: -50,
-    left: -60,
-    transform: [{ rotate: "-12deg" }],
-  },
-  blobPeach: {
-    width: 220,
-    height: 170,
-    backgroundColor: "rgba(242,201,183,0.32)",
-    top: -20,
-    right: -40,
-    transform: [{ rotate: "15deg" }],
-  },
-  blobCream: {
-    width: 240,
-    height: 180,
-    backgroundColor: "rgba(255,230,195,0.34)",
-    bottom: 80,
-    right: -50,
-    transform: [{ rotate: "-14deg" }],
-  },
-  header: {
+  step: {
     marginBottom: 28,
   },
-  kicker: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 13,
-    textTransform: "uppercase",
-    letterSpacing: 1.4,
+  stepTitle: {
+    fontFamily: serifFamily(),
+    fontSize: 27,
+    lineHeight: 34,
+    marginBottom: 16,
   },
-  title: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 30,
-    letterSpacing: -0.8,
-    marginTop: 6,
+  avatarChoices: {
+    flexDirection: "row",
+    gap: 12,
   },
-  avatarSection: {
-    alignItems: "center",
-    gap: 14,
-    marginBottom: 18,
-  },
-  avatarCircle: {
-    width: 148,
-    height: 148,
-    borderRadius: 42,
+  avatarChoice: {
+    flex: 1,
+    aspectRatio: 1,
+    borderRadius: 26,
     borderWidth: 2,
-    borderStyle: "dashed",
-    overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(244,238,228,0.95)",
+    overflow: "hidden",
+    gap: 8,
   },
-  avatarImage: {
+  avatarChoiceText: {
+    fontFamily: tokens.typography.sansBold,
+    fontSize: 13,
+  },
+  fill: {
     width: "100%",
     height: "100%",
   },
-  avatarEmpty: {
-    alignItems: "center",
-    gap: 6,
-  },
-  avatarHint: {
-    color: "#C8B89A",
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-  },
-  editBadge: {
-    position: "absolute",
-    bottom: 10,
-    right: 10,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#8B7B5A",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tagPill: {
+  customPanel: {
+    borderWidth: 1,
+    borderRadius: 26,
     paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 999,
   },
-  tagPillDefault: {
-    backgroundColor: "rgba(200,184,154,0.22)",
-    borderWidth: 1,
-    borderColor: "rgba(200,184,154,0.35)",
-  },
-  tagPillDone: {
-    backgroundColor: "rgba(191,216,196,0.38)",
-    borderWidth: 1,
-    borderColor: "rgba(144,183,151,0.4)",
-  },
-  tagText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-  },
-  photoButtons: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 22,
-  },
-  photoBtn: {
-    flex: 1,
+  controlRow: {
+    minHeight: 74,
+    borderBottomWidth: 1,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    paddingVertical: 16,
+    gap: 16,
+    paddingVertical: 12,
+  },
+  controlLabel: {
+    width: 88,
+    fontFamily: tokens.typography.sansBold,
+    fontSize: 17,
+  },
+  controlValue: {
+    flex: 1,
+  },
+  nameInputWrap: {
+    minHeight: 48,
     borderRadius: 20,
-    borderWidth: 1.5,
-  },
-  photoBtnBlush: {
-    backgroundColor: "#FFF2EC",
-    borderColor: "#EBC8B8",
-  },
-  photoBtnSky: {
-    backgroundColor: "#EEF8FA",
-    borderColor: "#BFDDE5",
-  },
-  photoBtnText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 14,
-  },
-  dividerRow: {
+    borderWidth: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginBottom: 22,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "rgba(200,184,154,0.4)",
-  },
-  dividerLabel: {
-    color: "#B8A882",
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-  },
-  nameSection: {
-    gap: 8,
-    marginBottom: 22,
-  },
-  inputLabel: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 12,
-    letterSpacing: 0.8,
-  },
-  inputWrap: {
-    position: "relative",
+    paddingHorizontal: 16,
   },
   nameInput: {
-    borderWidth: 1.5,
-    borderRadius: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    fontFamily: "Inter_500Medium",
-    fontSize: 17,
-    backgroundColor: "rgba(255,252,246,0.95)",
-  },
-  checkBadge: {
-    position: "absolute",
-    right: 16,
-    top: "50%",
-    marginTop: -14,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "rgba(191,216,196,0.5)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  saveButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    paddingVertical: 18,
-    borderRadius: 22,
-    marginBottom: 16,
-  },
-  saveButtonActive: {
-    backgroundColor: "#8B7B5A",
-  },
-  saveButtonMuted: {
-    backgroundColor: "rgba(200,184,154,0.45)",
-  },
-  saveText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 16,
-    color: "white",
-  },
-  footnote: {
-    color: "#B8A882",
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    textAlign: "center",
-    lineHeight: 18,
-    marginBottom: 32,
-  },
-  savedList: {
-    gap: 10,
-  },
-  savedLabel: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 12,
-    letterSpacing: 0.8,
-    marginBottom: 4,
-  },
-  characterRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    borderWidth: 1.5,
-    borderRadius: 22,
-    padding: 12,
-  },
-  rowPhoto: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
-    overflow: "hidden",
-  },
-  rowPhotoEmpty: {
-    backgroundColor: "rgba(244,238,228,0.95)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  rowName: {
     flex: 1,
-    fontFamily: "Inter_700Bold",
-    fontSize: 17,
+    fontFamily: tokens.typography.sansMedium,
+    fontSize: 19,
   },
-  selectedDot: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: "rgba(191,216,196,0.4)",
+  inlineOptions: {
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "flex-end",
+  },
+  swatches: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  swatch: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+  },
+  personalityBox: {
+    minHeight: 86,
+    borderWidth: 1,
+    borderRadius: 22,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    padding: 18,
+    gap: 12,
+  },
+  personalityInput: {
+    flex: 1,
+    minHeight: 48,
+    fontFamily: tokens.typography.sansMedium,
+    fontSize: 17,
+    lineHeight: 24,
+    textAlignVertical: "top",
+  },
+  tip: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 10,
+    marginTop: -4,
+    marginBottom: 22,
+  },
+  tipText: {
+    flex: 1,
+    fontFamily: tokens.typography.sansMedium,
+    fontSize: 15,
+    lineHeight: 21,
   },
 });

@@ -1,0 +1,194 @@
+[
+  {
+    "pageNumber": 1,
+    "row": 1,
+    "col": 1,
+    "output": "file:///Users/varindernagra/Documents/GitHub/app-kahani/artifacts/story-sheet-runs/quick-usage-20260429-162922/pages/01_cover.png",
+    "crop": {
+      "left": 0,
+      "top": 0,
+      "right": 1024,
+      "bottom": 1024
+    }
+  },
+  {
+    "pageNumber": 2,
+    "row": 1,
+    "col": 2,
+    "output": "file:///Users/varindernagra/Documents/GitHub/app-kahani/artifacts/story-sheet-runs/quick-usage-20260429-162922/pages/02_belongs_to.png",
+    "crop": {
+      "left": 1024,
+      "top": 0,
+      "right": 2048,
+      "bottom": 1024
+    }
+  },
+  {
+    "pageNumber": 3,
+    "row": 1,
+    "col": 3,
+    "output": "file:///Users/varindernagra/Documents/GitHub/app-kahani/artifacts/story-sheet-runs/quick-usage-20260429-162922/pages/03_the_end.png",
+    "crop": {
+      "left": 2048,
+      "top": 0,
+      "right": 3072,
+      "bottom": 1024
+    }
+  },
+  {
+    "pageNumber": 4,
+    "row": 1,
+    "col": 4,
+    "output": "file:///Users/varindernagra/Documents/GitHub/app-kahani/artifacts/story-sheet-runs/quick-usage-20260429-162922/pages/04_blank.png",
+    "crop": {
+      "left": 3072,
+      "top": 0,
+      "right": 4096,
+      "bottom": 1024
+    }
+  },
+  {
+    "pageNumber": 5,
+    "row": 2,
+    "col": 1,
+    "output": "file:///Users/varindernagra/Documents/GitHub/app-kahani/artifacts/story-sheet-runs/quick-usage-20260429-162922/pages/story_page_01.png",
+    "crop": {
+      "left": 0,
+      "top": 1024,
+      "right": 1024,
+      "bottom": 2048
+    }
+  },
+  {
+    "pageNumber": 6,
+    "row": 2,
+    "col": 2,
+    "output": "file:///Users/varindernagra/Documents/GitHub/app-kahani/artifacts/story-sheet-runs/quick-usage-20260429-162922/pages/story_page_02.png",
+    "crop": {
+      "left": 1024,
+      "top": 1024,
+      "right": 2048,
+      "bottom": 2048
+    }
+  },
+  {
+    "pageNumber": 7,
+    "row": 2,
+    "col": 3,
+    "output": "file:///Users/varindernagra/Documents/GitHub/app-kahani/artifacts/story-sheet-runs/quick-usage-20260429-162922/pages/story_page_03.png",
+    "crop": {
+      "left": 2048,
+      "top": 1024,
+      "right": 3072,
+      "bottom": 2048
+    }
+  },
+  {
+    "pageNumber": 8,
+    "row": 2,
+    "col": 4,
+    "output": "file:///Users/varindernagra/Documents/GitHub/app-kahani/artifacts/story-sheet-runs/quick-usage-20260429-162922/pages/story_page_04.png",
+    "crop": {
+      "left": 3072,
+      "top": 1024,
+      "right": 4096,
+      "bottom": 2048
+    }
+  },
+  {
+    "pageNumber": 9,
+    "row": 3,
+    "col": 1,
+    "output": "file:///Users/varindernagra/Documents/GitHub/app-kahani/artifacts/story-sheet-runs/quick-usage-20260429-162922/pages/story_page_05.png",
+    "crop": {
+      "left": 0,
+      "top": 2048,
+      "right": 1024,
+      "bottom": 3072
+    }
+  },
+  {
+    "pageNumber": 10,
+    "row": 3,
+    "col": 2,
+    "output": "file:///Users/varindernagra/Documents/GitHub/app-kahani/artifacts/story-sheet-runs/quick-usage-20260429-162922/pages/story_page_06.png",
+    "crop": {
+      "left": 1024,
+      "top": 2048,
+      "right": 2048,
+      "bottom": 3072
+    }
+  },
+  {
+    "pageNumber": 11,
+    "row": 3,
+    "col": 3,
+    "output": "file:///Users/varindernagra/Documents/GitHub/app-kahani/artifacts/story-sheet-runs/quick-usage-20260429-162922/pages/story_page_07.png",
+    "crop": {
+      "left": 2048,
+      "top": 2048,
+      "right": 3072,
+      "bottom": 3072
+    }
+  },
+  {
+    "pageNumber": 12,
+    "row": 3,
+    "col": 4,
+    "output": "file:///Users/varindernagra/Documents/GitHub/app-kahani/artifacts/story-sheet-runs/quick-usage-20260429-162922/pages/story_page_08.png",
+    "crop": {
+      "left": 3072,
+      "top": 2048,
+      "right": 4096,
+      "bottom": 3072
+    }
+  },
+  {
+    "pageNumber": 13,
+    "row": 4,
+    "col": 1,
+    "output": "file:///Users/varindernagra/Documents/GitHub/app-kahani/artifacts/story-sheet-runs/quick-usage-20260429-162922/pages/story_page_09.png",
+    "crop": {
+      "left": 0,
+      "top": 3072,
+      "right": 1024,
+      "bottom": 4096
+    }
+  },
+  {
+    "pageNumber": 14,
+    "row": 4,
+    "col": 2,
+    "output": "file:///Users/varindernagra/Documents/GitHub/app-kahani/artifacts/story-sheet-runs/quick-usage-20260429-162922/pages/story_page_10.png",
+    "crop": {
+      "left": 1024,
+      "top": 3072,
+      "right": 2048,
+      "bottom": 4096
+    }
+  },
+  {
+    "pageNumber": 15,
+    "row": 4,
+    "col": 3,
+    "output": "file:///Users/varindernagra/Documents/GitHub/app-kahani/artifacts/story-sheet-runs/quick-usage-20260429-162922/pages/story_page_11.png",
+    "crop": {
+      "left": 2048,
+      "top": 3072,
+      "right": 3072,
+      "bottom": 4096
+    }
+  },
+  {
+    "pageNumber": 16,
+    "row": 4,
+    "col": 4,
+    "output": "file:///Users/varindernagra/Documents/GitHub/app-kahani/artifacts/story-sheet-runs/quick-usage-20260429-162922/pages/story_page_12.png",
+    "crop": {
+      "left": 3072,
+      "top": 3072,
+      "right": 4096,
+      "bottom": 4096
+    }
+  }
+]

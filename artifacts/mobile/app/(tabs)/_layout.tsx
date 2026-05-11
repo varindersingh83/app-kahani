@@ -1,114 +1,124 @@
 import { Feather } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
-import { isLiquidGlassAvailable } from "expo-glass-effect";
+import { LinearGradient } from "expo-linear-gradient";
 import { Tabs } from "expo-router";
-import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
-import { SymbolView } from "expo-symbols";
 import React from "react";
-import { Platform, StyleSheet, View, useColorScheme } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 
-import { useColors } from "@/hooks/useColors";
+import tokens from "@/constants/colors";
+import { useKahaniTheme } from "@/context/ThemeContext";
 
-function NativeTabLayout() {
+function TabIcon({
+  name,
+  focused,
+}: {
+  name: keyof typeof Feather.glyphMap;
+  focused: boolean;
+}) {
+  const { colors } = useKahaniTheme();
+
   return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "sparkles", selected: "sparkles" }} />
-        <Label>Studio</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="characters">
-        <Icon sf={{ default: "person.crop.circle", selected: "person.crop.circle.fill" }} />
-        <Label>Characters</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="library">
-        <Icon sf={{ default: "books.vertical", selected: "books.vertical.fill" }} />
-        <Label>Library</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <View
+      style={[
+        styles.iconWrap,
+        {
+          backgroundColor: focused ? colors.card : "transparent",
+          borderColor: focused ? colors.border : "transparent",
+        },
+      ]}
+    >
+      <Feather
+        name={name}
+        color={focused ? colors.primary : colors.bark}
+        size={26}
+      />
+    </View>
   );
 }
 
-function ClassicTabLayout() {
-  const colors = useColors();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const isIOS = Platform.OS === "ios";
-  const isWeb = Platform.OS === "web";
+export default function TabLayout() {
+  const { colors } = useKahaniTheme();
+  const isDark = colors.scheme === "dark";
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.mutedForeground,
         headerShown: false,
+        tabBarActiveTintColor: colors.foreground,
+        tabBarInactiveTintColor: colors.mutedForeground,
+        tabBarLabelStyle: {
+          fontFamily: tokens.typography.serif,
+          fontSize: 14,
+          marginTop: 0,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 8,
+        },
         tabBarStyle: {
           position: "absolute",
-          backgroundColor: isIOS ? "transparent" : colors.background,
-          borderTopWidth: isWeb ? 1 : 0,
-          borderTopColor: colors.border,
-          elevation: 0,
-          ...(isWeb ? { height: 84 } : {}),
+          left: 24,
+          right: 24,
+          bottom: Platform.OS === "ios" ? 24 : 18,
+          height: 96,
+          borderTopWidth: 0,
+          borderRadius: 48,
+          paddingTop: 10,
+          paddingBottom: Platform.OS === "ios" ? 16 : 10,
+          overflow: "hidden",
+          backgroundColor: colors.wood,
+          borderWidth: 1,
+          borderColor: isDark ? colors.goldMuted : "#F3C892",
+          shadowColor: colors.shadow,
+          shadowOffset: { width: 0, height: 14 },
+          shadowOpacity: 0.28,
+          shadowRadius: 24,
+          elevation: 8,
         },
-        tabBarBackground: () =>
-          isIOS ? (
-            <BlurView
-              intensity={100}
-              tint={isDark ? "dark" : "light"}
-              style={StyleSheet.absoluteFill}
-            />
-          ) : isWeb ? (
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: colors.background },
-              ]}
-            />
-          ) : null,
+        tabBarBackground: () => (
+          <LinearGradient
+            colors={
+              isDark
+                ? [colors.woodDark, colors.secondary, colors.woodDark]
+                : ["#FFE7BD", colors.wood, "#EFC487"]
+            }
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        ),
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="characters"
         options={{
-          title: "Studio",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="sparkles" tintColor={color} size={24} />
-            ) : (
-              <Feather name="edit-3" size={22} color={color} />
-            ),
+          title: "Add character",
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="smile" />,
         }}
       />
       <Tabs.Screen
-        name="characters"
+        name="index"
         options={{
-          title: "Characters",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="person.crop.circle" tintColor={color} size={24} />
-            ) : (
-              <Feather name="users" size={22} color={color} />
-            ),
+          title: "Create story",
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="book-open" />,
         }}
       />
       <Tabs.Screen
         name="library"
         options={{
           title: "Library",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="books.vertical" tintColor={color} size={24} />
-            ) : (
-              <Feather name="book-open" size={22} color={color} />
-            ),
+          tabBarIcon: ({ focused }) => <TabIcon focused={focused} name="archive" />,
         }}
       />
     </Tabs>
   );
 }
 
-export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
-  return <ClassicTabLayout />;
-}
+const styles = StyleSheet.create({
+  iconWrap: {
+    width: 58,
+    height: 44,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
