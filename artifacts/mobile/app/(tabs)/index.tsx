@@ -45,9 +45,7 @@ export default function StudioScreen() {
     setGeneratedStory,
   } = useStoryStudio();
   const [mode, setMode] = useState<StoryMode>("behavior");
-  const [prompt, setPrompt] = useState(
-    "sharing toys, bedtime resistance,\nusing gentle hands",
-  );
+  const [prompt, setPrompt] = useState("");
 
   const mutation = useGenerateStory({
     mutation: {
