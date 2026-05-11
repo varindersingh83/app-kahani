@@ -1,0 +1,6 @@
+- generic [ref=e4]:
+  - heading "Component Preview Server" [level=1] [ref=e5]
+  - paragraph [ref=e6]: This server renders individual components for the workspace canvas.
+  - paragraph [ref=e7]:
+    - text: Access component previews at
+    - code [ref=e8]: /preview/ComponentName

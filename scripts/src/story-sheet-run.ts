@@ -47,6 +47,15 @@ type SheetSliceManifestEntry = {
   };
 };
 
+type ApiUsage = {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+  cost?: number;
+  total_cost?: number;
+  [key: string]: unknown;
+};
+
 const execFile = promisify(execFileCallback);
 
 const repoRoot = path.resolve(import.meta.dirname, "../..");
@@ -133,12 +142,16 @@ async function callJsonChat(config: AiConfig, systemPrompt: string, userPrompt: 
 
   const data = (await response.json()) as {
     choices?: Array<{ message?: { content?: string } }>;
+    usage?: ApiUsage;
   };
   const content = data.choices?.[0]?.message?.content;
   if (!content) {
     throw new Error("Story JSON request returned empty content.");
   }
-  return extractJson(content);
+  return {
+    data: extractJson(content),
+    usage: data.usage,
+  };
 }
 
 async function callMultimodalImageModel(
@@ -185,6 +198,7 @@ async function callMultimodalImageModel(
         }>;
       };
     }>;
+    usage?: ApiUsage;
   };
 }
 
@@ -293,6 +307,29 @@ function escapeHtml(value: string) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function getUsageCost(usage: ApiUsage | undefined) {
+  const cost = usage?.cost ?? usage?.total_cost;
+  return typeof cost === "number" ? cost : undefined;
+}
+
+function formatCost(cost: number | undefined) {
+  return typeof cost === "number" ? `$${cost.toFixed(6)}` : "n/a";
+}
+
+function sumUsage(usages: Array<ApiUsage | undefined>): ApiUsage {
+  const totals: ApiUsage = {};
+  for (const usage of usages) {
+    if (!usage) continue;
+    for (const key of ["prompt_tokens", "completion_tokens", "total_tokens", "cost", "total_cost"] as const) {
+      const value = usage[key];
+      if (typeof value === "number") {
+        totals[key] = (typeof totals[key] === "number" ? totals[key] : 0) + value;
+      }
+    }
+  }
+  return totals;
 }
 
 async function sliceStoryboardSheet(sheetImagePath: string, outputDir: string) {
@@ -767,11 +804,12 @@ async function main() {
   const parentName = resolveParentName(parentReferenceImage);
   const storyPromptTemplate = await loadTemplate(storyPromptPath);
   const storyPrompt = buildStoryPrompt(storyPromptTemplate, selectedBehavior.prompt, parentName);
-  const storyJson = (await callJsonChat(
+  const storyResult = await callJsonChat(
     config,
     "You write exact JSON only. Follow the user's schema and return valid JSON with no markdown or explanation.",
     storyPrompt,
-  )) as StoryInput;
+  );
+  const storyJson = storyResult.data as StoryInput;
 
   const sheetPromptTemplate = await loadTemplate(sheetPromptPath);
   const sheetPrompt = buildSheetPrompt(sheetPromptTemplate, storyJson);
@@ -810,6 +848,14 @@ async function main() {
   const pagesDir = path.join(outputDir, "pages");
   const slices = await sliceStoryboardSheet(sheetPath, pagesDir);
   await writeFile(path.join(outputDir, "slices.json"), `${JSON.stringify(slices, null, 2)}\n`);
+  const usage = {
+    textModel: config.textModel,
+    imageModel: config.imageModel,
+    story: storyResult.usage ?? null,
+    sheet: imageData.usage ?? null,
+    total: sumUsage([storyResult.usage, imageData.usage]),
+  };
+  await writeFile(path.join(outputDir, "usage.json"), `${JSON.stringify(usage, null, 2)}\n`);
   await writeFile(
     path.join(outputDir, "book.html"),
     renderCarouselHtml({
@@ -828,6 +874,23 @@ async function main() {
   console.log(`Sheet image: ${sheetPath}`);
   console.log(`Pages dir: ${pagesDir}`);
   console.log(`Book html: ${path.join(outputDir, "book.html")}`);
+  console.log(`Usage json: ${path.join(outputDir, "usage.json")}`);
+  console.log(
+    `Story usage: prompt=${storyResult.usage?.prompt_tokens ?? "n/a"} completion=${
+      storyResult.usage?.completion_tokens ?? "n/a"
+    } total=${storyResult.usage?.total_tokens ?? "n/a"} cost=${formatCost(getUsageCost(storyResult.usage))}`,
+  );
+  console.log(
+    `Sheet usage: prompt=${imageData.usage?.prompt_tokens ?? "n/a"} completion=${
+      imageData.usage?.completion_tokens ?? "n/a"
+    } total=${imageData.usage?.total_tokens ?? "n/a"} cost=${formatCost(getUsageCost(imageData.usage))}`,
+  );
+  const totalUsage = usage.total;
+  console.log(
+    `Total usage: prompt=${totalUsage.prompt_tokens ?? "n/a"} completion=${
+      totalUsage.completion_tokens ?? "n/a"
+    } total=${totalUsage.total_tokens ?? "n/a"} cost=${formatCost(getUsageCost(totalUsage))}`,
+  );
 }
 
 main().catch((error: unknown) => {

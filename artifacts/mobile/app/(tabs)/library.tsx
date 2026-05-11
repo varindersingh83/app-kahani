@@ -1,238 +1,208 @@
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { useStoryStudio } from "@/context/StoryContext";
-import { useColors } from "@/hooks/useColors";
+import {
+  KahaniHeader,
+  KahaniScreen,
+  StoryCard,
+  cardShadow,
+  serifFamily,
+} from "@/components/KahaniDesign";
+import tokens from "@/constants/colors";
+import { useStoryStudio, type Story } from "@/context/StoryContext";
+import { useKahaniTheme } from "@/context/ThemeContext";
+
+const sampleBooks = [
+  {
+    title: "Benny and The Brave Day",
+    text: "A brave bear and a tiny bunny learn how courage grows.",
+    pages: 24,
+  },
+  {
+    title: "Luna's Pocket of Stars",
+    text: "Luna keeps a jar of starlight for the darkest paths.",
+    pages: 20,
+  },
+  {
+    title: "The Treehouse Adventure",
+    text: "A hidden house in the branches opens to a gentle mystery.",
+    pages: 28,
+  },
+  {
+    title: "Across the Hills We Go",
+    text: "A small explorer follows a golden path through the mountains.",
+    pages: 26,
+  },
+];
 
 export default function LibraryScreen() {
-  const colors = useColors();
-  const { savedStories, removeStory, openStory } = useStoryStudio();
+  const { colors } = useKahaniTheme();
+  const { savedStories, currentStory, openStory } = useStoryStudio();
 
-  const handleRead = (story: (typeof savedStories)[number]) => {
+  const featured = savedStories[0] ?? currentStory;
+
+  const handleRead = (story: Story) => {
     openStory(story);
     router.push("/book-reader");
   };
 
   return (
-    <ScrollView
-      style={[styles.root, { backgroundColor: colors.background }]}
-      contentContainerStyle={styles.content}
-    >
-      <Text style={[styles.kicker, { color: colors.primary }]}>Library</Text>
-      <Text style={[styles.title, { color: colors.foreground }]}>Saved stories</Text>
-      <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-        A calm shelf for stories your family wants to revisit.
+    <KahaniScreen>
+      <KahaniHeader title="My Library" subtitle="Your stories, made with love" />
+
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+        Newly created
       </Text>
+      {featured ? (
+        <StoryCard
+          featured
+          title={featured.title}
+          description={featured.pages[0]?.text}
+          imageUri={featured.coverImageUrl ?? featured.characterPhotoUri}
+          pages={featured.pages.length}
+          onPress={() => handleRead(featured)}
+        />
+      ) : (
+        <View
+          style={[
+            styles.emptyFeatured,
+            { backgroundColor: colors.card, borderColor: colors.border },
+            cardShadow(colors.shadow),
+          ]}
+        >
+          <Feather name="book-open" color={colors.primary} size={32} />
+          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+            Your first story will live here.
+          </Text>
+          <Text style={[styles.emptyCopy, { color: colors.mutedForeground }]}>
+            Create and save a picture book to build your family library.
+          </Text>
+        </View>
+      )}
+
+      <View style={styles.allBooksHeader}>
+        <Text style={[styles.allBooksTitle, { color: colors.foreground }]}>
+          All books
+        </Text>
+        <View style={styles.filterRow}>
+          <Pressable
+            style={[
+              styles.filterPill,
+              { backgroundColor: colors.secondary, borderColor: colors.border },
+            ]}
+          >
+            <Text style={[styles.filterText, { color: colors.foreground }]}>
+              Recently created
+            </Text>
+            <Feather name="chevron-down" color={colors.bark} size={18} />
+          </Pressable>
+          <Pressable
+            style={[
+              styles.filterIcon,
+              { backgroundColor: colors.secondary, borderColor: colors.border },
+            ]}
+          >
+            <Feather name="sliders" color={colors.bark} size={20} />
+          </Pressable>
+        </View>
+      </View>
 
       <View style={styles.grid}>
-        {savedStories.length === 0 ? (
-          <View style={[styles.empty, { borderColor: colors.border }]}>
-            <Feather name="book" color={colors.mutedForeground} size={26} />
-            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              Generate a story and save it to build your family library.
-            </Text>
-          </View>
-        ) : (
-          savedStories.map((story) => (
-            <View
-              key={story.id}
-              style={[styles.bookCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-            >
-              {/* Cover thumbnail */}
-              <View style={[styles.coverThumb, { backgroundColor: "#2C1B0E" }]}>
-                {story.coverImageUrl ? (
-                  <Image
-                    source={{ uri: story.coverImageUrl }}
-                    style={styles.coverImage}
-                    resizeMode="cover"
-                  />
-                ) : story.characterPhotoUri ? (
-                  <Image
-                    source={{ uri: story.characterPhotoUri }}
-                    style={styles.coverImage}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={[styles.coverPlaceholder, { backgroundColor: colors.secondary }]}>
-                    <Feather name="book-open" color={colors.primary} size={22} />
-                  </View>
-                )}
-                <View style={[styles.coverSpine, { backgroundColor: colors.primary }]} />
-                <View style={styles.coverGradient} />
-                <Text style={styles.coverPageCount}>{story.pages.length}p</Text>
+        {savedStories.length > 0
+          ? savedStories.map((story) => (
+              <View key={story.id} style={styles.gridItem}>
+                <StoryCard
+                  title={story.title}
+                  description={story.createdAt ? "Just now" : undefined}
+                  imageUri={story.coverImageUrl ?? story.characterPhotoUri}
+                  pages={story.pages.length}
+                  onPress={() => handleRead(story)}
+                />
               </View>
-
-              {/* Book details */}
-              <View style={styles.bookBody}>
-                <Text style={[styles.bookFor, { color: colors.primary }]}>
-                  For {story.characterName}
-                </Text>
-                <Text style={[styles.bookTitle, { color: colors.foreground }]} numberOfLines={2}>
-                  {story.title}
-                </Text>
-                <Text style={[styles.bookPreview, { color: colors.mutedForeground }]} numberOfLines={3}>
-                  {story.pages[0]?.text}
-                </Text>
-
-                <View style={styles.bookActions}>
-                  <Pressable
-                    onPress={() => handleRead(story)}
-                    style={({ pressed }) => [
-                      styles.readButton,
-                      { backgroundColor: colors.primary, opacity: pressed ? 0.82 : 1 },
-                    ]}
-                  >
-                    <Feather name="book-open" color="white" size={15} />
-                    <Text style={styles.readButtonText}>Read</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => removeStory(story.id)}
-                    style={({ pressed }) => [styles.removeButton, { opacity: pressed ? 0.6 : 1 }]}
-                    hitSlop={12}
-                  >
-                    <Feather name="trash-2" color={colors.mutedForeground} size={16} />
-                  </Pressable>
-                </View>
+            ))
+          : sampleBooks.map((book) => (
+              <View key={book.title} style={styles.gridItem}>
+                <StoryCard
+                  title={book.title}
+                  description={book.text}
+                  pages={book.pages}
+                />
               </View>
-            </View>
-          ))
-        )}
+            ))}
       </View>
-    </ScrollView>
+    </KahaniScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  content: {
-    padding: 22,
-    paddingTop: Platform.OS === "web" ? 84 : 22,
-    paddingBottom: 120,
+  sectionTitle: {
+    fontFamily: serifFamily(),
+    fontSize: 26,
+    marginBottom: 14,
   },
-  kicker: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 13,
-    textTransform: "uppercase",
-    letterSpacing: 1.4,
-  },
-  title: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 32,
-    letterSpacing: -1,
-    marginTop: 8,
-  },
-  subtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
-    lineHeight: 22,
-    marginTop: 8,
-    marginBottom: 22,
-  },
-  grid: { gap: 16 },
-  empty: {
+  emptyFeatured: {
     borderWidth: 1,
-    borderStyle: "dashed",
     borderRadius: 28,
-    padding: 34,
+    padding: 24,
     alignItems: "center",
     gap: 10,
   },
-  emptyText: {
-    fontFamily: "Inter_500Medium",
+  emptyTitle: {
+    fontFamily: serifFamily(),
+    fontSize: 26,
     textAlign: "center",
-    lineHeight: 21,
   },
-  bookCard: {
-    borderWidth: 1,
-    borderRadius: 26,
+  emptyCopy: {
+    fontFamily: tokens.typography.sansMedium,
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: "center",
+  },
+  allBooksHeader: {
     flexDirection: "row",
-    overflow: "hidden",
-    minHeight: 180,
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 30,
+    marginBottom: 14,
   },
-  coverThumb: {
-    width: 96,
-    position: "relative",
-    overflow: "hidden",
+  allBooksTitle: {
+    fontFamily: serifFamily(),
+    fontSize: 30,
   },
-  coverImage: {
-    width: "100%",
-    height: "100%",
+  filterRow: {
+    flexDirection: "row",
+    gap: 8,
   },
-  coverPlaceholder: {
-    width: "100%",
-    height: "100%",
+  filterPill: {
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+  },
+  filterText: {
+    fontFamily: tokens.typography.sansBold,
+    fontSize: 13,
+  },
+  filterIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
-  coverSpine: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 8,
-    opacity: 0.7,
-  },
-  coverGradient: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 48,
-    backgroundColor: "rgba(20,12,6,0.55)",
-  },
-  coverPageCount: {
-    position: "absolute",
-    bottom: 8,
-    right: 8,
-    fontFamily: "Inter_700Bold",
-    fontSize: 11,
-    color: "rgba(255,255,255,0.8)",
-  },
-  bookBody: {
-    flex: 1,
-    padding: 16,
-    gap: 6,
-  },
-  bookFor: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 11,
-    textTransform: "uppercase",
-    letterSpacing: 1.1,
-  },
-  bookTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 18,
-    letterSpacing: -0.3,
-    lineHeight: 24,
-  },
-  bookPreview: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    lineHeight: 19,
-    flex: 1,
-  },
-  bookActions: {
+  grid: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 8,
+    flexWrap: "wrap",
+    gap: 14,
   },
-  readButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 14,
-  },
-  readButtonText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 13,
-    color: "white",
-  },
-  removeButton: {
-    padding: 6,
+  gridItem: {
+    width: "48%",
   },
 });

@@ -13,6 +13,22 @@ Kahani is a pnpm workspace TypeScript monorepo for Parent Story Studio. It inclu
 - `lib/db` - Drizzle/PostgreSQL schema and migration push tooling.
 - `scripts` - workspace utility scripts.
 
+## Current App Flow
+
+The main product surface is the Expo mobile app in `artifacts/mobile`. Parents add child characters on the Add Character tab, including a name and optional uploaded image. The Create Story tab lets a parent choose one saved character, choose behavior support or random story mode, enter a behavior/story prompt, and generate a picture book through the API. The newly generated book appears on the same Create Story screen as the current story card.
+
+The Library tab reads from the app's local `AsyncStorage` story state. Today, a generated book is not automatically added to the saved library grid immediately after generation; it becomes a saved library item when the parent opens the reader and saves it from the end page. The Library can still show the current unsaved story as the featured book.
+
+Character creation currently persists only `name` and `photoUri`. The screen also collects avatar, age, gender, hair, skin, outfit, and personality UI values, but those values are not yet saved into `StoryContext` or sent to the backend.
+
+## Backend Generation Flow
+
+The mobile app calls `POST /api/stories/generate`, which validates the request, runs the book-generation pipeline, and returns the packaged story JSON used by the frontend. The fuller persistent backend surface is `POST /api/books`; it returns a `bookId`, status, generated story, QA flag, and retry total. Saved backend jobs can be inspected with `GET /api/books/:bookId`, `GET /api/books/:bookId/pages`, and `GET /api/books/:bookId/events`.
+
+The generation pipeline lives under `artifacts/api-server/src/services/book-generation`. It creates a database book record, normalizes the parent input, builds a 12-page story plan, generates a cover and a 3x4 storyboard sheet, slices the sheet into page images, reviews the result, logs agent/event state, and packages the final story.
+
+Important current backend requirements: `DATABASE_URL` must point at a reachable Postgres database for the full pipeline, and AI generation requires `AI_INTEGRATIONS_OPENROUTER_BASE_URL` plus `AI_INTEGRATIONS_OPENROUTER_API_KEY`. Clerk middleware is wired, but local development skips auth when Clerk env vars are absent.
+
 ## Prerequisites
 
 - Node.js 24
@@ -20,6 +36,19 @@ Kahani is a pnpm workspace TypeScript monorepo for Parent Story Studio. It inclu
 - PostgreSQL, only if you are working on database-backed features
 
 This repo enforces pnpm in `preinstall`, so avoid `npm install` or `yarn install`.
+
+Check the active Node version before starting the local runtime:
+
+```sh
+node -v
+pnpm -v
+```
+
+If your shell is running with `CODEX_CI=1`, unset it for long-running dev servers. Expo exits immediately in CI mode, and the API build can behave differently under the Codex CI environment:
+
+```sh
+unset CODEX_CI
+```
 
 ## Install Dependencies
 
@@ -103,9 +132,11 @@ Expected response:
 {"status":"ok"}
 ```
 
+The API listens on `http://localhost:8080` by default. If you are starting it from a sandboxed agent environment and see `listen EPERM: operation not permitted 0.0.0.0:8080`, rerun the same command from a normal terminal so the process can bind the port.
+
 Story generation is available at `POST /api/stories/generate`, but it requires `AI_INTEGRATIONS_OPENROUTER_BASE_URL` and `AI_INTEGRATIONS_OPENROUTER_API_KEY`. Set `AI_INTEGRATIONS_OPENROUTER_IMAGE_MODEL` to choose the image model used for both the cover and storyboard-sheet calls; it defaults to `google/gemini-3.1-flash-image-preview` when unset. The older `AI_INTEGRATIONS_OPENAI_*` variables still work as backwards-compatible fallbacks.
 
-For the persistent book pipeline, use `POST /api/books`. The created book can be fetched later with `GET /api/books/:bookId`, and the per-page progress and events live at `GET /api/books/:bookId/pages` and `GET /api/books/:bookId/events`.
+For persistent backend jobs, use `POST /api/books`. The created book can be fetched later with `GET /api/books/:bookId`, and the per-page progress and events live at `GET /api/books/:bookId/pages` and `GET /api/books/:bookId/events`.
 
 ## Run The Mockup Sandbox
 
@@ -129,9 +160,41 @@ For a normal local Expo session, this is usually easier:
 pnpm run dev:mobile
 ```
 
-`dev:mobile` points the app at the local API server with `EXPO_PUBLIC_API_BASE_URL=http://localhost:8080`. When `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` is not set, the mobile app skips the Clerk sign-in screen for local development and opens the app directly.
+`dev:mobile` points the app at the local API server with `EXPO_PUBLIC_API_BASE_URL=http://localhost:8080` and starts Metro on `http://localhost:8081`. When `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` is not set, the mobile app skips the Clerk sign-in screen for local development and opens the app directly.
+
+Smoke test Metro after it starts:
+
+```sh
+curl http://localhost:8081/status
+```
+
+Expected response:
+
+```text
+packager-status:running
+```
+
+If Expo fails during startup with `TypeError: fetch failed` while validating native module versions, use Expo offline mode:
+
+```sh
+HOME=$PWD/.local/expo-home \
+XDG_CONFIG_HOME=$PWD/.local/expo-home/.config \
+EXPO_NO_TELEMETRY=1 \
+EXPO_PUBLIC_API_BASE_URL=http://localhost:8080 \
+pnpm --filter @workspace/mobile exec expo start --offline --port 8081
+```
 
 If you need Clerk auth in the mobile app, set `CLERK_PUBLISHABLE_KEY` before starting the Replit-oriented `dev` script. That script maps the value to `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`.
+
+## Story Sheet Flow
+
+The live parent-to-carousel flow is the story-sheet runner in `scripts/`.
+
+```sh
+pnpm --filter @workspace/scripts run story:sheet-run
+```
+
+It reads the parent prompt and character inputs, generates the story JSON, creates the storyboard sheet, slices it into 16 panels, and writes the carousel assets into `artifacts/story-sheet-runs/`.
 
 ## Database Tasks
 
@@ -175,66 +238,7 @@ Recommended smoke tests:
 - API: start the API server and `curl http://localhost:8080/api/healthz`.
 - Mockup sandbox: start Vite, open `http://localhost:8081/`, and confirm the UI renders.
 - Mobile: start Expo and confirm the app loads in a simulator, browser, or Expo Go.
-- Story generation: with AI env vars set, send a valid `POST /api/stories/generate` request and confirm it returns a generated story JSON payload.
-
-Harness for the new book pipeline:
-
-```sh
-pnpm --filter @workspace/scripts run book:harness
-```
-
-That command posts a sample parent request to `POST /api/books`, prints the final `bookId`, and writes the response to `artifacts/book-runs/<timestamp>/book.json` and `book.md`.
-It also writes `book.html`, which shows the cover and the page text together in a browser-friendly layout. Open that file in your browser if you want the closest thing to a book preview; most browsers can print it to PDF.
-
-If you want to send your own input directly with `curl`, use:
-
-```sh
-curl -sS http://localhost:8080/api/books \
-  -H 'Content-Type: application/json' \
-  -d '{"mode":"behavior","prompt":"My child is learning to share.","character":{"name":"Ava","photoUri":"file:///parent/uploads/ava.jpg"},"supportingCharacters":[{"name":"Leo","relationship":"little brother"}]}'
-```
-
-The response includes a `bookId`. Use it to fetch the saved book:
-
-```sh
-curl -sS http://localhost:8080/api/books/<bookId>
-curl -sS http://localhost:8080/api/books/<bookId>/pages
-curl -sS http://localhost:8080/api/books/<bookId>/events
-```
-
-To watch live API logs in a second terminal, start the API server with:
-
-```sh
-pnpm run dev:api | tee /tmp/kahani-api.log
-```
-
-Then follow the log file while the harness runs:
-
-```sh
-tail -f /tmp/kahani-api.log
-```
-
-If you want to watch just the book-specific event stream, poll:
-
-```sh
-curl -sS http://localhost:8080/api/books/<bookId>/events
-```
-
-To test the single-sheet slicing idea from an attachment like the one you sent, run:
-
-```sh
-pnpm --filter @workspace/scripts run slice:sheet -- "/Users/varindernagra/Downloads/ChatGPT Image Apr 23, 2026, 03_11_54 PM.png"
-```
-
-That assumes a 3x4 grid of 12 pages. The script writes 12 cropped page images plus a `manifest.json` into a sibling `*-slices` folder. Adjust `--rows`, `--cols`, and `--inset` if the image layout changes.
-
-To turn the face contact sheet into reusable test assets, run:
-
-```sh
-pnpm --filter @workspace/scripts run faces:test-data -- "/Users/varindernagra/Downloads/ChatGPT Image Apr 23, 2026, 10_18_36 PM.png"
-```
-
-That slices the sheet into `men/`, `women/`, and `kids/` folders, writes 45 cropped portraits, and exports `manifest.json` plus `role-combinations.json` so you can quickly pick dad / mom / kid / sibling / friend combinations in tests.
+- Story generation: with AI env vars set, run the story-sheet flow and confirm it writes the sheet, sliced pages, and carousel HTML.
 
 ## Useful Workspace Commands
 

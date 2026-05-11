@@ -1,11 +1,10 @@
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   Dimensions,
   FlatList,
   Image,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -14,19 +13,20 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useStoryStudio } from "@/context/StoryContext";
-import type { StoryPage } from "@/context/StoryContext";
+import {
+  IconButton,
+  PlaceholderArt,
+  ProgressDots,
+  ReaderNavButton,
+  ThemeToggle,
+  cardShadow,
+  serifFamily,
+} from "@/components/KahaniDesign";
+import tokens from "@/constants/colors";
+import { useStoryStudio, type StoryPage } from "@/context/StoryContext";
+import { useKahaniTheme } from "@/context/ThemeContext";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-
-const PAGE_COLORS = [
-  { bg: "#F5EDE2", blob1: "rgba(191,216,196,0.55)", blob2: "rgba(242,201,183,0.45)" },
-  { bg: "#EEF5F1", blob1: "rgba(207,228,232,0.55)", blob2: "rgba(255,230,195,0.45)" },
-  { bg: "#FBF3EC", blob1: "rgba(242,201,183,0.55)", blob2: "rgba(191,216,196,0.40)" },
-  { bg: "#EDF4F6", blob1: "rgba(207,228,232,0.60)", blob2: "rgba(255,230,195,0.40)" },
-  { bg: "#F8F2EA", blob1: "rgba(255,230,195,0.55)", blob2: "rgba(191,216,196,0.40)" },
-  { bg: "#F0F5EF", blob1: "rgba(191,216,196,0.60)", blob2: "rgba(242,201,183,0.40)" },
-];
 
 type PageItem =
   | { type: "cover" }
@@ -35,28 +35,40 @@ type PageItem =
 
 export default function BookReaderScreen() {
   const insets = useSafeAreaInsets();
+  const { colors } = useKahaniTheme();
   const { currentStory, saveCurrentStory, savedStories } = useStoryStudio();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef<FlatList<PageItem>>(null);
+
+  const items = useMemo<PageItem[]>(
+    () =>
+      currentStory
+        ? [
+            { type: "cover" },
+            ...currentStory.pages.map((page) => ({ type: "page" as const, page })),
+            { type: "end" },
+          ]
+        : [],
+    [currentStory],
+  );
 
   if (!currentStory) {
     return (
-      <View style={[styles.center, { backgroundColor: "#FFFCF6" }]}>
-        <Text style={styles.noStory}>No story loaded. Go generate one!</Text>
-        <Pressable onPress={() => router.back()} style={styles.closeBtn}>
-          <Feather name="x" color="#8B7B5A" size={22} />
-        </Pressable>
+      <View
+        style={[
+          styles.emptyRoot,
+          { backgroundColor: colors.background, paddingTop: insets.top + 24 },
+        ]}
+      >
+        <IconButton icon="chevron-left" onPress={() => router.back()} />
+        <Text style={[styles.emptyText, { color: colors.foreground }]}>
+          No story loaded.
+        </Text>
       </View>
     );
   }
 
-  const items: PageItem[] = [
-    { type: "cover" },
-    ...currentStory.pages.map((page) => ({ type: "page" as const, page })),
-    { type: "end" },
-  ];
-
-  const isSaved = savedStories.some((s) => s.id === currentStory.id);
+  const isSaved = savedStories.some((story) => story.id === currentStory.id);
 
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -66,187 +78,226 @@ export default function BookReaderScreen() {
     },
   ).current;
 
-  const goNext = () => {
-    if (currentIndex < items.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
-    }
+  const goTo = (index: number) => {
+    flatListRef.current?.scrollToIndex({
+      index: Math.max(0, Math.min(items.length - 1, index)),
+      animated: true,
+    });
   };
-
-  const goPrev = () => {
-    if (currentIndex > 0) {
-      flatListRef.current?.scrollToIndex({ index: currentIndex - 1, animated: true });
-    }
-  };
-
-  const renderCover = () => (
-    <View style={[styles.page, { backgroundColor: "#2C1B0E" }]}>
-      {currentStory.coverImageUrl ? (
-        <Image
-          source={{ uri: currentStory.coverImageUrl }}
-          style={styles.coverImage}
-          resizeMode="cover"
-        />
-      ) : (
-        <View style={styles.coverImagePlaceholder}>
-          <View style={[styles.blob, { backgroundColor: "rgba(191,216,196,0.25)", top: -60, left: -40, width: 260, height: 200 }]} />
-          <View style={[styles.blob, { backgroundColor: "rgba(242,201,183,0.25)", top: 20, right: -40, width: 220, height: 180 }]} />
-          <View style={[styles.blob, { backgroundColor: "rgba(207,228,232,0.20)", bottom: 40, left: 20, width: 240, height: 190 }]} />
-          {currentStory.characterPhotoUri ? (
-            <Image
-              source={{ uri: currentStory.characterPhotoUri }}
-              style={styles.coverCharacterPhoto}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={styles.coverIconWrap}>
-              <Text style={styles.coverBookEmoji}>📖</Text>
-            </View>
-          )}
-        </View>
-      )}
-      <View style={styles.coverOverlay}>
-        <Text style={styles.coverFor}>A story for</Text>
-        <Text style={styles.coverName}>{currentStory.characterName}</Text>
-        <View style={styles.coverDivider} />
-        <Text style={styles.coverTitle}>{currentStory.title}</Text>
-        <Text style={styles.coverSubtitle}>A Kahani story · {currentStory.pages.length} pages</Text>
-      </View>
-    </View>
-  );
-
-  const renderStoryPage = (page: StoryPage, index: number) => {
-    const palette = PAGE_COLORS[index % PAGE_COLORS.length]!;
-    return (
-      <View style={[styles.page, { backgroundColor: palette.bg }]}>
-        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-          <View style={[styles.blob, { backgroundColor: palette.blob1, top: -80, left: -60, width: 300, height: 240 }]} />
-          <View style={[styles.blob, { backgroundColor: palette.blob2, bottom: -40, right: -50, width: 280, height: 220 }]} />
-        </View>
-
-        <View style={[styles.pageContent, { paddingTop: insets.top + 28 }]}>
-          {currentStory.characterPhotoUri ? (
-            <View style={styles.characterFrame}>
-              <Image
-                source={{ uri: currentStory.characterPhotoUri }}
-                style={styles.characterPhoto}
-                resizeMode="cover"
-              />
-              <View style={styles.characterGlow} />
-            </View>
-          ) : (
-            <View style={[styles.characterFrame, styles.characterPhotoEmpty]}>
-              <Feather name="user" color="#C8B89A" size={44} />
-            </View>
-          )}
-
-          <View style={styles.illustrationCaption}>
-            <Text style={styles.illustrationText}>{page.illustrationPrompt}</Text>
-          </View>
-
-          <View style={styles.textBubble}>
-            <Text style={styles.pageText}>{page.text}</Text>
-          </View>
-
-          <Text style={styles.pageNumber}>
-            {page.pageNumber} / {currentStory.pages.length}
-          </Text>
-        </View>
-      </View>
-    );
-  };
-
-  const renderEnd = () => (
-    <View style={[styles.page, { backgroundColor: "#F8F2EA" }]}>
-      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        <View style={[styles.blob, { backgroundColor: "rgba(191,216,196,0.50)", top: -80, left: -60, width: 300, height: 240 }]} />
-        <View style={[styles.blob, { backgroundColor: "rgba(255,230,195,0.50)", bottom: -40, right: -50, width: 280, height: 220 }]} />
-      </View>
-
-      <View style={[styles.pageContent, { paddingTop: insets.top + 40, justifyContent: "center", alignItems: "center" }]}>
-        <Text style={styles.endEmoji}>✨</Text>
-        <Text style={styles.endTitle}>The End</Text>
-        <Text style={styles.endName}>{currentStory.title}</Text>
-
-        <View style={styles.reflectionCard}>
-          <Text style={styles.reflectionLabel}>Talk about it together</Text>
-          <Text style={styles.reflectionText}>{currentStory.reflectionQuestion}</Text>
-        </View>
-
-        {!isSaved && (
-          <Pressable
-            onPress={saveCurrentStory}
-            style={({ pressed }) => [styles.saveBtn, { opacity: pressed ? 0.8 : 1 }]}
-          >
-            <Feather name="bookmark" color="white" size={18} />
-            <Text style={styles.saveBtnText}>Save to library</Text>
-          </Pressable>
-        )}
-        {isSaved && (
-          <View style={styles.savedBadge}>
-            <Feather name="check" color="#5E7A60" size={16} />
-            <Text style={styles.savedBadgeText}>Saved to your library</Text>
-          </View>
-        )}
-      </View>
-    </View>
-  );
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
       <FlatList
         ref={flatListRef}
         data={items}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        keyExtractor={(_, i) => String(i)}
+        keyExtractor={(_, index) => String(index)}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
         renderItem={({ item, index }) => {
-          if (item.type === "cover") return renderCover();
-          if (item.type === "page") return renderStoryPage(item.page, index - 1);
-          return renderEnd();
+          if (item.type === "cover") {
+            return <CoverPage pageCount={currentStory.pages.length} />;
+          }
+          if (item.type === "end") {
+            return (
+              <EndPage
+                saved={isSaved}
+                title={currentStory.title}
+                question={currentStory.reflectionQuestion}
+                onSave={saveCurrentStory}
+              />
+            );
+          }
+          return (
+            <StoryReaderPage
+              page={item.page}
+              index={index - 1}
+              total={currentStory.pages.length}
+              title={currentStory.title}
+              fallbackImage={currentStory.coverImageUrl ?? currentStory.characterPhotoUri}
+            />
+          );
         }}
       />
 
-      {/* Close button */}
-      <Pressable
-        onPress={() => router.back()}
-        style={[styles.closeButton, { top: insets.top + 16 }]}
-      >
-        <Feather name="x" color="white" size={20} />
-      </Pressable>
+      <View style={[styles.readerTop, { top: insets.top + 16 }]}>
+        <IconButton icon="chevron-left" onPress={() => router.back()} />
+        <ThemeToggle />
+      </View>
 
-      {/* Navigation arrows */}
-      {currentIndex > 0 && (
-        <Pressable
-          onPress={goPrev}
-          style={[styles.navButton, styles.navLeft, { top: SCREEN_HEIGHT / 2 - 22 }]}
-        >
-          <Feather name="chevron-left" color="white" size={24} />
-        </Pressable>
-      )}
-      {currentIndex < items.length - 1 && (
-        <Pressable
-          onPress={goNext}
-          style={[styles.navButton, styles.navRight, { top: SCREEN_HEIGHT / 2 - 22 }]}
-        >
-          <Feather name="chevron-right" color="white" size={24} />
-        </Pressable>
-      )}
+      <View style={[styles.navRow, { bottom: insets.bottom + 82 }]}>
+        <ReaderNavButton
+          direction="left"
+          disabled={currentIndex === 0}
+          onPress={() => goTo(currentIndex - 1)}
+        />
+        <View style={styles.pageCount}>
+          <Feather name="book-open" color={colors.primary} size={24} />
+          <Text style={[styles.pageCountText, { color: colors.foreground }]}>
+            {currentIndex + 1} / {items.length}
+          </Text>
+        </View>
+        <ReaderNavButton
+          direction="right"
+          disabled={currentIndex === items.length - 1}
+          onPress={() => goTo(currentIndex + 1)}
+        />
+      </View>
 
-      {/* Progress dots */}
-      <View style={[styles.dots, { bottom: insets.bottom + 24 }]}>
-        {items.map((_, i) => (
-          <View
-            key={i}
-            style={[
-              styles.dot,
-              { backgroundColor: i === currentIndex ? "rgba(139,123,90,0.9)" : "rgba(139,123,90,0.25)" },
-              i === currentIndex && styles.dotActive,
-            ]}
+      <View style={[styles.progressWrap, { bottom: insets.bottom + 52 }]}>
+        <ProgressDots count={items.length} index={currentIndex} />
+      </View>
+    </View>
+  );
+}
+
+function CoverPage({ pageCount }: { pageCount: number }) {
+  const { colors } = useKahaniTheme();
+  const { currentStory } = useStoryStudio();
+  if (!currentStory) return null;
+
+  return (
+    <View style={styles.page}>
+      <View style={styles.readerContent}>
+        <Text style={[styles.readerTitle, { color: colors.foreground }]}>
+          {currentStory.title}
+        </Text>
+        <View
+          style={[
+            styles.heroImage,
+            { borderColor: colors.border, backgroundColor: colors.secondary },
+            cardShadow(colors.shadow),
+          ]}
+        >
+          {currentStory.coverImageUrl ? (
+            <Image
+              source={{ uri: currentStory.coverImageUrl }}
+              style={styles.fill}
+              resizeMode="cover"
+            />
+          ) : (
+            <PlaceholderArt title={currentStory.title} />
+          )}
+        </View>
+        <Text style={[styles.storyText, { color: colors.foreground }]}>
+          A story for {currentStory.characterName}.
+        </Text>
+        <Text style={[styles.readerMeta, { color: colors.mutedForeground }]}>
+          {pageCount} illustrated pages
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function StoryReaderPage({
+  page,
+  index,
+  total,
+  title,
+  fallbackImage,
+}: {
+  page: StoryPage;
+  index: number;
+  total: number;
+  title: string;
+  fallbackImage?: string;
+}) {
+  const { colors } = useKahaniTheme();
+  const pageWithImage = page as StoryPage & { imageUrl?: string; imageUri?: string };
+  const imageUri = pageWithImage.imageUrl ?? pageWithImage.imageUri ?? fallbackImage;
+
+  return (
+    <View style={styles.page}>
+      <View style={styles.readerContent}>
+        <Text style={[styles.readerTitle, { color: colors.foreground }]}>
+          {title}
+        </Text>
+        <View
+          style={[
+            styles.heroImage,
+            { borderColor: colors.border, backgroundColor: colors.secondary },
+            cardShadow(colors.shadow),
+          ]}
+        >
+          {imageUri ? (
+            <Image source={{ uri: imageUri }} style={styles.fill} resizeMode="cover" />
+          ) : (
+            <PlaceholderArt title={page.illustrationPrompt} />
+          )}
+        </View>
+        <Text style={[styles.storyText, { color: colors.foreground }]}>
+          {page.text}
+        </Text>
+        <Text style={[styles.readerMeta, { color: colors.mutedForeground }]}>
+          Page {index + 1} of {total}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function EndPage({
+  saved,
+  title,
+  question,
+  onSave,
+}: {
+  saved: boolean;
+  title: string;
+  question: string;
+  onSave: () => void;
+}) {
+  const { colors } = useKahaniTheme();
+
+  return (
+    <View style={styles.page}>
+      <View style={[styles.readerContent, styles.endContent]}>
+        <Feather name="bookmark" color={colors.primary} size={56} />
+        <Text style={[styles.endTitle, { color: colors.foreground }]}>The End</Text>
+        <Text style={[styles.endBook, { color: colors.mutedForeground }]}>{title}</Text>
+        <View
+          style={[
+            styles.questionBox,
+            { backgroundColor: colors.card, borderColor: colors.border },
+            cardShadow(colors.shadow),
+          ]}
+        >
+          <Text style={[styles.questionLabel, { color: colors.gold }]}>
+            Talk about it together
+          </Text>
+          <Text style={[styles.questionText, { color: colors.foreground }]}>
+            {question}
+          </Text>
+        </View>
+        <Pressable
+          onPress={onSave}
+          disabled={saved}
+          style={[
+            styles.saveButton,
+            { backgroundColor: saved ? colors.secondary : colors.primary },
+          ]}
+        >
+          <Feather
+            name={saved ? "check" : "bookmark"}
+            color={saved ? colors.secondaryForeground : colors.primaryForeground}
+            size={18}
           />
-        ))}
+          <Text
+            style={[
+              styles.saveText,
+              {
+                color: saved
+                  ? colors.secondaryForeground
+                  : colors.primaryForeground,
+              },
+            ]}
+          >
+            {saved ? "Saved to library" : "Save to library"}
+          </Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -255,295 +306,131 @@ export default function BookReaderScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#000",
   },
-  center: {
+  emptyRoot: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 20,
+    paddingHorizontal: 24,
+    gap: 24,
   },
-  noStory: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 16,
-    color: "#8B7B5A",
+  emptyText: {
+    fontFamily: serifFamily(),
+    fontSize: 28,
   },
   page: {
     width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
+    minHeight: SCREEN_HEIGHT,
+  },
+  readerContent: {
+    flex: 1,
+    paddingHorizontal: 30,
+    paddingTop: 142,
+    paddingBottom: 178,
+    alignItems: "center",
+  },
+  readerTop: {
+    position: "absolute",
+    left: 24,
+    right: 24,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  readerTitle: {
+    fontFamily: serifFamily(),
+    fontSize: 38,
+    lineHeight: 46,
+    textAlign: "center",
+    marginBottom: 28,
+  },
+  heroImage: {
+    width: "100%",
+    aspectRatio: 0.82,
+    borderRadius: 34,
+    borderWidth: 1,
     overflow: "hidden",
   },
-  blob: {
-    position: "absolute",
-    borderRadius: 999,
-  },
-  pageContent: {
-    flex: 1,
-    alignItems: "center",
-    paddingHorizontal: 28,
-    paddingBottom: 100,
-    gap: 20,
-  },
-
-  // Cover
-  coverImage: {
-    ...StyleSheet.absoluteFillObject,
+  fill: {
     width: "100%",
     height: "100%",
   },
-  coverImagePlaceholder: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#3D2B1F",
-    overflow: "hidden",
+  storyText: {
+    alignSelf: "stretch",
+    fontFamily: serifFamily(),
+    fontSize: 25,
+    lineHeight: 40,
+    marginTop: 36,
   },
-  coverCharacterPhoto: {
-    width: 220,
-    height: 220,
-    borderRadius: 999,
-    borderWidth: 6,
-    borderColor: "rgba(255,230,195,0.5)",
-  },
-  coverIconWrap: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: "rgba(255,230,195,0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  coverBookEmoji: {
-    fontSize: 72,
-  },
-  coverOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingBottom: 100,
-    paddingHorizontal: 28,
-    paddingTop: 40,
-    backgroundColor: "rgba(20,12,6,0.72)",
-    alignItems: "center",
-    gap: 8,
-  },
-  coverFor: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: "rgba(255,230,195,0.75)",
-    letterSpacing: 0.5,
-  },
-  coverName: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 38,
-    color: "#FFE6C3",
-    letterSpacing: -1,
-  },
-  coverDivider: {
-    width: 48,
-    height: 2,
-    backgroundColor: "rgba(255,230,195,0.35)",
-    borderRadius: 1,
-    marginVertical: 4,
-  },
-  coverTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 22,
-    color: "white",
-    textAlign: "center",
-    lineHeight: 30,
-    letterSpacing: -0.4,
-  },
-  coverSubtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    color: "rgba(255,255,255,0.5)",
-    marginTop: 4,
-  },
-
-  // Story page
-  characterFrame: {
-    width: 180,
-    height: 180,
-    borderRadius: 50,
-    overflow: "hidden",
-    borderWidth: 4,
-    borderColor: "rgba(255,255,255,0.7)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 6,
+  readerMeta: {
+    fontFamily: tokens.typography.sansMedium,
+    fontSize: 15,
     marginTop: 16,
   },
-  characterPhoto: {
-    width: "100%",
-    height: "100%",
-  },
-  characterPhotoEmpty: {
-    backgroundColor: "rgba(244,238,228,0.95)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  characterGlow: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 50,
-    borderWidth: 3,
-    borderColor: "rgba(255,255,255,0.5)",
-  },
-  illustrationCaption: {
-    backgroundColor: "rgba(255,255,255,0.55)",
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    maxWidth: "100%",
-  },
-  illustrationText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: "#8B7B5A",
-    fontStyle: "italic",
-    textAlign: "center",
-    lineHeight: 18,
-  },
-  textBubble: {
-    backgroundColor: "rgba(255,255,255,0.85)",
-    borderRadius: 28,
-    paddingHorizontal: 24,
-    paddingVertical: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 2,
-    flex: 1,
-    justifyContent: "center",
-  },
-  pageText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: Platform.OS === "web" ? 22 : 20,
-    lineHeight: Platform.OS === "web" ? 34 : 32,
-    color: "#2C2116",
-    textAlign: "center",
-  },
-  pageNumber: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    color: "rgba(139,123,90,0.6)",
-  },
-
-  // End page
-  endEmoji: {
-    fontSize: 52,
-    marginBottom: 4,
-  },
-  endTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 40,
-    color: "#2C2116",
-    letterSpacing: -1,
-  },
-  endName: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 16,
-    color: "#8B7B5A",
-    textAlign: "center",
-  },
-  reflectionCard: {
-    backgroundColor: "rgba(255,255,255,0.85)",
-    borderRadius: 28,
-    paddingHorizontal: 24,
-    paddingVertical: 22,
-    gap: 10,
-    marginTop: 8,
-    width: "100%",
-  },
-  reflectionLabel: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 12,
-    color: "#BFD8C4",
-    textTransform: "uppercase",
-    letterSpacing: 1.2,
-  },
-  reflectionText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 18,
-    color: "#2C2116",
-    lineHeight: 27,
-  },
-  saveBtn: {
+  navRow: {
+    position: "absolute",
+    left: 34,
+    right: 34,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    backgroundColor: "#8B7B5A",
-    paddingHorizontal: 28,
-    paddingVertical: 16,
-    borderRadius: 22,
-    marginTop: 8,
+    justifyContent: "space-between",
   },
-  saveBtnText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 15,
-    color: "white",
-  },
-  savedBadge: {
+  pageCount: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginTop: 8,
+    gap: 12,
   },
-  savedBadgeText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    color: "#5E7A60",
+  pageCountText: {
+    fontFamily: tokens.typography.sansMedium,
+    fontSize: 20,
   },
-
-  // Navigation
-  closeButton: {
-    position: "absolute",
-    right: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  closeBtn: {
-    padding: 12,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,230,195,0.3)",
-  },
-  navButton: {
-    position: "absolute",
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(0,0,0,0.28)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  navLeft: {
-    left: 16,
-  },
-  navRight: {
-    right: 16,
-  },
-  dots: {
+  progressWrap: {
     position: "absolute",
     left: 0,
     right: 0,
-    flexDirection: "row",
+  },
+  endContent: {
     justifyContent: "center",
-    gap: 6,
   },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+  endTitle: {
+    fontFamily: serifFamily(),
+    fontSize: 48,
+    marginTop: 20,
   },
-  dotActive: {
-    width: 18,
+  endBook: {
+    fontFamily: tokens.typography.sansMedium,
+    fontSize: 17,
+    marginTop: 8,
+    textAlign: "center",
+  },
+  questionBox: {
+    alignSelf: "stretch",
+    borderWidth: 1,
+    borderRadius: 28,
+    padding: 22,
+    marginTop: 32,
+  },
+  questionLabel: {
+    fontFamily: tokens.typography.sansBold,
+    fontSize: 12,
+    letterSpacing: 1.1,
+    textTransform: "uppercase",
+    marginBottom: 10,
+  },
+  questionText: {
+    fontFamily: tokens.typography.sansBold,
+    fontSize: 20,
+    lineHeight: 30,
+  },
+  saveButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 22,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    marginTop: 24,
+  },
+  saveText: {
+    fontFamily: tokens.typography.sansBold,
+    fontSize: 15,
   },
 });
