@@ -1,12 +1,12 @@
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import {
-  KahaniHeader,
   KahaniScreen,
   StoryCard,
+  ThemeToggle,
   cardShadow,
   serifFamily,
 } from "@/components/KahaniDesign";
@@ -49,11 +49,16 @@ export default function LibraryScreen() {
   };
 
   return (
-    <KahaniScreen>
-      <KahaniHeader title="My Library" subtitle="Your stories, made with love" />
+    <KahaniScreen withLeaves={false}>
+      <View style={styles.topControls}>
+        <Text style={[styles.screenTitle, { color: colors.foreground }]}>
+          Library
+        </Text>
+        <ThemeToggle />
+      </View>
 
       <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-        Newly created
+        Latest
       </Text>
       {featured ? (
         <StoryCard
@@ -86,33 +91,12 @@ export default function LibraryScreen() {
         <Text style={[styles.allBooksTitle, { color: colors.foreground }]}>
           All books
         </Text>
-        <View style={styles.filterRow}>
-          <Pressable
-            style={[
-              styles.filterPill,
-              { backgroundColor: colors.secondary, borderColor: colors.border },
-            ]}
-          >
-            <Text style={[styles.filterText, { color: colors.foreground }]}>
-              Recently created
-            </Text>
-            <Feather name="chevron-down" color={colors.bark} size={18} />
-          </Pressable>
-          <Pressable
-            style={[
-              styles.filterIcon,
-              { backgroundColor: colors.secondary, borderColor: colors.border },
-            ]}
-          >
-            <Feather name="sliders" color={colors.bark} size={20} />
-          </Pressable>
-        </View>
       </View>
 
-      <View style={styles.grid}>
+      <View style={styles.bookList}>
         {savedStories.length > 0
           ? savedStories.map((story) => (
-              <View key={story.id} style={styles.gridItem}>
+              <View key={story.id}>
                 <StoryCard
                   title={story.title}
                   description={story.createdAt ? "Just now" : undefined}
@@ -123,7 +107,7 @@ export default function LibraryScreen() {
               </View>
             ))
           : sampleBooks.map((book) => (
-              <View key={book.title} style={styles.gridItem}>
+              <View key={book.title}>
                 <StoryCard
                   title={book.title}
                   description={book.text}
@@ -137,9 +121,20 @@ export default function LibraryScreen() {
 }
 
 const styles = StyleSheet.create({
+  topControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 22,
+  },
+  screenTitle: {
+    fontFamily: serifFamily(),
+    fontSize: 34,
+    lineHeight: 40,
+  },
   sectionTitle: {
     fontFamily: serifFamily(),
-    fontSize: 26,
+    fontSize: 25,
     marginBottom: 14,
   },
   emptyFeatured: {
@@ -164,45 +159,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
-    marginTop: 30,
+    marginTop: 34,
     marginBottom: 14,
   },
   allBooksTitle: {
     fontFamily: serifFamily(),
-    fontSize: 30,
+    fontSize: 28,
   },
-  filterRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  filterPill: {
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 14,
-  },
-  filterText: {
-    fontFamily: tokens.typography.sansBold,
-    fontSize: 13,
-  },
-  filterIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+  bookList: {
     gap: 14,
-  },
-  gridItem: {
-    width: "48%",
   },
 });

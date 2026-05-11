@@ -115,7 +115,6 @@ export default function BookReaderScreen() {
               page={item.page}
               index={index - 1}
               total={currentStory.pages.length}
-              title={currentStory.title}
               fallbackImage={currentStory.coverImageUrl ?? currentStory.characterPhotoUri}
             />
           );
@@ -133,7 +132,12 @@ export default function BookReaderScreen() {
           disabled={currentIndex === 0}
           onPress={() => goTo(currentIndex - 1)}
         />
-        <View style={styles.pageCount}>
+        <View
+          style={[
+            styles.pageCount,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
           <Feather name="book-open" color={colors.primary} size={24} />
           <Text style={[styles.pageCountText, { color: colors.foreground }]}>
             {currentIndex + 1} / {items.length}
@@ -196,13 +200,11 @@ function StoryReaderPage({
   page,
   index,
   total,
-  title,
   fallbackImage,
 }: {
   page: StoryPage;
   index: number;
   total: number;
-  title: string;
   fallbackImage?: string;
 }) {
   const { colors } = useKahaniTheme();
@@ -211,13 +213,10 @@ function StoryReaderPage({
 
   return (
     <View style={styles.page}>
-      <View style={styles.readerContent}>
-        <Text style={[styles.readerTitle, { color: colors.foreground }]}>
-          {title}
-        </Text>
+      <View style={[styles.readerContent, styles.storyPageContent]}>
         <View
           style={[
-            styles.heroImage,
+            styles.pageImage,
             { borderColor: colors.border, backgroundColor: colors.secondary },
             cardShadow(colors.shadow),
           ]}
@@ -322,10 +321,13 @@ const styles = StyleSheet.create({
   },
   readerContent: {
     flex: 1,
-    paddingHorizontal: 30,
-    paddingTop: 142,
-    paddingBottom: 178,
+    paddingHorizontal: 24,
+    paddingTop: 118,
+    paddingBottom: 156,
     alignItems: "center",
+  },
+  storyPageContent: {
+    paddingTop: 112,
   },
   readerTop: {
     position: "absolute",
@@ -337,15 +339,22 @@ const styles = StyleSheet.create({
   },
   readerTitle: {
     fontFamily: serifFamily(),
-    fontSize: 38,
-    lineHeight: 46,
+    fontSize: 34,
+    lineHeight: 41,
     textAlign: "center",
-    marginBottom: 28,
+    marginBottom: 22,
   },
   heroImage: {
     width: "100%",
-    aspectRatio: 0.82,
-    borderRadius: 34,
+    aspectRatio: 0.86,
+    borderRadius: 26,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  pageImage: {
+    width: "100%",
+    aspectRatio: 1,
+    borderRadius: 24,
     borderWidth: 1,
     overflow: "hidden",
   },
@@ -356,9 +365,9 @@ const styles = StyleSheet.create({
   storyText: {
     alignSelf: "stretch",
     fontFamily: serifFamily(),
-    fontSize: 25,
-    lineHeight: 40,
-    marginTop: 36,
+    fontSize: 23,
+    lineHeight: 35,
+    marginTop: 24,
   },
   readerMeta: {
     fontFamily: tokens.typography.sansMedium,
@@ -367,8 +376,8 @@ const styles = StyleSheet.create({
   },
   navRow: {
     position: "absolute",
-    left: 34,
-    right: 34,
+    left: 24,
+    right: 24,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -376,11 +385,15 @@ const styles = StyleSheet.create({
   pageCount: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 8,
+    minHeight: 46,
+    borderRadius: 23,
+    borderWidth: 1,
+    paddingHorizontal: 16,
   },
   pageCountText: {
     fontFamily: tokens.typography.sansMedium,
-    fontSize: 20,
+    fontSize: 17,
   },
   progressWrap: {
     position: "absolute",
