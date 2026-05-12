@@ -1,17 +1,51 @@
-Write a children’s bedtime story for ages 2–5 about this behavior: {{BEHAVIOR}}
-
-Return only valid JSON. No markdown. No explanation. No extra text.
+Write an exceptional picture-book story for ages 2-5 about this behavior: {{BEHAVIOR}}
 
 Use this parent name: {{PARENT_NAME}}
 
-Requirements:
-* Exactly 12 pages
-* Each page: 1–2 lines only
-* Total length under 400 words
-* Language: simple, warm, rhythmic, and expressive
-* Tone: calm, emotionally grounded, slightly poetic
-* Avoid generic phrasing and filler language
-* Avoid moralizing or instructional language
+Return only valid JSON. No markdown. No explanation. No extra text.
+
+Quality bar:
+The story must feel like an A-level or A+ published picture book, not a lesson plan. A- is the minimum acceptable quality.
+
+Optimize for:
+* Emotional clarity: the child feeling is specific, named in toddler-simple language, and easy to understand.
+* Story structure: the page turns build an arc with tension, co-regulation, a small attempt, and repair.
+* Voice: warm, intimate, concrete, and read-aloud friendly.
+* Originality: include one fresh central image, object, ritual, or phrase that makes this story memorable.
+* Visual imagery: every page should give the illustrator a clear physical scene.
+* Child realism: the child may resist, cry, grab, freeze, hide, cling, or protest in age-believable ways.
+* Sentence rhythm: varied, musical, simple enough for toddlers and preschoolers.
+* Literary quality: specific nouns and verbs, no generic self-help phrasing.
+* Parent usefulness: the parent action should be practical, calm, and non-preachy.
+* Child legibility: a 3-year-old should understand what happened, what changed, and what helped.
+* Re-read value: include anticipation, repetition, and one tactile/sensory image a child can look forward to hearing again.
+
+Story design:
+* Exactly 12 pages.
+* Each page text is 1-2 short lines.
+* Total story text under 430 words.
+* Use one concrete setting and one concrete transition, object, or ritual.
+* The central object or ritual must feel ordinary and usable in real family life, not like a gimmick or magical prop.
+* The behavioral skill must emerge through story action, not explanation.
+* The ending should show progress, safety, and connection without pretending the behavior is fixed forever.
+* Avoid a generic moral. Do not summarize the lesson at the end.
+* Page text must be polished enough to read aloud as-is. Avoid awkward phrases, clunky metaphors, and lines that only exist to explain the behavior.
+* Do not use cutesy invented object names or baby-talk words. Ordinary language should carry the poetry.
+* If there is a ritual, make it something a real parent might naturally do with objects already in the scene.
+* Include one simple repeated phrase a young child could remember and say later.
+* Keep cause and effect clear: child wants to keep doing one thing, parent asks for the next thing, child protests, parent helps make a small bridge.
+* Avoid adult-subtle symbolism that a 3-year-old would miss.
+* Preserve narrative flow: every page must naturally cause the next page. No abrupt new props, no sudden strategy that appears from nowhere.
+* Deepen the emotional arc in child-legible ways: show wanting, interruption, protest, being seen, a tiny choice, and a mixed-feeling transition.
+* The ending must echo the beginning in a satisfying way and show the child carrying a piece of the old activity into the new moment.
+* The final page should feel tender and inevitable, not like a slogan or behavior chart.
+* The setting must feel specific, not interchangeable: include 2-3 concrete sensory anchors such as light, sound, texture, smell, temperature, or a distinctive room detail.
+* The parent should feel like a real person, not only a calm function: include one small individual action, posture, or habit.
+* Name the child emotion directly at least once using toddler-comprehensible language, such as "mad", "sad", "not ready", "wanted it to stay", or "too fast".
+* Prefer short, punchy page turns. Mix fragments with full sentences. Avoid too many medium-length explanatory sentences.
+* Create one image or line that can stick after the book closes.
+* Choose safe everyday transitions such as leaving play for snack, leaving the house, going to the car, cleaning up toys, coming to the table, or moving from outside to inside.
+* Do not use bath time, toileting, diapering, potty, changing clothes, pajamas, undressing, dressing, or any transition involving nudity or body privacy.
 
 JSON shape:
 {
@@ -23,32 +57,43 @@ JSON shape:
   "pages": [
     {
       "page": 1,
-      "text": "1–2 lines of story text",
-      "scene": "physical layout of the scene",
-      "composition": "camera framing such as wide shot, medium, or close-up",
+      "text": "1-2 lines of story text",
+      "scene": "physical visual action and setting for the illustration, with no text to render",
+      "composition": "camera framing such as wide shot, medium shot, close-up, or top-down view",
       "emotion": "single clear emotion word"
     }
   ]
 }
 
-Story rules:
-* Ground the child in a real, specific moment
-* Show the trigger through action
-* Let emotion rise through behavior
-* Parent enters as calm presence, minimal dialogue
-* Model better behavior through action
-* Include a turning point
-* End with calm, safety, and connection
+Arc requirements:
+* Pages 1-2: establish the child's attachment to the current activity, object, or desire with a clear repeating play pattern.
+* Pages 3-4: show the transition demand interrupting that pattern and the child's believable resistance.
+* Pages 5-6: parent enters low, calm, and specific; parent names the feeling and what is unfinished without lecturing.
+* Pages 7-8: use an object or action already present in the scene to create a small bridge from old activity to next activity.
+* Pages 9-10: child makes one small imperfect attempt while still upset; do not make the child suddenly cheerful.
+* Pages 11-12: repair and reconnection; echo the opening image in the new setting, but add one emotional surprise or tenderness so the ending does more than resolve the logistics.
 
-Character rules:
-* Use the chosen child name naturally, not every page
-* Child is expressive and imperfect
-* Parent is calm, not a teacher
-* No perfect resolution, only progress
+Scene requirements:
+* Scenes must be drawable as text-free illustrations.
+* Do not include signs, written labels, book pages, screens with text, captions, speech bubbles, or anything that requires readable words.
+* Use scene details that can guide an image model: posture, hands, distance, room objects, light, motion.
+* Scenes must be fully clothed and body-safe. Avoid bathrooms, bathtubs, toilets, bedrooms for changing, pajamas, towels, diapers, underwear, or clothing removal.
 
 Hard constraints:
-* No "big feelings"
-* No "use your words"
-* No "stay calm"
-* No extra keys
-* No text outside JSON
+* No "big feelings".
+* No "use your words".
+* No "stay calm".
+* No "calm down".
+* No "learned that".
+* No "it is okay to feel".
+* No therapy-speak.
+* No AI-smoothed phrases like "came low and close", "wet hand", "emotionally grounded", or "safe enough".
+* No cutesy invented nouns like "blockies".
+* No gimmicky named tools unless the name sounds like a family phrase a toddler would actually repeat.
+* No abrupt prop introductions that are not already present in the scene.
+* No ending that simply repeats the coping phrase as the whole resolution.
+* No bath time.
+* No bathroom, bathtub, toilet, potty, diaper, towel, pajamas, underwear, dressing, undressing, clothing changes, or body-privacy scenes.
+* No direct advice to the child.
+* No extra JSON keys.
+* No text outside JSON.

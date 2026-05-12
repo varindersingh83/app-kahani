@@ -18,17 +18,21 @@ Input JSON:
 
 Panel structure:
 Row 1:
-Panel 1: book cover, display only the book title from JSON title
-Panel 2: ownership page, display only: "This book belongs to [child_name]"
-Panel 3: end page, display only: "The End"
+Panel 1: book cover illustration only, inspired by JSON title, no written title
+Panel 2: ownership-style illustration only, warm personal opening image for child_name, no written words
+Panel 3: closing illustration only, peaceful final image, no written ending text
 Panel 4: blank page, empty soft background, no text, no objects
 
 Rows 2-4:
 Use JSON pages 1-12 in order, left to right, top to bottom.
 
 Critical text rule:
-- Text is allowed only in panels 1, 2, and 3.
-- No text anywhere else.
+- No text is allowed anywhere in the image.
+- Do not render the title.
+- Do not render "This book belongs to".
+- Do not render "The End".
+- Do not render any story text.
+- Do not render any readable or pseudo-readable marks.
 - No page numbers.
 - No captions.
 - No panel labels.
@@ -50,7 +54,10 @@ Scene rules:
 - Use each JSON page scene as the physical visual action.
 - Use composition for camera framing.
 - Use emotion only for posture and facial expression.
-- Do not render the page text in story panels.
+- Do not render the page text in any panel.
+- All text for the reader is handled by the app UI below the illustration, never inside the generated image.
+- All characters must remain fully clothed in every panel.
+- Do not depict bathrooms, bathtubs, toilets, potty scenes, diapering, towels, pajamas, underwear, dressing, undressing, clothing changes, bathing, or body-privacy moments.
 
 Negative prompt:
-text outside panels 1-3, captions, page numbers, panel labels, emotion labels, words, letters, numbers, watermark, logo, speech bubbles, uneven grid, warped grid, irregular panel sizes, borders inside panels, inconsistent characters, clothing changes, color drift, extra limbs, distorted hands, photorealism, clutter
+text, typography, title text, book title, "This book belongs to", "The End", captions, page numbers, panel labels, emotion labels, words, letters, numbers, handwriting, pseudo-text, gibberish text, signage, labels, watermark, logo, speech bubbles, bathroom, bathtub, toilet, potty, diaper, towel, pajamas, underwear, nudity, bath time, bathing, dressing, undressing, changing clothes, clothing removal, body privacy, uneven grid, warped grid, irregular panel sizes, borders inside panels, inconsistent characters, clothing changes, color drift, extra limbs, distorted hands, photorealism, clutter

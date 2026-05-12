@@ -52,6 +52,7 @@ export default function StudioScreen() {
   const [mode, setMode] = useState<StoryMode>("behavior");
   const [prompt, setPrompt] = useState("");
   const [generationMessage, setGenerationMessage] = useState("");
+  const [issueNotice, setIssueNotice] = useState<string | null>(null);
 
   const mutation = useGenerateStory({
     mutation: {
@@ -75,17 +76,20 @@ export default function StudioScreen() {
     }
 
     try {
+      const storyPrompt = prompt.trim() || undefined;
+      setIssueNotice(null);
       setGenerationMessage("Starting your book...");
       const job = await mutation.mutateAsync({
         data: {
           mode,
-          prompt: prompt.trim() || undefined,
+          prompt: storyPrompt,
           character: {
             name: selectedCharacter.name,
             photoUri: selectedCharacter.photoUri,
           },
         },
       });
+      setIssueNotice(job.issueNotice ?? null);
       const story = await waitForGeneratedStory(
         job.bookId,
         setGenerationMessage,
@@ -196,11 +200,16 @@ export default function StudioScreen() {
               : "Generate book"
           }
           icon="zap"
-          onPress={generate}
+          onPress={() => generate()}
           disabled={isGenerating}
         />
         {isGenerating ? (
           <ActivityIndicator style={styles.loader} color={colors.primary} />
+        ) : null}
+        {issueNotice ? (
+          <Text style={[styles.issueNotice, { color: colors.mutedForeground }]}>
+            {issueNotice}
+          </Text>
         ) : null}
       </View>
 
@@ -269,6 +278,12 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginTop: 12,
+  },
+  issueNotice: {
+    marginTop: 12,
+    fontFamily: tokens.typography.sansMedium,
+    fontSize: 13,
+    lineHeight: 19,
   },
   sectionHeader: {
     flexDirection: "row",

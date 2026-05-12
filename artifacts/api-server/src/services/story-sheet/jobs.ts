@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import type { GenerateStoryRequest } from "@workspace/api-zod";
 import type { AiConfig, StorySheetJob } from "./types";
 import { runStorySheetGeneration } from "./generator";
+import { buildMultiIssueNotice, planStoryIssues } from "./planner";
 import { storySheetRunDir } from "./paths";
 
 const jobs = new Map<string, StorySheetJob>();
@@ -25,6 +26,8 @@ export async function startStorySheetJob(
   const bookId = randomUUID();
   const outputDir = storySheetRunDir(bookId);
   const now = new Date().toISOString();
+  const plannedIssues = planStoryIssues(request);
+  const activeIssue = plannedIssues[0]?.issue;
   const job: StorySheetJob = {
     bookId,
     status: "queued",
@@ -34,6 +37,9 @@ export async function startStorySheetJob(
     updatedAt: now,
     outputDir,
     request,
+    plannedIssues,
+    activeIssue,
+    issueNotice: buildMultiIssueNotice(plannedIssues),
   };
 
   jobs.set(bookId, job);
