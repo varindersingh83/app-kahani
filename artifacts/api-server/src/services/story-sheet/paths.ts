@@ -6,6 +6,7 @@ export function repoRoot() {
   while (true) {
     if (
       existsSync(path.join(candidate, "package.json")) &&
+      existsSync(path.join(candidate, "pnpm-workspace.yaml")) &&
       existsSync(path.join(candidate, "artifacts"))
     ) {
       return candidate;
