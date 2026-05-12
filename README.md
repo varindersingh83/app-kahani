@@ -23,9 +23,9 @@ Character creation currently persists only `name` and `photoUri`. The screen als
 
 ## Backend Generation Flow
 
-The mobile app calls `POST /api/stories/generate`, which validates the request, runs the book-generation pipeline, and returns the packaged story JSON used by the frontend. The fuller persistent backend surface is `POST /api/books`; it returns a `bookId`, status, generated story, QA flag, and retry total. Saved backend jobs can be inspected with `GET /api/books/:bookId`, `GET /api/books/:bookId/pages`, and `GET /api/books/:bookId/events`.
+The mobile app calls `POST /api/stories/generate`, which validates the request, starts the story-sheet generation job, and returns the packaged story JSON used by the frontend once polling completes. The fuller persistent backend surface is `POST /api/books`; it returns a `bookId`, status, generated story, QA flag, and retry total. Saved backend jobs can be inspected with `GET /api/books/:bookId`, `GET /api/books/:bookId/pages`, and `GET /api/books/:bookId/events`.
 
-The generation pipeline lives under `artifacts/api-server/src/services/book-generation`. It creates a database book record, normalizes the parent input, builds a 12-page story plan, generates a cover and a 3x4 storyboard sheet, slices the sheet into page images, reviews the result, logs agent/event state, and packages the final story.
+The generation pipeline lives under `artifacts/api-server/src/services/story-sheet`. It creates a local generation job, normalizes the parent input, builds a 12-page story JSON plan, generates one 4x4 storyboard sheet, slices the sheet into cover/ownership/end/blank/page images, and packages the final story.
 
 Important current backend requirements: `DATABASE_URL` must point at a reachable Postgres database for the full pipeline, and AI generation requires `AI_INTEGRATIONS_OPENROUTER_BASE_URL` plus `AI_INTEGRATIONS_OPENROUTER_API_KEY`. Clerk middleware is wired, but local development skips auth when Clerk env vars are absent.
 
@@ -103,7 +103,7 @@ OPENROUTER_APP_TITLE=Kahani
 
 `OPENROUTER_SITE_URL` and `OPENROUTER_APP_TITLE` are optional attribution headers. The image model must be an OpenRouter model ID, usually with a provider prefix such as `google/gemini-3.1-flash-image-preview`, or whichever model you choose in OpenRouter.
 
-The current book pipeline uses the image model twice: once for the cover, and once for the full 3x4 storyboard sheet. The storyboard-sheet call returns the canonical story text plus the sheet image, and the server slices that sheet into page images before packaging the final book. If cover generation fails, the pipeline can still continue without a cover image.
+The current book pipeline uses the image model once for the full 4x4 storyboard sheet. The first row contains the cover, ownership page, end page, and blank page; the remaining 12 panels are the story pages. The image prompt includes an image-spec section that carries the child reference photo, optional appearance description, and supporting-character consistency rules before the server slices the sheet into page images.
 
 The mockup sandbox also requires:
 

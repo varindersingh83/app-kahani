@@ -16,6 +16,9 @@ Layout:
 Input JSON:
 {{JSON_INPUT}}
 
+Image spec:
+{{IMAGE_SPEC}}
+
 Panel structure:
 Row 1:
 Panel 1: book cover, display only the book title from JSON title

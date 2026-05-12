@@ -68,10 +68,7 @@ export async function runStorySheetGeneration(input: {
     promptPath("sheet-master-prompt.txt"),
     "utf8",
   );
-  const sheetPrompt = sheetPromptTemplate.replace(
-    "{{JSON_INPUT}}",
-    JSON.stringify(storyJson, null, 2),
-  );
+  const sheetPrompt = buildSheetPrompt(sheetPromptTemplate, storyJson, request);
   await writeFile(path.join(outputDir, "sheet-prompt.txt"), `${sheetPrompt}\n`);
 
   const imageData = await callMultimodalImageModel(
@@ -159,6 +156,43 @@ function buildStoryPrompt(
   return template
     .replaceAll("{{BEHAVIOR}}", behavior)
     .replaceAll("{{PARENT_NAME}}", parentName);
+}
+
+export function buildSheetPrompt(
+  template: string,
+  story: StorySheetInput,
+  request: GenerateStoryRequest,
+) {
+  return template
+    .replace("{{JSON_INPUT}}", JSON.stringify(story, null, 2))
+    .replace("{{IMAGE_SPEC}}", buildImageSpec(request));
+}
+
+export function buildImageSpec(request: GenerateStoryRequest) {
+  const childName = request.character.name.trim();
+  const appearance = request.character.appearance?.trim();
+  const supportingCharacters = request.supportingCharacters ?? [];
+  const lines = [
+    `Main child: ${childName}.`,
+    request.character.photoUri
+      ? "Use the uploaded child reference image as the canonical face, hair, skin tone, proportions, and overall likeness. Translate it into the watercolor storybook style without changing identity."
+      : "No child reference image was provided, so keep the same invented face, hair, clothing, and proportions in every panel.",
+    appearance
+      ? `Appearance lock: ${appearance}. Keep these traits consistent in every panel.`
+      : "If clothing is not specified, choose one simple outfit and keep it identical in every panel.",
+    supportingCharacters.length > 0
+      ? `Supporting cast, only when the story calls for them: ${supportingCharacters
+          .map(
+            (character: { name: string; relationship: string }) =>
+              `${character.name} (${character.relationship})`,
+          )
+          .join(", ")}. Keep each supporting character visually consistent across panels.`
+      : "Do not add recurring supporting characters unless the story scene clearly requires them.",
+    "Never change the main child's outfit, hair, age, body proportions, or facial structure between panels.",
+    "Keep parent/adult figures visually consistent when present, including clothing color and hairstyle.",
+  ];
+
+  return lines.join("\n");
 }
 
 function normalizeStoryJson(

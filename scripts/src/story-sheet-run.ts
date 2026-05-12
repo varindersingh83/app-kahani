@@ -218,7 +218,19 @@ function buildStoryPrompt(template: string, behavior: string, parentName: string
 }
 
 function buildSheetPrompt(template: string, story: StoryInput) {
-  return template.replace("{{JSON_INPUT}}", JSON.stringify(story, null, 2));
+  return template
+    .replace("{{JSON_INPUT}}", JSON.stringify(story, null, 2))
+    .replace("{{IMAGE_SPEC}}", buildImageSpec(story));
+}
+
+function buildImageSpec(story: StoryInput) {
+  return [
+    `Main child: ${story.child_name}.`,
+    "Use the child reference image as the canonical face, hair, skin tone, proportions, and overall likeness. Translate it into the watercolor storybook style without changing identity.",
+    "Use the parent reference image for the parent/adult character when present, keeping face, hair, clothing color, and proportions consistent.",
+    "Choose one simple outfit for the child and keep it identical in every panel unless a story action absolutely requires a temporary prop.",
+    "Never change the main child's age, body proportions, hair, facial structure, or core outfit between panels.",
+  ].join("\n");
 }
 
 function resolveParentName(referenceImage: string) {
