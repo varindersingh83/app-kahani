@@ -220,6 +220,10 @@ components:
           $ref: "#/components/schemas/StoryGenerationStep"
         message:
           type: string
+        activeIssue:
+          type: string
+        issueNotice:
+          type: string
       required:
         - bookId
         - status

@@ -9,7 +9,9 @@ import {
   callMultimodalImageModel,
   extractImageUrl,
 } from "./aiClient";
+import { buildImageQaChecklist } from "./imageQa";
 import { buildGeneratedStory } from "./mapper";
+import { planStoryIssues } from "./planner";
 import { promptPath, slicerScriptPath } from "./paths";
 import { renderBookHtml } from "./html";
 import type {
@@ -98,6 +100,15 @@ export async function runStorySheetGeneration(input: {
     path.join(outputDir, "slices.json"),
     `${JSON.stringify(slices, null, 2)}\n`,
   );
+  const imageQa = buildImageQaChecklist({
+    bookId,
+    sheetImagePath: sheetPath,
+    slices,
+  });
+  await writeFile(
+    path.join(outputDir, "image-qa.json"),
+    `${JSON.stringify(imageQa, null, 2)}\n`,
+  );
 
   const usage = {
     textModel: config.textModel,
@@ -133,11 +144,12 @@ export async function runStorySheetGeneration(input: {
     `${JSON.stringify(story, null, 2)}\n`,
   );
 
-  return { story, storyJson, slices, usage };
+  return { story, storyJson, slices, imageQa, usage };
 }
 
 function buildBehaviorPrompt(request: GenerateStoryRequest) {
-  const prompt = request.prompt?.trim();
+  const plannedIssue = planStoryIssues(request)[0]?.issue;
+  const prompt = plannedIssue ?? request.prompt?.trim();
   if (request.mode === "random") {
     return prompt
       ? `A warm imaginative story idea: ${prompt}`

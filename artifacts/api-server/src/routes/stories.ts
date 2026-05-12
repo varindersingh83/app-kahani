@@ -24,6 +24,8 @@ router.post("/stories/generate", async (req, res) => {
       status: job.status,
       step: job.step,
       message: job.message,
+      activeIssue: job.activeIssue,
+      issueNotice: job.issueNotice,
     });
   } catch (error) {
     req.log.error({ err: error }, "Story job could not start");
@@ -44,6 +46,8 @@ router.get("/stories/:bookId/status", async (req, res) => {
     step: job.step,
     message: job.message,
     error: job.error,
+    activeIssue: job.activeIssue,
+    issueNotice: job.issueNotice,
   });
 });
 
@@ -61,6 +65,8 @@ router.get("/stories/:bookId", async (req, res) => {
       step: job.step,
       message: job.message,
       error: job.error,
+      activeIssue: job.activeIssue,
+      issueNotice: job.issueNotice,
     });
     return;
   }

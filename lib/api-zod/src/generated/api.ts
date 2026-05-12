@@ -70,6 +70,8 @@ export const GetStoryStatusResponse = zod
       "failed",
     ]),
     message: zod.string(),
+    activeIssue: zod.string().optional(),
+    issueNotice: zod.string().optional(),
   })
   .and(
     zod.object({

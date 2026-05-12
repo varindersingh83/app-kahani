@@ -84,6 +84,8 @@ export interface StoryGenerationJob {
   status: StoryGenerationStatusValue;
   step: StoryGenerationStep;
   message: string;
+  activeIssue?: string;
+  issueNotice?: string;
 }
 
 export type StoryGenerationStatus = StoryGenerationJob & {

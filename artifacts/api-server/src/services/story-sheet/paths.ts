@@ -2,22 +2,21 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 export function repoRoot() {
-  const candidates = [
-    path.resolve(process.cwd(), "../.."),
-    process.cwd(),
-    path.resolve(process.cwd(), "../../.."),
-  ];
-
-  for (const candidate of candidates) {
+  let candidate = process.cwd();
+  while (true) {
     if (
       existsSync(path.join(candidate, "package.json")) &&
       existsSync(path.join(candidate, "artifacts"))
     ) {
       return candidate;
     }
+
+    const parent = path.dirname(candidate);
+    if (parent === candidate) break;
+    candidate = parent;
   }
 
-  return path.resolve(process.cwd(), "../..");
+  return process.cwd();
 }
 
 export function storySheetRunsRoot() {

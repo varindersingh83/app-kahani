@@ -83,6 +83,11 @@ export type StorySheetGeneratedStory = {
   artifactLinks?: StorySheetArtifactLinks;
 };
 
+export type StorySheetPlannedIssue = {
+  issue: string;
+  bookIntent: string;
+};
+
 export type StorySheetJob = {
   bookId: string;
   status: StorySheetJobStatus;
@@ -92,14 +97,38 @@ export type StorySheetJob = {
   updatedAt: string;
   outputDir: string;
   request: GenerateStoryRequest;
+  plannedIssues?: StorySheetPlannedIssue[];
+  activeIssue?: string;
+  issueNotice?: string;
   story?: StorySheetGeneratedStory;
   error?: string;
+};
+
+export type StorySheetImageQa = {
+  bookId: string;
+  sheetImageFileName: string;
+  status: "needs_human_review";
+  summary: string;
+  panelChecks: Array<{
+    panel: number;
+    row: number;
+    col: number;
+    fileName: string;
+    role:
+      | "cover_illustration"
+      | "opening_illustration"
+      | "closing_illustration"
+      | "blank_panel"
+      | "story_illustration";
+    criteria: string[];
+  }>;
 };
 
 export type StorySheetRunResult = {
   story: StorySheetGeneratedStory;
   storyJson: StorySheetInput;
   slices: SheetSliceManifestEntry[];
+  imageQa: StorySheetImageQa;
   usage: {
     textModel: string;
     imageModel: string;
