@@ -2,9 +2,13 @@ import express, { type Express } from "express";
 import cors from "cors";
 import { clerkMiddleware } from "@clerk/express";
 import pinoHttp from "pino-http";
-import { CLERK_PROXY_PATH, clerkProxyMiddleware } from "./middlewares/clerkProxyMiddleware";
+import {
+  CLERK_PROXY_PATH,
+  clerkProxyMiddleware,
+} from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { storySheetRunsRoot } from "./services/story-sheet/paths";
 
 const app: Express = express();
 
@@ -31,8 +35,12 @@ app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 app.use(cors({ credentials: true, origin: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use("/api/story-runs", express.static(storySheetRunsRoot()));
 
-if (process.env.CLERK_PUBLISHABLE_KEY || process.env.NODE_ENV === "production") {
+if (
+  process.env.CLERK_PUBLISHABLE_KEY ||
+  process.env.NODE_ENV === "production"
+) {
   app.use(clerkMiddleware());
 }
 

@@ -17,9 +17,12 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  ErrorMessage,
   GenerateStoryRequest,
   GeneratedStory,
   HealthStatus,
+  StoryGenerationJob,
+  StoryGenerationStatus,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -108,8 +111,8 @@ export function useHealthCheck<
 }
 
 /**
- * Generates a Montessori-inspired story for a selected child character.
- * @summary Generate a child story
+ * Starts a high-quality story-sheet generation job for a child character.
+ * @summary Generate a child picture book
  */
 export const getGenerateStoryUrl = () => {
   return `/api/stories/generate`;
@@ -118,8 +121,8 @@ export const getGenerateStoryUrl = () => {
 export const generateStory = async (
   generateStoryRequest: GenerateStoryRequest,
   options?: RequestInit,
-): Promise<GeneratedStory> => {
-  return customFetch<GeneratedStory>(getGenerateStoryUrl(), {
+): Promise<StoryGenerationJob> => {
+  return customFetch<StoryGenerationJob>(getGenerateStoryUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
@@ -128,7 +131,7 @@ export const generateStory = async (
 };
 
 export const getGenerateStoryMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorMessage>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -169,13 +172,13 @@ export type GenerateStoryMutationResult = NonNullable<
   Awaited<ReturnType<typeof generateStory>>
 >;
 export type GenerateStoryMutationBody = BodyType<GenerateStoryRequest>;
-export type GenerateStoryMutationError = ErrorType<unknown>;
+export type GenerateStoryMutationError = ErrorType<ErrorMessage>;
 
 /**
- * @summary Generate a child story
+ * @summary Generate a child picture book
  */
 export const useGenerateStory = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<ErrorMessage>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -193,3 +196,180 @@ export const useGenerateStory = <
 > => {
   return useMutation(getGenerateStoryMutationOptions(options));
 };
+
+/**
+ * @summary Get story generation status
+ */
+export const getGetStoryStatusUrl = (bookId: string) => {
+  return `/api/stories/${bookId}/status`;
+};
+
+export const getStoryStatus = async (
+  bookId: string,
+  options?: RequestInit,
+): Promise<StoryGenerationStatus> => {
+  return customFetch<StoryGenerationStatus>(getGetStoryStatusUrl(bookId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetStoryStatusQueryKey = (bookId: string) => {
+  return [`/api/stories/${bookId}/status`] as const;
+};
+
+export const getGetStoryStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStoryStatus>>,
+  TError = ErrorType<ErrorMessage>,
+>(
+  bookId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getStoryStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetStoryStatusQueryKey(bookId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getStoryStatus>>> = ({
+    signal,
+  }) => getStoryStatus(bookId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!bookId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getStoryStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetStoryStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getStoryStatus>>
+>;
+export type GetStoryStatusQueryError = ErrorType<ErrorMessage>;
+
+/**
+ * @summary Get story generation status
+ */
+
+export function useGetStoryStatus<
+  TData = Awaited<ReturnType<typeof getStoryStatus>>,
+  TError = ErrorType<ErrorMessage>,
+>(
+  bookId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getStoryStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetStoryStatusQueryOptions(bookId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get completed generated story
+ */
+export const getGetGeneratedStoryUrl = (bookId: string) => {
+  return `/api/stories/${bookId}`;
+};
+
+export const getGeneratedStory = async (
+  bookId: string,
+  options?: RequestInit,
+): Promise<GeneratedStory> => {
+  return customFetch<GeneratedStory>(getGetGeneratedStoryUrl(bookId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetGeneratedStoryQueryKey = (bookId: string) => {
+  return [`/api/stories/${bookId}`] as const;
+};
+
+export const getGetGeneratedStoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getGeneratedStory>>,
+  TError = ErrorType<ErrorMessage | StoryGenerationStatus>,
+>(
+  bookId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGeneratedStory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetGeneratedStoryQueryKey(bookId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getGeneratedStory>>
+  > = ({ signal }) => getGeneratedStory(bookId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!bookId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getGeneratedStory>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetGeneratedStoryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getGeneratedStory>>
+>;
+export type GetGeneratedStoryQueryError = ErrorType<
+  ErrorMessage | StoryGenerationStatus
+>;
+
+/**
+ * @summary Get completed generated story
+ */
+
+export function useGetGeneratedStory<
+  TData = Awaited<ReturnType<typeof getGeneratedStory>>,
+  TError = ErrorType<ErrorMessage | StoryGenerationStatus>,
+>(
+  bookId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGeneratedStory>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetGeneratedStoryQueryOptions(bookId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}

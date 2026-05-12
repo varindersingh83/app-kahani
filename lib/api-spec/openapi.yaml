@@ -31,7 +31,7 @@ paths:
       operationId: generateStory
       tags: [stories]
       summary: Generate a child picture book
-      description: Generates a watercolor kids picture book (10-20 pages) for a child character.
+      description: Starts a high-quality story-sheet generation job for a child character.
       requestBody:
         required: true
         content:
@@ -39,14 +39,81 @@ paths:
             schema:
               $ref: "#/components/schemas/GenerateStoryRequest"
       responses:
+        "202":
+          description: Story generation job accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoryGenerationJob"
+        "503":
+          description: Story generation is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /stories/{bookId}/status:
+    get:
+      operationId: getStoryStatus
+      tags: [stories]
+      summary: Get story generation status
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Story generation status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoryGenerationStatus"
+        "404":
+          description: Story job not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /stories/{bookId}:
+    get:
+      operationId: getGeneratedStory
+      tags: [stories]
+      summary: Get completed generated story
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
         "200":
           description: Generated picture book
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/GeneratedStory"
+        "404":
+          description: Story job not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "409":
+          description: Story generation is not complete
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoryGenerationStatus"
 components:
   schemas:
+    ErrorMessage:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
     HealthStatus:
       type: object
       properties:
@@ -112,10 +179,68 @@ components:
         illustrationPrompt:
           type: string
           description: A short description of what the watercolor illustration on this page should show.
+        imageUrl:
+          type: string
+          description: URL of the sliced storyboard image for this page.
+        scene:
+          type: string
+        composition:
+          type: string
+        emotion:
+          type: string
       required:
         - pageNumber
         - text
         - illustrationPrompt
+    StoryGenerationStep:
+      type: string
+      enum:
+        - queued
+        - writing_story
+        - painting_sheet
+        - slicing_pages
+        - preparing_reader
+        - complete
+        - failed
+    StoryGenerationStatusValue:
+      type: string
+      enum:
+        - queued
+        - running
+        - complete
+        - failed
+    StoryGenerationJob:
+      type: object
+      properties:
+        bookId:
+          type: string
+        status:
+          $ref: "#/components/schemas/StoryGenerationStatusValue"
+        step:
+          $ref: "#/components/schemas/StoryGenerationStep"
+        message:
+          type: string
+      required:
+        - bookId
+        - status
+        - step
+        - message
+    StoryGenerationStatus:
+      allOf:
+        - $ref: "#/components/schemas/StoryGenerationJob"
+        - type: object
+          properties:
+            error:
+              type: string
+    StoryArtifactLinks:
+      type: object
+      properties:
+        bookHtmlUrl:
+          type: string
+        storyJsonUrl:
+          type: string
+        usageJsonUrl:
+          type: string
     GeneratedStory:
       type: object
       properties:
@@ -132,6 +257,14 @@ components:
         coverImageUrl:
           type: string
           description: URL of the AI-generated watercolor cover illustration.
+        endImageUrl:
+          type: string
+          description: URL of the sliced end-page illustration.
+        sheetImageUrl:
+          type: string
+          description: URL of the full 4x4 storyboard sheet.
+        artifactLinks:
+          $ref: "#/components/schemas/StoryArtifactLinks"
       required:
         - title
         - pages

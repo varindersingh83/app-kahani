@@ -63,7 +63,7 @@ function RootLayoutNav() {
 }
 
 function AuthenticatedRoot() {
-  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const { isLoaded, isSignedIn, getToken, userId } = useAuth();
 
   useEffect(() => {
     setAuthTokenGetter(async () => getToken());
@@ -77,7 +77,7 @@ function AuthenticatedRoot() {
   }
 
   return (
-    <StoryProvider>
+    <StoryProvider profileId={userId}>
       <RootLayoutNav />
     </StoryProvider>
   );

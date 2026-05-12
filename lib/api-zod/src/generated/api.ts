@@ -16,7 +16,7 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
- * Generates a watercolor kids picture book for a selected child character.
+ * Starts a high-quality story-sheet generation job for a child character.
  * @summary Generate a child picture book
  */
 
@@ -29,7 +29,12 @@ export const GenerateStoryBody = zod.object({
   character: zod.object({
     name: zod.string().min(1),
     photoUri: zod.string().optional(),
-    appearance: zod.string().optional(),
+    appearance: zod
+      .string()
+      .optional()
+      .describe(
+        "Optional short appearance description for illustration consistency.",
+      ),
   }),
   supportingCharacters: zod
     .array(
@@ -38,18 +43,93 @@ export const GenerateStoryBody = zod.object({
         relationship: zod.string(),
       }),
     )
-    .optional(),
+    .optional()
+    .describe(
+      "Optional list of other characters to include if the story calls for them.",
+    ),
 });
 
-const StoryPage = zod.object({
-  pageNumber: zod.number().int().min(1),
-  text: zod.string(),
-  illustrationPrompt: zod.string(),
+/**
+ * @summary Get story generation status
+ */
+export const GetStoryStatusParams = zod.object({
+  bookId: zod.coerce.string(),
 });
 
-export const GenerateStoryResponse = zod.object({
+export const GetStoryStatusResponse = zod
+  .object({
+    bookId: zod.string(),
+    status: zod.enum(["queued", "running", "complete", "failed"]),
+    step: zod.enum([
+      "queued",
+      "writing_story",
+      "painting_sheet",
+      "slicing_pages",
+      "preparing_reader",
+      "complete",
+      "failed",
+    ]),
+    message: zod.string(),
+  })
+  .and(
+    zod.object({
+      error: zod.string().optional(),
+    }),
+  );
+
+/**
+ * @summary Get completed generated story
+ */
+export const GetGeneratedStoryParams = zod.object({
+  bookId: zod.coerce.string(),
+});
+
+export const getGeneratedStoryResponsePagesMin = 10;
+export const getGeneratedStoryResponsePagesMax = 20;
+
+export const GetGeneratedStoryResponse = zod.object({
   title: zod.string(),
-  pages: zod.array(StoryPage).min(10).max(20),
+  pages: zod
+    .array(
+      zod.object({
+        pageNumber: zod.number().min(1),
+        text: zod
+          .string()
+          .describe("1-3 sentences of simple, age-appropriate story text."),
+        illustrationPrompt: zod
+          .string()
+          .describe(
+            "A short description of what the watercolor illustration on this page should show.",
+          ),
+        imageUrl: zod
+          .string()
+          .optional()
+          .describe("URL of the sliced storyboard image for this page."),
+        scene: zod.string().optional(),
+        composition: zod.string().optional(),
+        emotion: zod.string().optional(),
+      }),
+    )
+    .min(getGeneratedStoryResponsePagesMin)
+    .max(getGeneratedStoryResponsePagesMax),
   reflectionQuestion: zod.string(),
-  coverImageUrl: zod.string().optional(),
+  coverImageUrl: zod
+    .string()
+    .optional()
+    .describe("URL of the AI-generated watercolor cover illustration."),
+  endImageUrl: zod
+    .string()
+    .optional()
+    .describe("URL of the sliced end-page illustration."),
+  sheetImageUrl: zod
+    .string()
+    .optional()
+    .describe("URL of the full 4x4 storyboard sheet."),
+  artifactLinks: zod
+    .object({
+      bookHtmlUrl: zod.string().optional(),
+      storyJsonUrl: zod.string().optional(),
+      usageJsonUrl: zod.string().optional(),
+    })
+    .optional(),
 });

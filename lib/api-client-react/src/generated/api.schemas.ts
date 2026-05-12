@@ -5,6 +5,10 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface ErrorMessage {
+  message: string;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -39,18 +43,72 @@ export interface GenerateStoryRequest {
 }
 
 export interface StoryPage {
+  /** @minimum 1 */
   pageNumber: number;
   /** 1-3 sentences of simple, age-appropriate story text. */
   text: string;
   /** A short description of what the watercolor illustration on this page should show. */
   illustrationPrompt: string;
+  /** URL of the sliced storyboard image for this page. */
+  imageUrl?: string;
+  scene?: string;
+  composition?: string;
+  emotion?: string;
+}
+
+export type StoryGenerationStep =
+  (typeof StoryGenerationStep)[keyof typeof StoryGenerationStep];
+
+export const StoryGenerationStep = {
+  queued: "queued",
+  writing_story: "writing_story",
+  painting_sheet: "painting_sheet",
+  slicing_pages: "slicing_pages",
+  preparing_reader: "preparing_reader",
+  complete: "complete",
+  failed: "failed",
+} as const;
+
+export type StoryGenerationStatusValue =
+  (typeof StoryGenerationStatusValue)[keyof typeof StoryGenerationStatusValue];
+
+export const StoryGenerationStatusValue = {
+  queued: "queued",
+  running: "running",
+  complete: "complete",
+  failed: "failed",
+} as const;
+
+export interface StoryGenerationJob {
+  bookId: string;
+  status: StoryGenerationStatusValue;
+  step: StoryGenerationStep;
+  message: string;
+}
+
+export type StoryGenerationStatus = StoryGenerationJob & {
+  error?: string;
+};
+
+export interface StoryArtifactLinks {
+  bookHtmlUrl?: string;
+  storyJsonUrl?: string;
+  usageJsonUrl?: string;
 }
 
 export interface GeneratedStory {
   title: string;
-  /** @minItems 10 @maxItems 20 */
+  /**
+   * @minItems 10
+   * @maxItems 20
+   */
   pages: StoryPage[];
   reflectionQuestion: string;
   /** URL of the AI-generated watercolor cover illustration. */
   coverImageUrl?: string;
+  /** URL of the sliced end-page illustration. */
+  endImageUrl?: string;
+  /** URL of the full 4x4 storyboard sheet. */
+  sheetImageUrl?: string;
+  artifactLinks?: StoryArtifactLinks;
 }

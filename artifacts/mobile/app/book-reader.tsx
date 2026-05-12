@@ -1,15 +1,13 @@
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Dimensions,
-  FlatList,
   Image,
   Pressable,
   StyleSheet,
   Text,
   View,
-  ViewToken,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -38,19 +36,27 @@ export default function BookReaderScreen() {
   const { colors } = useKahaniTheme();
   const { currentStory, saveCurrentStory, savedStories } = useStoryStudio();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const flatListRef = useRef<FlatList<PageItem>>(null);
 
   const items = useMemo<PageItem[]>(
     () =>
       currentStory
         ? [
             { type: "cover" },
-            ...currentStory.pages.map((page) => ({ type: "page" as const, page })),
+            ...currentStory.pages.map((page) => ({
+              type: "page" as const,
+              page,
+            })),
             { type: "end" },
           ]
         : [],
     [currentStory],
   );
+
+  useEffect(() => {
+    setCurrentIndex((index) =>
+      Math.max(0, Math.min(items.length - 1, index)),
+    );
+  }, [items.length]);
 
   if (!currentStory) {
     return (
@@ -69,57 +75,36 @@ export default function BookReaderScreen() {
   }
 
   const isSaved = savedStories.some((story) => story.id === currentStory.id);
-
-  const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      if (viewableItems.length > 0 && viewableItems[0].index !== null) {
-        setCurrentIndex(viewableItems[0].index);
-      }
-    },
-  ).current;
+  const currentItem = items[currentIndex];
 
   const goTo = (index: number) => {
-    flatListRef.current?.scrollToIndex({
-      index: Math.max(0, Math.min(items.length - 1, index)),
-      animated: true,
-    });
+    setCurrentIndex(Math.max(0, Math.min(items.length - 1, index)));
   };
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <FlatList
-        ref={flatListRef}
-        data={items}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(_, index) => String(index)}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
-        renderItem={({ item, index }) => {
-          if (item.type === "cover") {
-            return <CoverPage pageCount={currentStory.pages.length} />;
+      {currentItem.type === "cover" ? (
+        <CoverPage pageCount={currentStory.pages.length} />
+      ) : null}
+      {currentItem.type === "end" ? (
+        <EndPage
+          saved={isSaved}
+          title={currentStory.title}
+          question={currentStory.reflectionQuestion}
+          imageUrl={currentStory.endImageUrl}
+          onSave={saveCurrentStory}
+        />
+      ) : null}
+      {currentItem.type === "page" ? (
+        <StoryReaderPage
+          page={currentItem.page}
+          index={currentIndex - 1}
+          total={currentStory.pages.length}
+          fallbackImage={
+            currentStory.coverImageUrl ?? currentStory.characterPhotoUri
           }
-          if (item.type === "end") {
-            return (
-              <EndPage
-                saved={isSaved}
-                title={currentStory.title}
-                question={currentStory.reflectionQuestion}
-                onSave={saveCurrentStory}
-              />
-            );
-          }
-          return (
-            <StoryReaderPage
-              page={item.page}
-              index={index - 1}
-              total={currentStory.pages.length}
-              fallbackImage={currentStory.coverImageUrl ?? currentStory.characterPhotoUri}
-            />
-          );
-        }}
-      />
+        />
+      ) : null}
 
       <View style={[styles.readerTop, { top: insets.top + 16 }]}>
         <IconButton icon="chevron-left" onPress={() => router.back()} />
@@ -208,8 +193,12 @@ function StoryReaderPage({
   fallbackImage?: string;
 }) {
   const { colors } = useKahaniTheme();
-  const pageWithImage = page as StoryPage & { imageUrl?: string; imageUri?: string };
-  const imageUri = pageWithImage.imageUrl ?? pageWithImage.imageUri ?? fallbackImage;
+  const pageWithImage = page as StoryPage & {
+    imageUrl?: string;
+    imageUri?: string;
+  };
+  const imageUri =
+    pageWithImage.imageUrl ?? pageWithImage.imageUri ?? fallbackImage;
 
   return (
     <View style={styles.page}>
@@ -222,7 +211,11 @@ function StoryReaderPage({
           ]}
         >
           {imageUri ? (
-            <Image source={{ uri: imageUri }} style={styles.fill} resizeMode="cover" />
+            <Image
+              source={{ uri: imageUri }}
+              style={styles.fill}
+              resizeMode="cover"
+            />
           ) : (
             <PlaceholderArt title={page.illustrationPrompt} />
           )}
@@ -242,11 +235,13 @@ function EndPage({
   saved,
   title,
   question,
+  imageUrl,
   onSave,
 }: {
   saved: boolean;
   title: string;
   question: string;
+  imageUrl?: string;
   onSave: () => void;
 }) {
   const { colors } = useKahaniTheme();
@@ -254,9 +249,29 @@ function EndPage({
   return (
     <View style={styles.page}>
       <View style={[styles.readerContent, styles.endContent]}>
-        <Feather name="bookmark" color={colors.primary} size={56} />
-        <Text style={[styles.endTitle, { color: colors.foreground }]}>The End</Text>
-        <Text style={[styles.endBook, { color: colors.mutedForeground }]}>{title}</Text>
+        {imageUrl ? (
+          <View
+            style={[
+              styles.heroImage,
+              { borderColor: colors.border, backgroundColor: colors.secondary },
+              cardShadow(colors.shadow),
+            ]}
+          >
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.fill}
+              resizeMode="cover"
+            />
+          </View>
+        ) : (
+          <Feather name="bookmark" color={colors.primary} size={56} />
+        )}
+        <Text style={[styles.endTitle, { color: colors.foreground }]}>
+          The End
+        </Text>
+        <Text style={[styles.endBook, { color: colors.mutedForeground }]}>
+          {title}
+        </Text>
         <View
           style={[
             styles.questionBox,
@@ -281,7 +296,9 @@ function EndPage({
         >
           <Feather
             name={saved ? "check" : "bookmark"}
-            color={saved ? colors.secondaryForeground : colors.primaryForeground}
+            color={
+              saved ? colors.secondaryForeground : colors.primaryForeground
+            }
             size={18}
           />
           <Text

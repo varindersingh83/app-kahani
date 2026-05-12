@@ -1,5 +1,10 @@
 import { Feather } from "@expo/vector-icons";
-import { GeneratedStory, useGenerateStory } from "@workspace/api-client-react";
+import {
+  getGeneratedStory,
+  getStoryStatus,
+  useGenerateStory,
+  type GeneratedStory,
+} from "@workspace/api-client-react";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import React, { useState } from "react";
@@ -42,26 +47,14 @@ export default function StudioScreen() {
     selectedCharacterId,
     selectCharacter,
     currentStory,
-    setGeneratedStory,
+    createGeneratedStory,
   } = useStoryStudio();
   const [mode, setMode] = useState<StoryMode>("behavior");
   const [prompt, setPrompt] = useState("");
+  const [generationMessage, setGenerationMessage] = useState("");
 
   const mutation = useGenerateStory({
     mutation: {
-      onSuccess: (story: GeneratedStory) => {
-        setGeneratedStory({
-          title: story.title,
-          pages: story.pages,
-          reflectionQuestion: story.reflectionQuestion,
-          coverImageUrl: story.coverImageUrl ?? undefined,
-          characterName: selectedCharacter?.name ?? "your child",
-          characterPhotoUri: selectedCharacter?.photoUri ?? undefined,
-        });
-        if (Platform.OS !== "web") {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        }
-      },
       onError: () => {
         Alert.alert(
           "Story not ready",
@@ -71,28 +64,66 @@ export default function StudioScreen() {
     },
   });
 
-  const generate = () => {
+  const generate = async () => {
     if (!selectedCharacter) {
-      Alert.alert("Add a character", "Create a character before generating a story.");
+      Alert.alert(
+        "Add a character",
+        "Create a character before generating a story.",
+      );
       router.push("/(tabs)/characters");
       return;
     }
 
-    mutation.mutate({
-      data: {
-        mode,
-        prompt: prompt.trim() || undefined,
-        character: {
-          name: selectedCharacter.name,
-          photoUri: selectedCharacter.photoUri,
+    try {
+      setGenerationMessage("Starting your book...");
+      const job = await mutation.mutateAsync({
+        data: {
+          mode,
+          prompt: prompt.trim() || undefined,
+          character: {
+            name: selectedCharacter.name,
+            photoUri: selectedCharacter.photoUri,
+          },
         },
-      },
-    });
+      });
+      const story = await waitForGeneratedStory(
+        job.bookId,
+        setGenerationMessage,
+      );
+      const generatedStory = await createGeneratedStory({
+        title: story.title,
+        pages: story.pages,
+        reflectionQuestion: story.reflectionQuestion,
+        coverImageUrl: story.coverImageUrl ?? undefined,
+        endImageUrl: story.endImageUrl ?? undefined,
+        sheetImageUrl: story.sheetImageUrl ?? undefined,
+        artifactLinks: story.artifactLinks,
+        characterName: selectedCharacter.name,
+        characterPhotoUri: selectedCharacter.photoUri ?? undefined,
+      });
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      setGenerationMessage("");
+      router.push({
+        pathname: "/book-reader",
+        params: { storyId: generatedStory.id },
+      });
+    } catch (error) {
+      setGenerationMessage("");
+      Alert.alert(
+        "Story not ready",
+        error instanceof Error
+          ? error.message
+          : "The story service could not finish. Try again in a moment.",
+      );
+    }
   };
 
   const storyTitle = currentStory?.title ?? SAMPLE_TITLE;
   const storyText = currentStory?.pages[0]?.text ?? SAMPLE_TEXT;
   const visibleCharacters = characters.slice(0, 3);
+  const isGenerating = mutation.isPending || Boolean(generationMessage);
 
   return (
     <KahaniScreen withLeaves={false}>
@@ -159,12 +190,16 @@ export default function StudioScreen() {
 
       <View style={styles.ctaBlock}>
         <KahaniButton
-          label={mutation.isPending ? "Writing your story..." : "Generate book"}
+          label={
+            isGenerating
+              ? generationMessage || "Writing your story..."
+              : "Generate book"
+          }
           icon="zap"
           onPress={generate}
-          disabled={mutation.isPending}
+          disabled={isGenerating}
         />
-        {mutation.isPending ? (
+        {isGenerating ? (
           <ActivityIndicator style={styles.loader} color={colors.primary} />
         ) : null}
       </View>
@@ -179,7 +214,9 @@ export default function StudioScreen() {
         featured
         title={storyTitle}
         description={storyText}
-        imageUri={currentStory?.coverImageUrl ?? currentStory?.characterPhotoUri}
+        imageUri={
+          currentStory?.coverImageUrl ?? currentStory?.characterPhotoUri
+        }
         pages={currentStory?.pages.length ?? 24}
         onPress={() => {
           if (currentStory) {
@@ -261,3 +298,34 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
 });
+
+async function waitForGeneratedStory(
+  bookId: string,
+  setMessage: (message: string) => void,
+): Promise<GeneratedStory> {
+  for (let attempt = 0; attempt < 180; attempt += 1) {
+    const status = await getStoryStatus(bookId);
+    setMessage(status.message);
+
+    if (status.status === "failed") {
+      throw new Error(
+        status.error ?? "The story service could not generate the book.",
+      );
+    }
+
+    if (status.status === "complete") {
+      setMessage("Opening your book...");
+      return getGeneratedStory(bookId);
+    }
+
+    await delay(1500);
+  }
+
+  throw new Error(
+    "The story is taking longer than expected. Please try again.",
+  );
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

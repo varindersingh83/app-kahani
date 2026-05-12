@@ -5,20 +5,22 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-
-export interface StoryPage {
-  pageNumber: number;
-  /** 1-3 sentences of simple, age-appropriate story text. */
-  text: string;
-  /** A short description of what the watercolor illustration on this page should show. */
-  illustrationPrompt: string;
-}
+import type { StoryArtifactLinks } from "./storyArtifactLinks";
+import type { StoryPage } from "./storyPage";
 
 export interface GeneratedStory {
   title: string;
-  /** @minItems 10 @maxItems 20 */
+  /**
+   * @minItems 10
+   * @maxItems 20
+   */
   pages: StoryPage[];
   reflectionQuestion: string;
   /** URL of the AI-generated watercolor cover illustration. */
   coverImageUrl?: string;
+  /** URL of the sliced end-page illustration. */
+  endImageUrl?: string;
+  /** URL of the full 4x4 storyboard sheet. */
+  sheetImageUrl?: string;
+  artifactLinks?: StoryArtifactLinks;
 }

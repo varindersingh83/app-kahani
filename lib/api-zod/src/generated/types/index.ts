@@ -7,7 +7,15 @@
  */
 
 export * from "./characterInput";
+export * from "./errorMessage";
 export * from "./generatedStory";
 export * from "./generateStoryRequest";
 export * from "./healthStatus";
+export * from "./storyArtifactLinks";
+export * from "./storyGenerationJob";
+export * from "./storyGenerationStatus";
+export * from "./storyGenerationStatusValue";
+export * from "./storyGenerationStep";
 export * from "./storyMode";
+export * from "./storyPage";
+export * from "./supportingCharacter";

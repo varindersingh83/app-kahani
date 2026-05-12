@@ -1,25 +1,97 @@
 import { Router, type IRouter } from "express";
 import { GenerateStoryBody } from "@workspace/api-zod";
-import { getAiConfig } from "../services/book-generation/aiClient";
-import { runBookPipeline } from "../services/book-generation/orchestrator";
+import { getAiConfig } from "../services/story-sheet/aiClient";
+import {
+  readStorySheetJob,
+  startStorySheetJob,
+} from "../services/story-sheet/jobs";
+import type { StorySheetGeneratedStory } from "../services/story-sheet/types";
 
 const router: IRouter = Router();
 
 router.post("/stories/generate", async (req, res) => {
   const config = getAiConfig();
   if (!config) {
-    res.status(500).json({ message: "Story generation is not configured." });
+    res.status(503).json({ message: "Story generation is not configured." });
     return;
   }
 
   try {
     const body = GenerateStoryBody.parse(req.body);
-    const result = await runBookPipeline(body, config);
-    res.json(result.story);
+    const job = await startStorySheetJob(body, config);
+    res.status(202).json({
+      bookId: job.bookId,
+      status: job.status,
+      step: job.step,
+      message: job.message,
+    });
   } catch (error) {
-    req.log.error({ err: error }, "Story pipeline failed");
-    res.status(502).json({ message: "The story service could not generate a story." });
+    req.log.error({ err: error }, "Story job could not start");
+    res.status(400).json({ message: "The story request is invalid." });
   }
 });
 
+router.get("/stories/:bookId/status", async (req, res) => {
+  const job = await readStorySheetJob(req.params.bookId);
+  if (!job) {
+    res.status(404).json({ message: "Story job not found." });
+    return;
+  }
+
+  res.json({
+    bookId: job.bookId,
+    status: job.status,
+    step: job.step,
+    message: job.message,
+    error: job.error,
+  });
+});
+
+router.get("/stories/:bookId", async (req, res) => {
+  const job = await readStorySheetJob(req.params.bookId);
+  if (!job) {
+    res.status(404).json({ message: "Story job not found." });
+    return;
+  }
+
+  if (job.status !== "complete" || !job.story) {
+    res.status(409).json({
+      bookId: job.bookId,
+      status: job.status,
+      step: job.step,
+      message: job.message,
+      error: job.error,
+    });
+    return;
+  }
+
+  res.json(withAbsoluteUrls(job.story, `${req.protocol}://${req.get("host")}`));
+});
+
 export default router;
+
+function withAbsoluteUrls(
+  story: StorySheetGeneratedStory,
+  origin: string,
+): StorySheetGeneratedStory {
+  const absolutize = (value?: string) =>
+    value?.startsWith("/") ? `${origin}${value}` : value;
+
+  return {
+    ...story,
+    coverImageUrl: absolutize(story.coverImageUrl),
+    endImageUrl: absolutize(story.endImageUrl),
+    sheetImageUrl: absolutize(story.sheetImageUrl),
+    artifactLinks: story.artifactLinks
+      ? {
+          bookHtmlUrl: absolutize(story.artifactLinks.bookHtmlUrl),
+          storyJsonUrl: absolutize(story.artifactLinks.storyJsonUrl),
+          usageJsonUrl: absolutize(story.artifactLinks.usageJsonUrl),
+        }
+      : undefined,
+    pages: story.pages.map((page) => ({
+      ...page,
+      imageUrl: absolutize(page.imageUrl),
+    })),
+  };
+}
