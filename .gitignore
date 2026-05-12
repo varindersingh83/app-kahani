@@ -16,6 +16,9 @@ node_modules
 .env.*
 !.env.example
 
+# local story generation QA artifacts
+/artifacts/story-sheet-runs/*
+
 # IDEs and editors
 /.idea
 .project
