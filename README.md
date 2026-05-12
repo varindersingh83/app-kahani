@@ -160,7 +160,7 @@ For a normal local Expo session, this is usually easier:
 pnpm run dev:mobile
 ```
 
-`dev:mobile` points the app at the local API server with `EXPO_PUBLIC_API_BASE_URL=http://localhost:8080` and starts Metro on `http://localhost:8081`. When `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` is not set, the mobile app skips the Clerk sign-in screen for local development and opens the app directly.
+`dev:mobile` points the app at the local API server with `EXPO_PUBLIC_API_BASE_URL=http://localhost:8080` and starts Metro. Expo may choose an open port if `8081` is busy. When `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` is not set, the mobile app skips the Clerk sign-in screen for local development and opens the app directly.
 
 Smoke test Metro after it starts:
 
@@ -173,6 +173,18 @@ Expected response:
 ```text
 packager-status:running
 ```
+
+For browser testing, start Expo web on a fixed port and verify the browser renders the app, not only that Metro returns HTML:
+
+```sh
+HOME=$PWD/.local/expo-home \
+XDG_CONFIG_HOME=$PWD/.local/expo-home/.config \
+EXPO_NO_TELEMETRY=1 \
+EXPO_PUBLIC_API_BASE_URL=http://localhost:8080 \
+pnpm --filter @workspace/mobile exec expo start --localhost --web --clear --port 19007
+```
+
+Open `http://localhost:19007/library`. If the page forever spins or shows the Expo red error overlay, check the Metro terminal for a web bundle error. A common failure is importing native-only modules at module scope. Keep web-safe fallbacks for providers such as `react-native-gesture-handler` and `react-native-keyboard-controller` so the browser does not evaluate their native entrypoints.
 
 If Expo fails during startup with `TypeError: fetch failed` while validating native module versions, use Expo offline mode:
 

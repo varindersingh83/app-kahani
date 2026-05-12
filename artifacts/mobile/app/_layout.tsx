@@ -16,9 +16,7 @@ import { Stack } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
-import { Platform } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { KeyboardProvider } from "react-native-keyboard-controller";
+import { Platform, View, type ViewProps } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthScreen } from "@/components/AuthScreen";
@@ -48,6 +46,25 @@ const tokenCache = {
   async saveToken(key: string, value: string) {
     await SecureStore.setItemAsync(key, value);
   },
+};
+
+const InteractionRoot = ({ children }: { children: React.ReactNode }) => {
+  if (Platform.OS === "web") {
+    return <View style={{ flex: 1 }}>{children}</View>;
+  }
+
+  const { GestureHandlerRootView } = require("react-native-gesture-handler") as {
+    GestureHandlerRootView: React.ComponentType<ViewProps>;
+  };
+  const { KeyboardProvider } = require("react-native-keyboard-controller") as {
+    KeyboardProvider: React.ComponentType<{ children: React.ReactNode }>;
+  };
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <KeyboardProvider>{children}</KeyboardProvider>
+    </GestureHandlerRootView>
+  );
 };
 
 function RootLayoutNav() {
@@ -102,21 +119,17 @@ export default function RootLayout() {
   const app = publishableKey ? (
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <ClerkLoaded>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <KeyboardProvider>
-            <AuthenticatedRoot />
-          </KeyboardProvider>
-        </GestureHandlerRootView>
+        <InteractionRoot>
+          <AuthenticatedRoot />
+        </InteractionRoot>
       </ClerkLoaded>
     </ClerkProvider>
   ) : (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <KeyboardProvider>
-        <StoryProvider>
-          <RootLayoutNav />
-        </StoryProvider>
-      </KeyboardProvider>
-    </GestureHandlerRootView>
+    <InteractionRoot>
+      <StoryProvider>
+        <RootLayoutNav />
+      </StoryProvider>
+    </InteractionRoot>
   );
 
   return (
