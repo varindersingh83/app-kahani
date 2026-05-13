@@ -23,7 +23,6 @@ import {
   KahaniButton,
   KahaniScreen,
   SectionTitle,
-  SegmentedControl,
   StoryCard,
   ThemeToggle,
   cardShadow,
@@ -32,8 +31,6 @@ import {
 import tokens from "@/constants/colors";
 import { useStoryStudio } from "@/context/StoryContext";
 import { useKahaniTheme } from "@/context/ThemeContext";
-
-type StoryMode = "behavior" | "random";
 
 const SAMPLE_TITLE = "The Little Seed's Journey";
 const SAMPLE_TEXT =
@@ -49,7 +46,6 @@ export default function StudioScreen() {
     currentStory,
     createGeneratedStory,
   } = useStoryStudio();
-  const [mode, setMode] = useState<StoryMode>("behavior");
   const [prompt, setPrompt] = useState("");
   const [generationMessage, setGenerationMessage] = useState("");
   const [issueNotice, setIssueNotice] = useState<string | null>(null);
@@ -81,7 +77,7 @@ export default function StudioScreen() {
       setGenerationMessage("Starting your book...");
       const job = await mutation.mutateAsync({
         data: {
-          mode,
+          mode: "behavior",
           prompt: storyPrompt,
           character: {
             name: selectedCharacter.name,
@@ -155,16 +151,6 @@ export default function StudioScreen() {
         />
       </View>
 
-      <SectionTitle>Story type</SectionTitle>
-      <SegmentedControl
-        value={mode}
-        onChange={setMode}
-        options={[
-          { value: "behavior", label: "Behavior support" },
-          { value: "random", label: "Random story" },
-        ]}
-      />
-
       <View
         style={[
           styles.promptBox,
@@ -179,11 +165,7 @@ export default function StudioScreen() {
           value={prompt}
           onChangeText={setPrompt}
           multiline
-          placeholder={
-            mode === "behavior"
-              ? "sharing toys, bedtime resistance, using gentle hands"
-              : "picnic with parents, drive home from school, rainy day adventure"
-          }
+          placeholder="sharing toys, bedtime resistance, using gentle hands"
           placeholderTextColor={colors.mutedForeground}
           style={[
             styles.promptInput,
