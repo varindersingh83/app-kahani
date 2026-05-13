@@ -107,7 +107,11 @@ export default function BookReaderScreen() {
       ) : null}
 
       <View style={[styles.readerTop, { top: insets.top + 16 }]}>
-        <IconButton icon="chevron-left" onPress={() => router.back()} />
+        <IconButton
+          icon="chevron-left"
+          onPress={() => router.back()}
+          testID="reader-back-button"
+        />
         <ThemeToggle />
       </View>
 
@@ -116,6 +120,7 @@ export default function BookReaderScreen() {
           direction="left"
           disabled={currentIndex === 0}
           onPress={() => goTo(currentIndex - 1)}
+          testID="reader-nav-left"
         />
         <View
           style={[
@@ -132,6 +137,7 @@ export default function BookReaderScreen() {
           direction="right"
           disabled={currentIndex === items.length - 1}
           onPress={() => goTo(currentIndex + 1)}
+          testID="reader-nav-right"
         />
       </View>
 
@@ -170,7 +176,10 @@ function CoverPage({ pageCount }: { pageCount: number }) {
             <PlaceholderArt title={currentStory.title} />
           )}
         </View>
-        <Text style={[styles.storyText, { color: colors.foreground }]}>
+        <Text
+          testID="reader-cover-owner"
+          style={[styles.storyText, { color: colors.foreground }]}
+        >
           A story for {currentStory.characterName}.
         </Text>
         <Text style={[styles.readerMeta, { color: colors.mutedForeground }]}>
@@ -220,7 +229,10 @@ function StoryReaderPage({
             <PlaceholderArt title={page.illustrationPrompt} />
           )}
         </View>
-        <Text style={[styles.storyText, { color: colors.foreground }]}>
+        <Text
+          testID={`reader-page-${index + 1}-text`}
+          style={[styles.storyText, { color: colors.foreground }]}
+        >
           {page.text}
         </Text>
         <Text style={[styles.readerMeta, { color: colors.mutedForeground }]}>
@@ -289,6 +301,7 @@ function EndPage({
         <Pressable
           onPress={onSave}
           disabled={saved}
+          testID="save-to-library-button"
           style={[
             styles.saveButton,
             { backgroundColor: saved ? colors.secondary : colors.primary },

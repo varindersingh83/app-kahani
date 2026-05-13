@@ -43,7 +43,6 @@ export default function StudioScreen() {
   const { colors } = useKahaniTheme();
   const {
     characters,
-    selectedCharacter,
     selectedCharacterId,
     selectCharacter,
     currentStory,
@@ -52,24 +51,43 @@ export default function StudioScreen() {
   const [mode, setMode] = useState<StoryMode>("behavior");
   const [prompt, setPrompt] = useState("");
   const [generationMessage, setGenerationMessage] = useState("");
+  const [generationError, setGenerationError] = useState<string | null>(null);
   const [issueNotice, setIssueNotice] = useState<string | null>(null);
+  const childCharacters = characters.filter(
+    (character) => (character.relationship ?? "child") === "child",
+  );
+  const selectedChild =
+    childCharacters.find((character) => character.id === selectedCharacterId) ??
+    childCharacters[0] ??
+    null;
+  const supportingCharacters = characters
+    .filter((character) => (character.relationship ?? "child") !== "child")
+    .map((character) => ({
+      name: character.name,
+      relationship: character.relationship ?? "family",
+    }));
 
   const mutation = useGenerateStory({
     mutation: {
-      onError: () => {
+      onError: (error) => {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "The story service could not finish. Try again in a moment.";
+        setGenerationError(message);
         Alert.alert(
           "Story not ready",
-          "The story service could not finish. Try again in a moment.",
+          message,
         );
       },
     },
   });
 
   const generate = async () => {
-    if (!selectedCharacter) {
+    if (!selectedChild) {
       Alert.alert(
         "Add a character",
-        "Create a character before generating a story.",
+        "Create a child character before generating a story.",
       );
       router.push("/(tabs)/characters");
       return;
@@ -78,15 +96,17 @@ export default function StudioScreen() {
     try {
       const storyPrompt = prompt.trim() || undefined;
       setIssueNotice(null);
+      setGenerationError(null);
       setGenerationMessage("Starting your book...");
       const job = await mutation.mutateAsync({
         data: {
           mode,
           prompt: storyPrompt,
           character: {
-            name: selectedCharacter.name,
-            photoUri: selectedCharacter.photoUri,
+            name: selectedChild.name,
+            photoUri: selectedChild.photoUri,
           },
+          supportingCharacters,
         },
       });
       setIssueNotice(job.issueNotice ?? null);
@@ -102,8 +122,8 @@ export default function StudioScreen() {
         endImageUrl: story.endImageUrl ?? undefined,
         sheetImageUrl: story.sheetImageUrl ?? undefined,
         artifactLinks: story.artifactLinks,
-        characterName: selectedCharacter.name,
-        characterPhotoUri: selectedCharacter.photoUri ?? undefined,
+        characterName: selectedChild.name,
+        characterPhotoUri: selectedChild.photoUri ?? undefined,
       });
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -115,18 +135,21 @@ export default function StudioScreen() {
       });
     } catch (error) {
       setGenerationMessage("");
-      Alert.alert(
-        "Story not ready",
+      const message =
         error instanceof Error
           ? error.message
-          : "The story service could not finish. Try again in a moment.",
+          : "The story service could not finish. Try again in a moment.";
+      setGenerationError(message);
+      Alert.alert(
+        "Story not ready",
+        message,
       );
     }
   };
 
   const storyTitle = currentStory?.title ?? SAMPLE_TITLE;
   const storyText = currentStory?.pages[0]?.text ?? SAMPLE_TEXT;
-  const visibleCharacters = characters.slice(0, 3);
+  const visibleCharacters = childCharacters.slice(0, 3);
   const isGenerating = mutation.isPending || Boolean(generationMessage);
 
   return (
@@ -142,16 +165,18 @@ export default function StudioScreen() {
             key={character.id}
             label={character.name}
             imageUri={character.photoUri}
-            selected={character.id === selectedCharacterId}
+            selected={character.id === selectedChild?.id}
             onPress={() => selectCharacter(character.id)}
+            testID={`story-character-${character.name}`}
           />
         ))}
         <CharacterAvatar
           key="add-character"
-          label="Add child"
+          label="Add character"
           icon="plus"
           muted
           onPress={() => router.push("/(tabs)/characters")}
+          testID="add-character-shortcut"
         />
       </View>
 
@@ -189,6 +214,7 @@ export default function StudioScreen() {
             styles.promptInput,
             { color: colors.foreground, outlineColor: "transparent" },
           ]}
+          testID="story-prompt-input"
         />
       </View>
 
@@ -202,6 +228,7 @@ export default function StudioScreen() {
           icon="zap"
           onPress={() => generate()}
           disabled={isGenerating}
+          testID="generate-book-button"
         />
         {isGenerating ? (
           <ActivityIndicator style={styles.loader} color={colors.primary} />
@@ -209,6 +236,14 @@ export default function StudioScreen() {
         {issueNotice ? (
           <Text style={[styles.issueNotice, { color: colors.mutedForeground }]}>
             {issueNotice}
+          </Text>
+        ) : null}
+        {generationError ? (
+          <Text
+            testID="generation-error"
+            style={[styles.generationError, { color: colors.primary }]}
+          >
+            {generationError}
           </Text>
         ) : null}
       </View>
@@ -232,6 +267,7 @@ export default function StudioScreen() {
             router.push("/book-reader");
           }
         }}
+        testID="newly-created-story-card"
       />
 
       {!currentStory ? (
@@ -284,6 +320,12 @@ const styles = StyleSheet.create({
     fontFamily: tokens.typography.sansMedium,
     fontSize: 13,
     lineHeight: 19,
+  },
+  generationError: {
+    marginTop: 12,
+    fontFamily: tokens.typography.sansBold,
+    fontSize: 14,
+    lineHeight: 20,
   },
   sectionHeader: {
     flexDirection: "row",

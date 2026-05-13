@@ -96,6 +96,10 @@ async function runJob(bookId: string, config: AiConfig) {
       story: result.story,
     });
   } catch (error) {
+    console.error("Story sheet job failed", {
+      bookId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     await updateJob(bookId, {
       status: "failed",
       step: "failed",

@@ -1,17 +1,21 @@
-Write an exceptional picture-book story for ages 2-5 about this behavior: {{BEHAVIOR}}
+Write an exceptional short picture-book story for ages 2-5 about this behavior: {{BEHAVIOR}}
 
 Use this parent name: {{PARENT_NAME}}
 
 Return only valid JSON. No markdown. No explanation. No extra text.
 
 Quality bar:
-The story must feel like an A-level or A+ published picture book, not a lesson plan. A- is the minimum acceptable quality.
+The story must feel like a real picture-book seed, not a lesson plan, behavior plan, therapy script, or parenting advice disguised as fiction.
+Story quality comes first. Parent usefulness must come through concrete story action, not explanation.
+12 pages is the maximum, not the target. Use the fewest pages needed for a complete child-readable arc.
 
 Optimize for:
-* Emotional clarity: the child feeling is specific, named in toddler-simple language, and easy to understand.
-* Story structure: the page turns build an arc with tension, co-regulation, a small attempt, and repair.
+* Story quality: a coherent single arc with no filler pages.
+* Emotional truth: the child's want, loss, fear, or frustration should feel specific and earned.
+* Child language: natural toddler/preschool phrasing, not stiff adult phrasing.
+* Story structure: the page turns build an arc with tension, a small attempt, and a modest repair.
 * Voice: warm, intimate, concrete, and read-aloud friendly.
-* Originality: include one fresh central image, object, ritual, or phrase that makes this story memorable.
+* Originality: include one fresh central image, object, or action that feels discovered by the child, not engineered by the parent.
 * Visual imagery: every page should give the illustrator a clear physical scene.
 * Child realism: the child may resist, cry, grab, freeze, hide, cling, or protest in age-believable ways.
 * Sentence rhythm: varied, musical, simple enough for toddlers and preschoolers.
@@ -21,31 +25,47 @@ Optimize for:
 * Re-read value: include anticipation, repetition, and one tactile/sensory image a child can look forward to hearing again.
 
 Story design:
-* Exactly 12 pages.
+* 6-12 pages. Choose the shortest page count that gives the story a complete beginning, middle, and end.
 * Each page text is 1-2 short lines.
-* Total story text under 430 words.
-* Use one concrete setting and one concrete transition, object, or ritual.
-* The central object or ritual must feel ordinary and usable in real family life, not like a gimmick or magical prop.
+* Total story text under 360 words.
+* Use one concrete setting and one concrete story problem. Do not add a second subplot.
+* The central object or action must feel ordinary and already present in the scene, not like a gimmick, magical prop, or adult strategy.
 * The behavioral skill must emerge through story action, not explanation.
-* The ending should show progress, safety, and connection without pretending the behavior is fixed forever.
+* The ending should show small progress, safety, and connection without pretending the behavior is fixed forever.
 * Avoid a generic moral. Do not summarize the lesson at the end.
 * Page text must be polished enough to read aloud as-is. Avoid awkward phrases, clunky metaphors, and lines that only exist to explain the behavior.
 * Do not use cutesy invented object names or baby-talk words. Ordinary language should carry the poetry.
-* If there is a ritual, make it something a real parent might naturally do with objects already in the scene.
-* Include one simple repeated phrase a young child could remember and say later.
-* Keep cause and effect clear: child wants to keep doing one thing, parent asks for the next thing, child protests, parent helps make a small bridge.
+* If there is a repeated phrase, make it sound like something a real child or family might naturally say.
+* Keep cause and effect clear: one thing happens because of the thing before it. No abrupt new props, no sudden strategy that appears from nowhere.
 * Avoid adult-subtle symbolism that a 3-year-old would miss.
 * Preserve narrative flow: every page must naturally cause the next page. No abrupt new props, no sudden strategy that appears from nowhere.
-* Deepen the emotional arc in child-legible ways: show wanting, interruption, protest, being seen, a tiny choice, and a mixed-feeling transition.
-* The ending must echo the beginning in a satisfying way and show the child carrying a piece of the old activity into the new moment.
+* Deepen the emotional arc in child-legible ways: show wanting, interruption, protest or stuckness, a tiny choice, and a mixed-feeling repair.
+* The ending should echo the beginning in a satisfying way, but it must not feel like a slogan, trick, or behavior chart.
 * The final page should feel tender and inevitable, not like a slogan or behavior chart.
 * The setting must feel specific, not interchangeable: include 2-3 concrete sensory anchors such as light, sound, texture, smell, temperature, or a distinctive room detail.
 * The parent should feel like a real person, not only a calm function: include one small individual action, posture, or habit.
-* Name the child emotion directly at least once using toddler-comprehensible language, such as "mad", "sad", "not ready", "wanted it to stay", or "too fast".
+* If you name the child's emotion directly, use toddler-comprehensible language such as "mad", "sad", "not ready", "wanted it to stay", or "too fast". Do not force an emotion label if the action already makes it clear.
 * Prefer short, punchy page turns. Mix fragments with full sentences. Avoid too many medium-length explanatory sentences.
 * Create one image or line that can stick after the book closes.
-* Choose safe everyday transitions such as leaving play for snack, leaving the house, going to the car, cleaning up toys, coming to the table, or moving from outside to inside.
+* Choose safe everyday settings such as a park, kitchen, living room, grocery store, sidewalk, preschool doorway, table, shop, or quiet room edge.
 * Do not use bath time, toileting, diapering, potty, changing clothes, pajamas, undressing, dressing, or any transition involving nudity or body privacy.
+* If the behavior involves body-signal awareness, handle it only through noticing, pausing, saving a place in play, and returning. Do not show or mention private-care scenes.
+
+Before finalizing, internally run a Harsh Story Rater pass. Do not include the rating in the JSON. Rewrite before returning if any of these are true:
+* Awkward child grammar or phrases a toddler/preschooler would not naturally say.
+* Broken physical logic or unclear blocking.
+* The story feels like a parenting intervention, coping tool, or behavior plan.
+* It tries to cover too many sub-behaviors at once.
+* The plot is too tidy, too adult-managed, or emotionally unearned.
+* The central image/object feels engineered rather than discovered by the child.
+* The prose is generic, bland, or not read-aloud worthy.
+
+Behavior-specific guardrails:
+* Aggression: do not show harm. Show the unsafe impulse being stopped or redirected before anyone is hurt.
+* Anxiety and fears: do not force bravery. Let the child choose a small distance or partial participation.
+* Food-related issues: avoid pressure, shame, reward, moralizing, or making tasting the victory.
+* Perfectionism/frustration intolerance: stay entirely with one concrete problem, such as one drawing or one fallen object. Do not jump to a second activity.
+* Public behavior struggles: allow disappointment to remain; do not turn the ending into instant compliance.
 
 JSON shape:
 {
@@ -66,12 +86,10 @@ JSON shape:
 }
 
 Arc requirements:
-* Pages 1-2: establish the child's attachment to the current activity, object, or desire with a clear repeating play pattern.
-* Pages 3-4: show the transition demand interrupting that pattern and the child's believable resistance.
-* Pages 5-6: parent enters low, calm, and specific; parent names the feeling and what is unfinished without lecturing.
-* Pages 7-8: use an object or action already present in the scene to create a small bridge from old activity to next activity.
-* Pages 9-10: child makes one small imperfect attempt while still upset; do not make the child suddenly cheerful.
-* Pages 11-12: repair and reconnection; echo the opening image in the new setting, but add one emotional surprise or tenderness so the ending does more than resolve the logistics.
+* Opening pages: establish the child's attachment to one activity, object, place, or desire.
+* Middle pages: interrupt that want with one believable problem, limit, change, loss, or conflict.
+* Repair pages: use an object, action, or choice already present in the scene. The parent may help practically, but must not dominate the story.
+* Final pages: show small repair or reconnection. Echo the opening image with one emotional surprise or tenderness.
 
 Scene requirements:
 * Scenes must be drawable as text-free illustrations.
@@ -86,6 +104,7 @@ Hard constraints:
 * No "calm down".
 * No "learned that".
 * No "it is okay to feel".
+* No "brave" as a label for the child.
 * No therapy-speak.
 * No AI-smoothed phrases like "came low and close", "wet hand", "emotionally grounded", or "safe enough".
 * No cutesy invented nouns like "blockies".

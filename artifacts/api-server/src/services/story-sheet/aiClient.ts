@@ -136,9 +136,18 @@ export async function callMultimodalImageModel(
   return (await response.json()) as {
     choices?: Array<{
       message?: {
+        content?:
+          | string
+          | Array<{
+              type?: string;
+              image_url?: { url?: string };
+              imageUrl?: { url?: string };
+              url?: string;
+            }>;
         images?: Array<{
           image_url?: { url?: string };
           imageUrl?: { url?: string };
+          url?: string;
         }>;
       };
     }>;
@@ -149,15 +158,35 @@ export async function callMultimodalImageModel(
 export function extractImageUrl(imageData: {
   choices?: Array<{
     message?: {
+      content?:
+        | string
+        | Array<{
+            type?: string;
+            image_url?: { url?: string };
+            imageUrl?: { url?: string };
+            url?: string;
+          }>;
       images?: Array<{
         image_url?: { url?: string };
         imageUrl?: { url?: string };
+        url?: string;
       }>;
     };
   }>;
 }) {
-  const image = imageData.choices?.[0]?.message?.images?.[0];
-  return image?.image_url?.url ?? image?.imageUrl?.url;
+  const message = imageData.choices?.[0]?.message;
+  const image = message?.images?.[0];
+  const imageUrl = image?.image_url?.url ?? image?.imageUrl?.url ?? image?.url;
+  if (imageUrl) return imageUrl;
+
+  if (Array.isArray(message?.content)) {
+    for (const part of message.content) {
+      const url = part.image_url?.url ?? part.imageUrl?.url ?? part.url;
+      if (url) return url;
+    }
+  }
+
+  return undefined;
 }
 
 async function toImageDataUrl(source: string) {

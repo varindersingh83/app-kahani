@@ -79,6 +79,10 @@ export async function runStorySheetGeneration(input: {
     { aspectRatio: "1:1", imageSize: "4K" },
     request.character.photoUri ? [request.character.photoUri] : [],
   );
+  await writeFile(
+    path.join(outputDir, "sheet-response.json"),
+    `${JSON.stringify(imageData, null, 2)}\n`,
+  );
   const sheetImageUrl = extractImageUrl(imageData);
   if (!sheetImageUrl)
     throw new Error("Storyboard sheet request returned no image.");
@@ -207,25 +211,39 @@ export function buildImageSpec(request: GenerateStoryRequest) {
   return lines.join("\n");
 }
 
-function normalizeStoryJson(
+export function normalizeStoryJson(
   story: StorySheetInput,
   request: GenerateStoryRequest,
   behavior: string,
 ): StorySheetInput {
+  const requestedChildName = request.character.name.trim();
+  const generatedChildName = story.child_name.trim();
+  const normalizeChildName = (value: string) =>
+    requestedChildName && generatedChildName
+      ? replaceName(value, generatedChildName, requestedChildName)
+      : value;
+
   return {
     ...story,
-    child_name: request.character.name.trim() || story.child_name,
+    title: normalizeChildName(story.title),
+    child_name: requestedChildName || story.child_name,
     parent_name: story.parent_name || "Mom",
     parent_role: story.parent_role || "parent",
     behavior,
     pages: story.pages.slice(0, 12).map((page, index) => ({
       page: index + 1,
-      text: page.text,
-      scene: page.scene,
+      text: normalizeChildName(page.text),
+      scene: normalizeChildName(page.scene),
       composition: page.composition,
       emotion: page.emotion,
     })),
   };
+}
+
+function replaceName(value: string, fromName: string, toName: string) {
+  if (fromName === toName) return value;
+  const escaped = fromName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return value.replace(new RegExp(`\\b${escaped}\\b`, "g"), toName);
 }
 
 async function saveImageAsset(source: string, destinationBasePath: string) {
