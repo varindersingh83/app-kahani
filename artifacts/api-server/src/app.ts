@@ -11,6 +11,9 @@ import { logger } from "./lib/logger";
 import { storySheetRunsRoot } from "./services/story-sheet/paths";
 
 const app: Express = express();
+const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use(
   pinoHttp({
@@ -32,10 +35,29 @@ app.use(
   }),
 );
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
-app.use(cors({ credentials: true, origin: true }));
+app.use(
+  cors({
+    credentials: true,
+    origin(origin, callback) {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      if (!allowedOrigins?.length || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Origin is not allowed by CORS."));
+    },
+  }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use("/api/story-runs", express.static(storySheetRunsRoot()));
+if (process.env.NODE_ENV !== "production") {
+  app.use("/api/story-runs", express.static(storySheetRunsRoot()));
+}
 
 if (
   process.env.CLERK_PUBLISHABLE_KEY ||

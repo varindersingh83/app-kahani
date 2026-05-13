@@ -45,6 +45,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StoryGenerationJob"
+        "400":
+          description: Story request is invalid or rejected by guardrails
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
         "503":
           description: Story generation is not configured
           content:

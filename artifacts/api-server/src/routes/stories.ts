@@ -6,18 +6,33 @@ import {
   startStorySheetJob,
 } from "../services/story-sheet/jobs";
 import type { StorySheetGeneratedStory } from "../services/story-sheet/types";
+import {
+  GUARDRAIL_REWRITE_MESSAGE,
+  sanitizedGuardrailLog,
+  scanStoryRequest,
+} from "../services/guardrails";
 
 const router: IRouter = Router();
 
 router.post("/stories/generate", async (req, res) => {
-  const config = getAiConfig();
-  if (!config) {
-    res.status(503).json({ message: "Story generation is not configured." });
-    return;
-  }
-
   try {
     const body = GenerateStoryBody.parse(req.body);
+    const guardrail = scanStoryRequest(body);
+    if (guardrail.result.verdict !== "allow") {
+      req.log.warn(
+        { guardrail: sanitizedGuardrailLog(guardrail) },
+        "Story generation rejected by prompt guardrail",
+      );
+      res.status(400).json({ message: GUARDRAIL_REWRITE_MESSAGE });
+      return;
+    }
+
+    const config = getAiConfig();
+    if (!config) {
+      res.status(503).json({ message: "Story generation is not configured." });
+      return;
+    }
+
     const job = await startStorySheetJob(body, config);
     res.status(202).json({
       bookId: job.bookId,

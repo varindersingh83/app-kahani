@@ -4,9 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prompt:scan": "tsx ./src/prompt-injection-scan.ts",
     "story:sheet-run": "tsx ./src/story-sheet-run.ts",
     "slice:sheet": "python3 ./src/slice-sheet.py",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@workspace/guardrails": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

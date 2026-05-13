@@ -176,6 +176,9 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:../../lib/db
+      '@workspace/guardrails':
+        specifier: workspace:*
+        version: link:../../lib/guardrails
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -596,7 +599,17 @@ importers:
         specifier: ^0.31.9
         version: 0.31.9
 
+  lib/guardrails:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.3.5
+
   scripts:
+    dependencies:
+      '@workspace/guardrails':
+        specifier: workspace:*
+        version: link:../lib/guardrails
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

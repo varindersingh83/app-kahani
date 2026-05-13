@@ -5,20 +5,35 @@ import {
   readStorySheetJob,
   startStorySheetJob,
 } from "../services/story-sheet/jobs";
+import {
+  GUARDRAIL_REWRITE_MESSAGE,
+  sanitizedGuardrailLog,
+  scanStoryRequest,
+} from "../services/guardrails";
 
 const router: IRouter = Router();
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 router.post("/books", async (req, res) => {
-  const config = getAiConfig();
-  if (!config) {
-    res.status(503).json({ message: "Book generation is not configured." });
-    return;
-  }
-
   try {
     const body = GenerateStoryBody.parse(req.body);
+    const guardrail = scanStoryRequest(body);
+    if (guardrail.result.verdict !== "allow") {
+      req.log.warn(
+        { guardrail: sanitizedGuardrailLog(guardrail) },
+        "Book generation rejected by prompt guardrail",
+      );
+      res.status(400).json({ message: GUARDRAIL_REWRITE_MESSAGE });
+      return;
+    }
+
+    const config = getAiConfig();
+    if (!config) {
+      res.status(503).json({ message: "Book generation is not configured." });
+      return;
+    }
+
     const job = await startStorySheetJob(body, config);
     res.status(202).json({
       bookId: job.bookId,
