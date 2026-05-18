@@ -22,6 +22,7 @@ export type Character = {
   id: string;
   name: string;
   photoUri?: string;
+  appearance?: string;
 };
 
 export type Story = {
@@ -48,7 +49,11 @@ type StoryContextValue = {
   selectedCharacterId: string | null;
   currentStory: Story | null;
   selectedCharacter: Character | null;
-  addCharacter: (name: string, photoUri?: string) => Promise<void>;
+  addCharacter: (
+    name: string,
+    photoUri?: string,
+    appearance?: string,
+  ) => Promise<void>;
   removeCharacter: (id: string) => Promise<void>;
   selectCharacter: (id: string) => Promise<void>;
   setGeneratedStory: (story: Omit<Story, "id" | "createdAt">) => void;
@@ -143,9 +148,7 @@ export function StoryProvider({
     setCharacters: React.Dispatch<React.SetStateAction<Character[]>>;
     setSavedStories: React.Dispatch<React.SetStateAction<Story[]>>;
     setCurrentStory: React.Dispatch<React.SetStateAction<Story | null>>;
-    setSelectedCharacterId: React.Dispatch<
-      React.SetStateAction<string | null>
-    >;
+    setSelectedCharacterId: React.Dispatch<React.SetStateAction<string | null>>;
     storageKey: string;
   }) {
     if (typeof window === "undefined") return;
@@ -219,8 +222,13 @@ export function StoryProvider({
   );
 
   const addCharacter = useCallback(
-    async (name: string, photoUri?: string) => {
-      const character = { id: createId(), name: name.trim(), photoUri };
+    async (name: string, photoUri?: string, appearance?: string) => {
+      const character = {
+        id: createId(),
+        name: name.trim(),
+        photoUri,
+        appearance: appearance?.trim() || undefined,
+      };
       const nextCharacters = [character, ...characters];
       const nextSelectedCharacterId =
         !selectedCharacterId || !isParentLikeName(character.name)

@@ -41,6 +41,13 @@ export const GenerateStoryBody = zod.object({
       zod.object({
         name: zod.string(),
         relationship: zod.string(),
+        photoUri: zod.string().optional(),
+        appearance: zod
+          .string()
+          .optional()
+          .describe(
+            "Optional short appearance description for illustration consistency.",
+          ),
       }),
     )
     .optional()

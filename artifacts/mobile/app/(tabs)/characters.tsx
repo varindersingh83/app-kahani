@@ -38,6 +38,10 @@ export default function CharactersScreen() {
   } = useStoryStudio();
   const [name, setName] = useState("");
   const [photoUri, setPhotoUri] = useState<string | undefined>();
+  const [presentation, setPresentation] = useState<
+    "from-photo" | "girl" | "boy"
+  >("from-photo");
+  const [appearanceNotes, setAppearanceNotes] = useState("");
 
   const pickPhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -51,7 +55,10 @@ export default function CharactersScreen() {
       aspect: [1, 1],
       quality: 0.8,
     });
-    if (!result.canceled) setPhotoUri(result.assets[0]?.uri);
+    if (!result.canceled) {
+      const uri = result.assets[0]?.uri;
+      setPhotoUri(uri ? await persistableImageUri(uri) : undefined);
+    }
   };
 
   const save = async () => {
@@ -59,9 +66,15 @@ export default function CharactersScreen() {
       Alert.alert("Add a name", "Enter a name before saving.");
       return;
     }
-    await addCharacter(name.trim(), photoUri);
+    await addCharacter(
+      name.trim(),
+      photoUri,
+      buildAppearanceLock(presentation, appearanceNotes),
+    );
     setName("");
     setPhotoUri(undefined);
+    setPresentation("from-photo");
+    setAppearanceNotes("");
     if (Platform.OS !== "web") {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
@@ -76,7 +89,7 @@ export default function CharactersScreen() {
       </View>
 
       <Text style={[styles.screenTitle, { color: colors.foreground }]}>
-        Add child
+        Add character
       </Text>
 
       <Pressable
@@ -88,14 +101,20 @@ export default function CharactersScreen() {
         ]}
       >
         {photoUri ? (
-          <Image source={{ uri: photoUri }} style={styles.fill} resizeMode="cover" />
+          <Image
+            source={{ uri: photoUri }}
+            style={styles.fill}
+            resizeMode="cover"
+          />
         ) : (
           <View style={styles.photoEmpty}>
-            <View style={[styles.photoIcon, { backgroundColor: colors.secondary }]}>
+            <View
+              style={[styles.photoIcon, { backgroundColor: colors.secondary }]}
+            >
               <Feather name="camera" color={colors.bark} size={28} />
             </View>
             <Text style={[styles.photoTitle, { color: colors.foreground }]}>
-              Add a photo
+              Add character photo
             </Text>
           </View>
         )}
@@ -120,7 +139,67 @@ export default function CharactersScreen() {
         />
       </View>
 
-      <KahaniButton label="Save child" onPress={save} disabled={!name.trim()} />
+      <View style={styles.identityBlock}>
+        <Text style={[styles.fieldLabel, { color: colors.foreground }]}>
+          Character identity
+        </Text>
+        <View style={styles.identityOptions}>
+          {IDENTITY_OPTIONS.map((option) => {
+            const selected = presentation === option.value;
+            return (
+              <Pressable
+                key={option.value}
+                onPress={() => setPresentation(option.value)}
+                style={[
+                  styles.identityOption,
+                  {
+                    backgroundColor: selected ? colors.primary : colors.card,
+                    borderColor: selected ? colors.primary : colors.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.identityText,
+                    {
+                      color: selected
+                        ? colors.primaryForeground
+                        : colors.foreground,
+                    },
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      <View
+        style={[
+          styles.nameInputWrap,
+          { backgroundColor: colors.card, borderColor: colors.border },
+        ]}
+      >
+        <TextInput
+          value={appearanceNotes}
+          onChangeText={setAppearanceNotes}
+          placeholder="Blonde hair, pink shirt, bright smile"
+          placeholderTextColor={colors.mutedForeground}
+          style={[
+            styles.nameInput,
+            { color: colors.foreground, outlineColor: "transparent" },
+          ]}
+          returnKeyType="done"
+        />
+      </View>
+
+      <KahaniButton
+        label="Add character"
+        onPress={save}
+        disabled={!name.trim()}
+      />
 
       {characters.length > 0 ? (
         <View style={styles.savedSection}>
@@ -140,7 +219,10 @@ export default function CharactersScreen() {
                   onPress={() => removeCharacter(character.id)}
                   style={[
                     styles.removeButton,
-                    { backgroundColor: colors.secondary, borderColor: colors.border },
+                    {
+                      backgroundColor: colors.secondary,
+                      borderColor: colors.border,
+                    },
                   ]}
                 >
                   <Feather name="trash-2" color={colors.bark} size={15} />
@@ -207,6 +289,32 @@ const styles = StyleSheet.create({
     fontFamily: tokens.typography.sansMedium,
     fontSize: 18,
   },
+  identityBlock: {
+    marginBottom: 16,
+    gap: 10,
+  },
+  fieldLabel: {
+    fontFamily: tokens.typography.sansBold,
+    fontSize: 15,
+  },
+  identityOptions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  identityOption: {
+    minHeight: 44,
+    flex: 1,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  identityText: {
+    fontFamily: tokens.typography.sansBold,
+    fontSize: 14,
+    textAlign: "center",
+  },
   savedSection: {
     marginTop: 34,
   },
@@ -236,3 +344,34 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 });
+
+const IDENTITY_OPTIONS = [
+  { label: "Use photo", value: "from-photo" },
+  { label: "Girl", value: "girl" },
+  { label: "Boy", value: "boy" },
+] as const;
+
+function buildAppearanceLock(
+  presentation: "from-photo" | "girl" | "boy",
+  notes: string,
+) {
+  const trimmedNotes = notes.trim();
+  const identity =
+    presentation === "from-photo"
+      ? "Use the uploaded photo as the source of truth for gender presentation; do not infer gender from the name."
+      : `The main child is a ${presentation}.`;
+  return trimmedNotes ? `${identity} ${trimmedNotes}.` : identity;
+}
+
+async function persistableImageUri(uri: string) {
+  if (Platform.OS !== "web" || !uri.startsWith("blob:")) return uri;
+
+  const response = await fetch(uri);
+  const blob = await response.blob();
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}

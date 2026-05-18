@@ -1,6 +1,10 @@
 Write an exceptional picture-book story for ages 2-5 about this behavior: {{BEHAVIOR}}
 
+Use this child name exactly: {{CHILD_NAME}}
+
 Use this parent name: {{PARENT_NAME}}
+
+{{CHILD_IDENTITY}}
 
 Return only valid JSON. No markdown. No explanation. No extra text.
 
@@ -19,6 +23,8 @@ Optimize for:
 * Parent usefulness: the parent action should be practical, calm, and non-preachy.
 * Child legibility: a 3-year-old should understand what happened, what changed, and what helped.
 * Re-read value: include anticipation, repetition, and one tactile/sensory image a child can look forward to hearing again.
+* Name lock: the main child must be named exactly "{{CHILD_NAME}}" in child_name, page text, scenes, and any story references. Do not invent or substitute another child name.
+* Identity lock: do not infer the main child's gender from the name. If child identity details or a reference photo are provided, preserve that gender presentation, hair, face, clothing, and overall likeness in every scene.
 
 Story design:
 * Exactly 12 pages.
@@ -50,7 +56,7 @@ Story design:
 JSON shape:
 {
   "title": "short memorable title",
-  "child_name": "simple child name",
+  "child_name": "{{CHILD_NAME}}",
   "parent_name": "{{PARENT_NAME}}",
   "parent_role": "parent",
   "behavior": "{{BEHAVIOR}}",
@@ -95,5 +101,6 @@ Hard constraints:
 * No bath time.
 * No bathroom, bathtub, toilet, potty, diaper, towel, pajamas, underwear, dressing, undressing, clothing changes, or body-privacy scenes.
 * No direct advice to the child.
+* No child name other than "{{CHILD_NAME}}" for the main character.
 * No extra JSON keys.
 * No text outside JSON.

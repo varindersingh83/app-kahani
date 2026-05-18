@@ -97,6 +97,11 @@ export default function StudioScreen() {
           character: {
             name: selectedStoryCharacter.name,
             photoUri: selectedStoryCharacter.photoUri,
+            appearance:
+              selectedStoryCharacter.appearance ??
+              (selectedStoryCharacter.photoUri
+                ? "Use the uploaded photo as the source of truth for gender presentation; do not infer gender from the name."
+                : undefined),
           },
           supportingCharacters: parentCharacter
             ? [
@@ -231,7 +236,9 @@ export default function StudioScreen() {
           featured
           title={currentStory.title}
           description={currentStory.pages[0]?.text}
-          imageUri={currentStory.coverImageUrl ?? currentStory.characterPhotoUri}
+          imageUri={
+            currentStory.coverImageUrl ?? currentStory.characterPhotoUri
+          }
           pages={currentStory.pages.length}
           onPress={() => router.push("/book-reader")}
         />
@@ -245,7 +252,9 @@ export default function StudioScreen() {
             },
           ]}
         >
-          <View style={[styles.emptyIcon, { backgroundColor: colors.secondary }]}>
+          <View
+            style={[styles.emptyIcon, { backgroundColor: colors.secondary }]}
+          >
             <Feather name="book-open" color={colors.primary} size={24} />
           </View>
           <Text style={[styles.emptyTitle, { color: colors.foreground }]}>

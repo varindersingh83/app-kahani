@@ -146,6 +146,11 @@ components:
           type: string
         relationship:
           type: string
+        photoUri:
+          type: string
+        appearance:
+          type: string
+          description: Optional short appearance description for illustration consistency.
       required:
         - name
         - relationship

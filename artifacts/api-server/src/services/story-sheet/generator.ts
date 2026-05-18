@@ -47,7 +47,13 @@ export async function runStorySheetGeneration(input: {
     "utf8",
   );
   const behavior = buildBehaviorPrompt(request);
-  const storyPrompt = buildStoryPrompt(storyPromptTemplate, behavior, "Mom");
+  const storyPrompt = buildStoryPrompt(
+    storyPromptTemplate,
+    behavior,
+    request.character.name,
+    parentNameForRequest(request),
+    buildChildIdentityForStory(request),
+  );
   const storyResult = await callJsonChat(
     config,
     "You write exact JSON only. Follow the user's schema and return valid JSON with no markdown or explanation.",
@@ -77,7 +83,7 @@ export async function runStorySheetGeneration(input: {
     config,
     sheetPrompt,
     { aspectRatio: "1:1", imageSize: "4K" },
-    request.character.photoUri ? [request.character.photoUri] : [],
+    buildReferenceImageUris(request),
   );
   const sheetImageUrl = extractImageUrl(imageData);
   if (!sheetImageUrl)
@@ -163,11 +169,15 @@ function buildBehaviorPrompt(request: GenerateStoryRequest) {
 function buildStoryPrompt(
   template: string,
   behavior: string,
+  childName: string,
   parentName: string,
+  childIdentity: string,
 ) {
   return template
     .replaceAll("{{BEHAVIOR}}", behavior)
-    .replaceAll("{{PARENT_NAME}}", parentName);
+    .replaceAll("{{CHILD_NAME}}", childName.trim())
+    .replaceAll("{{PARENT_NAME}}", parentName)
+    .replaceAll("{{CHILD_IDENTITY}}", childIdentity);
 }
 
 export function buildSheetPrompt(
@@ -184,10 +194,13 @@ export function buildImageSpec(request: GenerateStoryRequest) {
   const childName = request.character.name.trim();
   const appearance = request.character.appearance?.trim();
   const supportingCharacters = request.supportingCharacters ?? [];
+  const parentReference = supportingCharacters.find((character) =>
+    isParentRelationship(character.relationship),
+  );
   const lines = [
     `Main child: ${childName}.`,
     request.character.photoUri
-      ? "Use the uploaded child reference image as the canonical face, hair, skin tone, proportions, and overall likeness. Translate it into the watercolor storybook style without changing identity."
+      ? "Use the uploaded child reference image as the canonical face, hair, skin tone, gender presentation, proportions, and overall likeness. Translate it into the watercolor storybook style without changing identity. Do not infer gender from the child's name when it conflicts with the reference photo or appearance lock."
       : "No child reference image was provided, so keep the same invented face, hair, clothing, and proportions in every panel.",
     appearance
       ? `Appearance lock: ${appearance}. Keep these traits consistent in every panel.`
@@ -195,37 +208,97 @@ export function buildImageSpec(request: GenerateStoryRequest) {
     supportingCharacters.length > 0
       ? `Supporting cast, only when the story calls for them: ${supportingCharacters
           .map(
-            (character: { name: string; relationship: string }) =>
-              `${character.name} (${character.relationship})`,
+            (character: {
+              name: string;
+              relationship: string;
+              appearance?: string;
+              photoUri?: string;
+            }) => `${character.name} (${character.relationship})`,
           )
-          .join(", ")}. Keep each supporting character visually consistent across panels.`
+          .join(
+            ", ",
+          )}. Keep each supporting character visually consistent across panels.`
       : "Do not add recurring supporting characters unless the story scene clearly requires them.",
+    parentReference?.photoUri
+      ? `Parent reference: ${parentReference.name} has an uploaded reference image. Use that parent image as the canonical adult face, hair, skin tone, proportions, and overall likeness whenever the parent appears. Translate it into the watercolor storybook style without changing identity.`
+      : "No parent reference image was provided, so keep any parent/adult figure consistent but do not make them the main child.",
+    parentReference?.appearance
+      ? `Parent appearance lock: ${parentReference.appearance}. Keep these adult traits consistent in every panel.`
+      : undefined,
     "Never change the main child's outfit, hair, age, body proportions, or facial structure between panels.",
+    "Never switch the main child's gender presentation between the story text, cover, and page illustrations.",
     "Keep parent/adult figures visually consistent when present, including clothing color and hairstyle.",
-  ];
+  ].filter(Boolean);
 
   return lines.join("\n");
 }
 
-function normalizeStoryJson(
+function buildChildIdentityForStory(request: GenerateStoryRequest) {
+  const appearance = request.character.appearance?.trim();
+  if (appearance) {
+    return `Child identity lock: ${appearance} Keep the main child consistent. Do not infer gender from the child's name if it conflicts with this identity lock.`;
+  }
+  if (request.character.photoUri) {
+    return "Child identity lock: use the uploaded child reference photo as the source of truth for gender presentation and likeness. Avoid gendered pronouns unless clearly supported by the reference photo.";
+  }
+  return "Child identity lock: do not infer gender from the child's name. Use neutral wording unless a gender is explicitly provided.";
+}
+
+export function buildReferenceImageUris(request: GenerateStoryRequest) {
+  return [
+    request.character.photoUri,
+    ...(request.supportingCharacters ?? [])
+      .filter((character) => isParentRelationship(character.relationship))
+      .map((character) => character.photoUri),
+  ].filter((uri): uri is string => Boolean(uri));
+}
+
+function parentNameForRequest(request: GenerateStoryRequest) {
+  return (
+    request.supportingCharacters?.find((character) =>
+      isParentRelationship(character.relationship),
+    )?.name ?? "Mom"
+  );
+}
+
+function isParentRelationship(relationship: string) {
+  return /parent|mom|mum|mama|mother|dad|dada|papa|father/i.test(relationship);
+}
+
+export function normalizeStoryJson(
   story: StorySheetInput,
   request: GenerateStoryRequest,
   behavior: string,
 ): StorySheetInput {
+  const lockedChildName = request.character.name.trim() || story.child_name;
+  const generatedChildName = story.child_name?.trim();
+  const replaceGeneratedName = (value: string) =>
+    generatedChildName && generatedChildName !== lockedChildName
+      ? value.replace(
+          new RegExp(`\\b${escapeRegExp(generatedChildName)}\\b`, "g"),
+          lockedChildName,
+        )
+      : value;
+
   return {
     ...story,
-    child_name: request.character.name.trim() || story.child_name,
+    title: replaceGeneratedName(story.title),
+    child_name: lockedChildName,
     parent_name: story.parent_name || "Mom",
     parent_role: story.parent_role || "parent",
     behavior,
     pages: story.pages.slice(0, 12).map((page, index) => ({
       page: index + 1,
-      text: page.text,
-      scene: page.scene,
+      text: replaceGeneratedName(page.text),
+      scene: replaceGeneratedName(page.scene),
       composition: page.composition,
       emotion: page.emotion,
     })),
   };
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 async function saveImageAsset(source: string, destinationBasePath: string) {

@@ -9,4 +9,7 @@
 export interface SupportingCharacter {
   name: string;
   relationship: string;
+  photoUri?: string;
+  /** Optional short appearance description for illustration consistency. */
+  appearance?: string;
 }
