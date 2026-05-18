@@ -53,11 +53,12 @@ export default function CharactersScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
+      base64: true,
+      quality: 0.7,
     });
     if (!result.canceled) {
-      const uri = result.assets[0]?.uri;
-      setPhotoUri(uri ? await persistableImageUri(uri) : undefined);
+      const asset = result.assets[0];
+      setPhotoUri(asset ? await persistableImageUri(asset) : undefined);
     }
   };
 
@@ -363,10 +364,17 @@ function buildAppearanceLock(
   return trimmedNotes ? `${identity} ${trimmedNotes}.` : identity;
 }
 
-async function persistableImageUri(uri: string) {
-  if (Platform.OS !== "web" || !uri.startsWith("blob:")) return uri;
+async function persistableImageUri(asset: ImagePicker.ImagePickerAsset) {
+  if (asset.base64) {
+    const mimeType = asset.mimeType ?? detectMimeType(asset.uri);
+    return `data:${mimeType};base64,${asset.base64}`;
+  }
 
-  const response = await fetch(uri);
+  if (Platform.OS !== "web" || !asset.uri.startsWith("blob:")) {
+    return asset.uri;
+  }
+
+  const response = await fetch(asset.uri);
   const blob = await response.blob();
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -374,4 +382,11 @@ async function persistableImageUri(uri: string) {
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(blob);
   });
+}
+
+function detectMimeType(uri: string) {
+  const lower = uri.toLowerCase();
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  if (lower.endsWith(".webp")) return "image/webp";
+  return "image/png";
 }

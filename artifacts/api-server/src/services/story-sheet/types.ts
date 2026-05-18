@@ -109,6 +109,11 @@ export type StorySheetImageQa = {
   sheetImageFileName: string;
   status: "needs_human_review";
   summary: string;
+  referenceImages: Array<{
+    role: "main_child" | "parent";
+    uriKind: "data" | "http" | "file" | "other";
+    attached: boolean;
+  }>;
   panelChecks: Array<{
     panel: number;
     row: number;

@@ -18,7 +18,15 @@ export function buildImageQaChecklist(input: {
   bookId: string;
   sheetImagePath: string;
   slices: SheetSliceManifestEntry[];
+  referenceImages: StorySheetImageQa["referenceImages"];
 }): StorySheetImageQa {
+  const childIdentityCriteria = [
+    "main child resembles uploaded reference photo",
+    "main child keeps same gender presentation as reference photo",
+    "main child keeps same hair color and hairstyle as reference photo",
+    "main child keeps same face shape, skin tone, and proportions as reference photo",
+    "main child does not drift into a different child across panels",
+  ];
   const panelChecks = input.slices.map((slice) => {
     const fileName = path.basename(slice.output);
     return {
@@ -30,7 +38,7 @@ export function buildImageQaChecklist(input: {
       criteria:
         fileName === "04_blank.png"
           ? [...noTextCriteria, "empty soft background", "no objects"]
-          : noTextCriteria,
+          : [...childIdentityCriteria, ...noTextCriteria],
     };
   });
 
@@ -39,7 +47,8 @@ export function buildImageQaChecklist(input: {
     sheetImageFileName: path.basename(input.sheetImagePath),
     status: "needs_human_review",
     summary:
-      "Inspect generated sheet and slices for any readable or pseudo-readable text before considering the illustration run polished.",
+      "Inspect generated sheet and slices for child likeness, gender presentation, cross-panel character consistency, and any readable or pseudo-readable text before considering the illustration run polished.",
+    referenceImages: input.referenceImages,
     panelChecks,
   };
 }

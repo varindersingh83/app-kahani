@@ -110,6 +110,7 @@ export async function runStorySheetGeneration(input: {
     bookId,
     sheetImagePath: sheetPath,
     slices,
+    referenceImages: buildReferenceImageQa(request),
   });
   await writeFile(
     path.join(outputDir, "image-qa.json"),
@@ -251,6 +252,52 @@ export function buildReferenceImageUris(request: GenerateStoryRequest) {
       .filter((character) => isParentRelationship(character.relationship))
       .map((character) => character.photoUri),
   ].filter((uri): uri is string => Boolean(uri));
+}
+
+function buildReferenceImageQa(
+  request: GenerateStoryRequest,
+): StorySheetRunResult["imageQa"]["referenceImages"] {
+  return [
+    request.character.photoUri
+      ? {
+          role: "main_child" as const,
+          uriKind: referenceUriKind(request.character.photoUri),
+          attached: isAttachableReferenceUri(request.character.photoUri),
+        }
+      : undefined,
+    ...(request.supportingCharacters ?? [])
+      .filter((character) => isParentRelationship(character.relationship))
+      .map((character) =>
+        character.photoUri
+          ? {
+              role: "parent" as const,
+              uriKind: referenceUriKind(character.photoUri),
+              attached: isAttachableReferenceUri(character.photoUri),
+            }
+          : undefined,
+      ),
+  ].filter(
+    (
+      reference,
+    ): reference is StorySheetRunResult["imageQa"]["referenceImages"][number] =>
+      Boolean(reference),
+  );
+}
+
+function isAttachableReferenceUri(uri: string) {
+  return (
+    uri.startsWith("data:image/") ||
+    uri.startsWith("http://") ||
+    uri.startsWith("https://")
+  );
+}
+
+function referenceUriKind(uri: string) {
+  if (uri.startsWith("data:")) return "data" as const;
+  if (uri.startsWith("http://") || uri.startsWith("https://"))
+    return "http" as const;
+  if (uri.startsWith("file://")) return "file" as const;
+  return "other" as const;
 }
 
 function parentNameForRequest(request: GenerateStoryRequest) {

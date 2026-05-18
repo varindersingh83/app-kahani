@@ -49,6 +49,7 @@ export default function StudioScreen() {
     createGeneratedStory,
   } = useStoryStudio();
   const [prompt, setPrompt] = useState("");
+  const [isPromptFocused, setIsPromptFocused] = useState(false);
   const [generationMessage, setGenerationMessage] = useState("");
   const [issueNotice, setIssueNotice] = useState<string | null>(null);
 
@@ -81,6 +82,15 @@ export default function StudioScreen() {
       Alert.alert(
         "Add a character",
         "Create a character before generating a story.",
+      );
+      router.push("/(tabs)/characters");
+      return;
+    }
+
+    if (!isPortablePhotoUri(selectedStoryCharacter.photoUri)) {
+      Alert.alert(
+        "Re-add this photo",
+        "This character was saved with a phone-only photo path, so the story service cannot use it as a reference. Please add the character again so the photo can be sent with the book request.",
       );
       router.push("/(tabs)/characters");
       return;
@@ -192,7 +202,9 @@ export default function StudioScreen() {
           value={prompt}
           onChangeText={setPrompt}
           multiline
-          placeholder={BEHAVIOR_PROMPT_PLACEHOLDER}
+          onBlur={() => setIsPromptFocused(false)}
+          onFocus={() => setIsPromptFocused(true)}
+          placeholder={isPromptFocused ? "" : BEHAVIOR_PROMPT_PLACEHOLDER}
           placeholderTextColor={colors.mutedForeground}
           style={[
             styles.promptInput,
@@ -267,6 +279,15 @@ export default function StudioScreen() {
         </View>
       )}
     </KahaniScreen>
+  );
+}
+
+function isPortablePhotoUri(photoUri?: string) {
+  if (!photoUri) return true;
+  return (
+    photoUri.startsWith("data:image/") ||
+    photoUri.startsWith("http://") ||
+    photoUri.startsWith("https://")
   );
 }
 
