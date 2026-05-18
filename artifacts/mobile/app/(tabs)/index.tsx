@@ -32,16 +32,18 @@ import tokens from "@/constants/colors";
 import { useStoryStudio } from "@/context/StoryContext";
 import { useKahaniTheme } from "@/context/ThemeContext";
 
-const SAMPLE_TITLE = "The Little Seed's Journey";
-const SAMPLE_TEXT =
-  "A tiny seed dreams big and learns that growth takes time, love and little by little.";
+const BEHAVIOR_PROMPT_PLACEHOLDER =
+  "sharing toys, bedtime resistance, using gentle hands";
+
+function isParentCharacterName(name: string) {
+  return /^(mom|mum|mama|mother|dad|dada|papa|father)$/i.test(name.trim());
+}
 
 export default function StudioScreen() {
   const { colors } = useKahaniTheme();
   const {
     characters,
     selectedCharacter,
-    selectedCharacterId,
     selectCharacter,
     currentStory,
     createGeneratedStory,
@@ -61,8 +63,21 @@ export default function StudioScreen() {
     },
   });
 
+  const childCharacters = characters.filter(
+    (character) => !isParentCharacterName(character.name),
+  );
+  const selectedStoryCharacter =
+    selectedCharacter && !isParentCharacterName(selectedCharacter.name)
+      ? selectedCharacter
+      : (childCharacters[0] ?? selectedCharacter);
+  const parentCharacter = characters.find(
+    (character) =>
+      character.id !== selectedStoryCharacter?.id &&
+      isParentCharacterName(character.name),
+  );
+
   const generate = async () => {
-    if (!selectedCharacter) {
+    if (!selectedStoryCharacter) {
       Alert.alert(
         "Add a character",
         "Create a character before generating a story.",
@@ -80,9 +95,18 @@ export default function StudioScreen() {
           mode: "behavior",
           prompt: storyPrompt,
           character: {
-            name: selectedCharacter.name,
-            photoUri: selectedCharacter.photoUri,
+            name: selectedStoryCharacter.name,
+            photoUri: selectedStoryCharacter.photoUri,
           },
+          supportingCharacters: parentCharacter
+            ? [
+                {
+                  name: parentCharacter.name,
+                  relationship: "parent",
+                  photoUri: parentCharacter.photoUri,
+                },
+              ]
+            : undefined,
         },
       });
       setIssueNotice(job.issueNotice ?? null);
@@ -98,8 +122,8 @@ export default function StudioScreen() {
         endImageUrl: story.endImageUrl ?? undefined,
         sheetImageUrl: story.sheetImageUrl ?? undefined,
         artifactLinks: story.artifactLinks,
-        characterName: selectedCharacter.name,
-        characterPhotoUri: selectedCharacter.photoUri ?? undefined,
+        characterName: selectedStoryCharacter.name,
+        characterPhotoUri: selectedStoryCharacter.photoUri ?? undefined,
       });
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -120,9 +144,7 @@ export default function StudioScreen() {
     }
   };
 
-  const storyTitle = currentStory?.title ?? SAMPLE_TITLE;
-  const storyText = currentStory?.pages[0]?.text ?? SAMPLE_TEXT;
-  const visibleCharacters = characters.slice(0, 3);
+  const visibleCharacters = characters;
   const isGenerating = mutation.isPending || Boolean(generationMessage);
 
   return (
@@ -138,13 +160,13 @@ export default function StudioScreen() {
             key={character.id}
             label={character.name}
             imageUri={character.photoUri}
-            selected={character.id === selectedCharacterId}
+            selected={character.id === selectedStoryCharacter?.id}
             onPress={() => selectCharacter(character.id)}
           />
         ))}
         <CharacterAvatar
           key="add-character"
-          label="Add child"
+          label="Add character"
           icon="plus"
           muted
           onPress={() => router.push("/(tabs)/characters")}
@@ -165,7 +187,7 @@ export default function StudioScreen() {
           value={prompt}
           onChangeText={setPrompt}
           multiline
-          placeholder="sharing toys, bedtime resistance, using gentle hands"
+          placeholder={BEHAVIOR_PROMPT_PLACEHOLDER}
           placeholderTextColor={colors.mutedForeground}
           style={[
             styles.promptInput,
@@ -197,33 +219,44 @@ export default function StudioScreen() {
 
       <View style={styles.sectionHeader}>
         <Text style={[styles.cardSectionTitle, { color: colors.foreground }]}>
-          Newly created
+          Created books
         </Text>
-        <Text style={[styles.viewAll, { color: colors.bark }]}>View all</Text>
+        {currentStory ? (
+          <Text style={[styles.viewAll, { color: colors.bark }]}>View all</Text>
+        ) : null}
       </View>
-      <StoryCard
-        featured
-        title={storyTitle}
-        description={storyText}
-        imageUri={
-          currentStory?.coverImageUrl ?? currentStory?.characterPhotoUri
-        }
-        pages={currentStory?.pages.length ?? 24}
-        onPress={() => {
-          if (currentStory) {
-            router.push("/book-reader");
-          }
-        }}
-      />
 
-      {!currentStory ? (
-        <View style={styles.hintRow}>
-          <Feather name="info" color={colors.leaf} size={16} />
-          <Text style={[styles.hintText, { color: colors.mutedForeground }]}>
-            Generate a story to replace this sample card with your child's book.
+      {currentStory ? (
+        <StoryCard
+          featured
+          title={currentStory.title}
+          description={currentStory.pages[0]?.text}
+          imageUri={currentStory.coverImageUrl ?? currentStory.characterPhotoUri}
+          pages={currentStory.pages.length}
+          onPress={() => router.push("/book-reader")}
+        />
+      ) : (
+        <View
+          style={[
+            styles.emptyBooks,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <View style={[styles.emptyIcon, { backgroundColor: colors.secondary }]}>
+            <Feather name="book-open" color={colors.primary} size={24} />
+          </View>
+          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+            No books yet
+          </Text>
+          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+            Generate a book and it will appear here, ready to open and save to
+            your library.
           </Text>
         </View>
-      ) : null}
+      )}
     </KahaniScreen>
   );
 }
@@ -282,17 +315,35 @@ const styles = StyleSheet.create({
     fontFamily: tokens.typography.sansBold,
     fontSize: 14,
   },
-  hintRow: {
-    flexDirection: "row",
+  emptyBooks: {
+    borderWidth: 1,
+    borderRadius: 24,
+    minHeight: 190,
+    paddingHorizontal: 24,
+    paddingVertical: 28,
     alignItems: "center",
-    gap: 8,
-    marginTop: 14,
+    justifyContent: "center",
   },
-  hintText: {
-    flex: 1,
+  emptyIcon: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontFamily: serifFamily(),
+    fontSize: 30,
+    lineHeight: 36,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  emptyText: {
     fontFamily: tokens.typography.sansMedium,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: "center",
   },
 });
 

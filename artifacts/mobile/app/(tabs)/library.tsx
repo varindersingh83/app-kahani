@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
 
 import {
   KahaniScreen,
@@ -39,13 +39,29 @@ const sampleBooks = [
 
 export default function LibraryScreen() {
   const { colors } = useKahaniTheme();
-  const { savedStories, currentStory, openStory } = useStoryStudio();
+  const { savedStories, currentStory, openStory, removeStory } =
+    useStoryStudio();
 
   const featured = savedStories[0] ?? currentStory;
 
   const handleRead = (story: Story) => {
     openStory(story);
     router.push("/book-reader");
+  };
+
+  const confirmDelete = (story: Story) => {
+    Alert.alert(
+      "Delete book?",
+      `Remove "${story.title}" from your library?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => removeStory(story.id),
+        },
+      ],
+    );
   };
 
   return (
@@ -103,6 +119,7 @@ export default function LibraryScreen() {
                   imageUri={story.coverImageUrl ?? story.characterPhotoUri}
                   pages={story.pages.length}
                   onPress={() => handleRead(story)}
+                  onDelete={() => confirmDelete(story)}
                 />
               </View>
             ))

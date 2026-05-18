@@ -1,5 +1,4 @@
 import { Feather } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { Tabs } from "expo-router";
 import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
@@ -22,7 +21,7 @@ function TabIcon({
       style={[
         styles.iconWrap,
         {
-          backgroundColor: focused ? colors.card : "transparent",
+          backgroundColor: focused ? colors.secondary : "transparent",
           borderColor: focused ? colors.border : "transparent",
         },
       ]}
@@ -30,7 +29,7 @@ function TabIcon({
       <Feather
         name={name}
         color={focused ? colors.primary : colors.bark}
-        size={26}
+        size={22}
       />
     </View>
   );
@@ -53,44 +52,46 @@ export default function TabLayout() {
           tabBarActiveTintColor: colors.foreground,
           tabBarInactiveTintColor: colors.mutedForeground,
           tabBarLabelStyle: {
-            fontFamily: tokens.typography.serif,
-            fontSize: 12,
-            lineHeight: 15,
-            marginTop: -2,
+            fontFamily: tokens.typography.sansSemiBold,
+            fontSize: 11,
+            lineHeight: 14,
+            marginTop: 2,
+            textAlign: "center",
           },
           tabBarItemStyle: {
-            paddingVertical: 4,
+            flex: 1,
+            height: 62,
+            minWidth: 0,
+            paddingHorizontal: 0,
+            paddingVertical: 0,
+            alignItems: "center",
+            justifyContent: "center",
+          },
+          tabBarIconStyle: {
+            width: 48,
+            height: 30,
+            alignItems: "center",
+            justifyContent: "center",
           },
           tabBarStyle: {
-            marginHorizontal: 20,
+            marginHorizontal: 24,
             marginBottom: tabBarBottom,
-            height: 82,
+            height: 68,
             borderTopWidth: 0,
-            borderRadius: 34,
-            paddingTop: 8,
-            paddingBottom: 10,
+            borderRadius: 28,
+            paddingHorizontal: 10,
+            paddingTop: 7,
+            paddingBottom: 7,
             overflow: "hidden",
-            backgroundColor: colors.wood,
+            backgroundColor: isDark ? colors.card : colors.elevated,
             borderWidth: 1,
-            borderColor: isDark ? colors.goldMuted : "#F3C892",
+            borderColor: colors.border,
             shadowColor: colors.shadow,
-            shadowOffset: { width: 0, height: 10 },
-            shadowOpacity: 0.28,
-            shadowRadius: 24,
-            elevation: 8,
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.22,
+            shadowRadius: 18,
+            elevation: 6,
           },
-          tabBarBackground: () => (
-            <LinearGradient
-              colors={
-                isDark
-                  ? [colors.woodDark, colors.secondary, colors.woodDark]
-                  : ["#FFE7BD", colors.wood, "#EFC487"]
-              }
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-          ),
         }}
       >
         <Tabs.Screen
@@ -124,8 +125,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   iconWrap: {
-    width: 48,
-    height: 34,
+    width: 42,
+    height: 30,
     borderRadius: 15,
     borderWidth: 1,
     alignItems: "center",

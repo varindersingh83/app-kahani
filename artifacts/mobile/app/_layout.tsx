@@ -134,11 +134,11 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <ErrorBoundary>
-        <ThemeProvider>
+      <ThemeProvider>
+        <ErrorBoundary>
           <QueryClientProvider client={queryClient}>{app}</QueryClientProvider>
-        </ThemeProvider>
-      </ErrorBoundary>
+        </ErrorBoundary>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
