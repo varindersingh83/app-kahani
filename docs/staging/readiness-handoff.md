@@ -34,7 +34,7 @@ Updated: 2026-05-19
 | Staging DB schema push | Pass | Local `STAGING_DATABASE_URL` uses Render external Postgres URL with `sslmode=require`; schema push completed with `Changes applied`; local `DATABASE_URL` stayed pointed at local Postgres |
 | Render deploy | Pass | Service is live at `https://app-kahani-staging.onrender.com` |
 | Health smoke | Pass | `GET https://app-kahani-staging.onrender.com/api/healthz` returns `{"status":"ok"}` |
-| Staging smoke | Pending | Full synthetic smoke checklist has not been run yet |
+| Staging smoke | Partial pass | Live API/auth/consent/guardrail smoke passed with `kahani-staging-tester-01@example.com`; provider-spend generation and UI/mobile smoke remain pending |
 
 ## Deployment Handoff
 
@@ -51,16 +51,16 @@ Updated: 2026-05-19
 
 ## Immediate Next Step
 
-Run the full synthetic smoke checklist against `https://app-kahani-staging.onrender.com`. Public signup remains blocked regardless of smoke outcome until the production-hardening blockers below are closed.
+Run the remaining synthetic smoke checklist items against `https://app-kahani-staging.onrender.com`: allowed story generation, provider payload privacy, reader/library, mobile UI, logs, and operational controls. Public signup remains blocked regardless of smoke outcome until the production-hardening blockers below are closed.
 
 ## Smoke Exit Criteria
 
 | Gate | Required state | Evidence |
 |---|---|---|
-| Health | API health endpoint responds | Response summary |
-| Auth | Staging sign-in works with staging Clerk app | Screenshot/tester note |
-| Consent | Missing/stale consent blocks generation where supported | Response summary |
-| Guardrails | Injection and urgent-risk fixtures block before provider work | Response and provider-call absence evidence |
+| Health | API health endpoint responds | `GET /api/healthz` returned `{"status":"ok"}` |
+| Auth | Staging Clerk session authenticates API calls | Clerk session for `kahani-staging-tester-01@example.com`; unauthenticated generation returned 401 |
+| Consent | Missing/stale consent blocks generation where supported | Missing consent returned 403 with `external_text_ai_consent_required` |
+| Guardrails | Injection and urgent-risk fixtures block before provider work | Four live guardrail fixtures returned 400 with `input_guardrail_blocked` |
 | Generation | Allowed synthetic prompt completes or fails safely | Job/result summary |
 | Provider payload privacy | No family-photo URI/data/path/blob/photo reference reaches provider payload | Redacted payload summary |
 | Reader/library | Generated story opens in reader and follows current saved-library behavior | Screenshot/tester note |

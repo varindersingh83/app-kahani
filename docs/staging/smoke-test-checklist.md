@@ -31,14 +31,14 @@ Run this checklist only after the branch has no conflicts, typecheck/build pass,
 | Check | Input / action | Expected result | Evidence | Result |
 |---|---|---|---|---|
 | Health endpoint | Open staging `/api/healthz` | Returns healthy status | `GET https://app-kahani-staging.onrender.com/api/healthz` -> `{"status":"ok"}` | Pass |
-| Staging sign-in | Sign in with Clerk staging app | Parent can access staging app | Screenshot or tester note | |
-| Unauthenticated generation | Call generation route without auth in staging-like config | Request is rejected before generation | Response status/body summary | |
+| Staging sign-in | Create short-lived Clerk session for `kahani-staging-tester-01@example.com` | Parent can access staging API | Authenticated consent/guardrail API calls reached route logic | Pass |
+| Unauthenticated generation | Call generation route without auth in staging-like config | Request is rejected before generation | `POST /api/stories/generate` returned 401 `Sign in is required.` | Pass |
 
 ## Consent
 
 | Check | Input / action | Expected result | Evidence | Result |
 |---|---|---|---|---|
-| Consent missing | Use `consent-missing` fixture | Generation blocked with consent-required behavior | Response status/body summary | |
+| Consent missing | Use `consent-missing` fixture | Generation blocked with consent-required behavior | Authenticated `POST /api/stories/generate` returned 403 `external_text_ai_consent_required` | Pass |
 | Consent accepted | Use `consent-accepted` fixture | Generation can proceed if guardrails pass | Job/result evidence | |
 | Consent stale | Use `consent-stale` if supported | Current consent is required | Response status/body summary | |
 
@@ -62,10 +62,10 @@ Run this checklist only after the branch has no conflicts, typecheck/build pass,
 
 | Check | Input / action | Expected result | Evidence | Result |
 |---|---|---|---|---|
-| Prompt injection | Submit `inject-ignore-rules` | Blocked before provider work | Response plus provider-call absence note | |
-| System prompt extraction | Submit `inject-system-prompt` | Blocked before provider work | Response plus provider-call absence note | |
-| Urgent risk | Submit `urgent-medical` | Blocked with parent-safe guidance before provider work | Response summary | |
-| Crisis/self-harm | Submit `self-harm-crisis` | Blocked with parent-safe guidance before provider work | Response summary | |
+| Prompt injection | Submit `inject-ignore-rules` | Blocked before provider work | Authenticated request returned 400 `input_guardrail_blocked`, category `prompt_injection` | Pass |
+| System prompt extraction | Submit `inject-system-prompt` | Blocked before provider work | Authenticated request returned 400 `input_guardrail_blocked`, category `prompt_injection` | Pass |
+| Urgent risk | Submit `urgent-medical` | Blocked with parent-safe guidance before provider work | Authenticated request returned 400 `input_guardrail_blocked`, category `high_risk_safety` | Pass |
+| Crisis/self-harm | Submit `self-harm-crisis` | Blocked with parent-safe guidance before provider work | Authenticated request returned 400 `input_guardrail_blocked`, category `high_risk_safety` | Pass |
 
 ## Provider Payload Privacy
 
