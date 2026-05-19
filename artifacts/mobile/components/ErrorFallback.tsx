@@ -8,11 +8,12 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useColorScheme,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useColors } from "@/hooks/useColors";
+import tokens from "@/constants/colors";
 
 export type ErrorFallbackProps = {
   error: Error;
@@ -20,7 +21,8 @@ export type ErrorFallbackProps = {
 };
 
 export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
-  const colors = useColors();
+  const deviceScheme = useColorScheme();
+  const colors = tokens[deviceScheme === "light" ? "light" : "dark"];
   const insets = useSafeAreaInsets();
 
   const [isModalVisible, setIsModalVisible] = useState(false);

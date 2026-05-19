@@ -6,18 +6,54 @@ import {
   startStorySheetJob,
 } from "../services/story-sheet/jobs";
 import type { StorySheetGeneratedStory } from "../services/story-sheet/types";
+import {
+  evaluateInputGuardrails,
+  inputGuardrailMessage,
+} from "../services/safety/inputGuardrails";
+import { buildInputGuardrailEvent } from "../services/safety/safetyEvents";
+import { requireUser } from "../services/auth/requireUser";
+import { requireExternalTextAiConsent } from "../services/consent/consentService";
 
 const router: IRouter = Router();
 
 router.post("/stories/generate", async (req, res) => {
-  const config = getAiConfig();
-  if (!config) {
-    res.status(503).json({ message: "Story generation is not configured." });
-    return;
-  }
-
   try {
     const body = GenerateStoryBody.parse(req.body);
+    const user = requireUser(req);
+    if (!user) {
+      res.status(401).json({ message: "Sign in is required." });
+      return;
+    }
+
+    const guardrail = evaluateInputGuardrails(body);
+    if (!guardrail.allowed) {
+      req.log.warn(
+        { guardrail: buildInputGuardrailEvent(body, guardrail) },
+        "Story request blocked by input guardrail",
+      );
+      res.status(400).json({
+        message: inputGuardrailMessage(guardrail),
+        code: "input_guardrail_blocked",
+        category: guardrail.category,
+      });
+      return;
+    }
+
+    const consent = requireExternalTextAiConsent(body);
+    if (!consent.allowed) {
+      res.status(403).json({
+        message: consent.message,
+        code: consent.code,
+      });
+      return;
+    }
+
+    const config = getAiConfig();
+    if (!config) {
+      res.status(503).json({ message: "Story generation is not configured." });
+      return;
+    }
+
     const job = await startStorySheetJob(body, config);
     res.status(202).json({
       bookId: job.bookId,

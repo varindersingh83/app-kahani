@@ -9,4 +9,11 @@
 export interface SupportingCharacter {
   name: string;
   relationship: string;
+  /**
+   * Local preview URI only. Production generation ignores this field and never sends family photos to AI providers.
+   * @deprecated
+   */
+  photoUri?: string;
+  /** Optional non-photo appearance descriptor for illustration consistency. */
+  appearance?: string;
 }

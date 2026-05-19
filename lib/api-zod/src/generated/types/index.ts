@@ -7,9 +7,14 @@
  */
 
 export * from "./characterInput";
+export * from "./consentRequiredMessage";
+export * from "./consentRequiredMessageCode";
 export * from "./errorMessage";
 export * from "./generatedStory";
 export * from "./generateStoryRequest";
+export * from "./guardrailBlockedMessage";
+export * from "./guardrailBlockedMessageCategory";
+export * from "./guardrailBlockedMessageCode";
 export * from "./healthStatus";
 export * from "./storyArtifactLinks";
 export * from "./storyGenerationJob";

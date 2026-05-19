@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { assertNoProviderReferenceImages } from "../safety/providerPayloadPolicy";
 import type { AiConfig, ApiUsage } from "./types";
 
 export function getAiConfig(): AiConfig | null {
@@ -37,6 +38,15 @@ export function extractJson(text: string) {
   return JSON.parse(text.slice(start, end + 1));
 }
 
+function jsonSlice(text: string) {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error("Model did not return valid JSON.");
+  }
+  return text.slice(start, end + 1);
+}
+
 function headers(config: AiConfig) {
   const result: Record<string, string> = {
     Authorization: `Bearer ${config.apiKey}`,
@@ -54,6 +64,29 @@ export async function callJsonChat(
   systemPrompt: string,
   userPrompt: string,
 ) {
+  const data = await requestJsonChat(config, systemPrompt, userPrompt);
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error("Story JSON request returned empty content.");
+
+  try {
+    return {
+      data: extractJson(content),
+      usage: data.usage,
+    };
+  } catch (error) {
+    const repaired = await repairJsonChat(config, content, String(error));
+    return {
+      data: extractJson(repaired),
+      usage: data.usage,
+    };
+  }
+}
+
+async function requestJsonChat(
+  config: AiConfig,
+  systemPrompt: string,
+  userPrompt: string,
+) {
   const response = await fetch(
     `${config.baseUrl.replace(/\/$/, "")}/chat/completions`,
     {
@@ -62,6 +95,7 @@ export async function callJsonChat(
       body: JSON.stringify({
         model: config.textModel,
         max_completion_tokens: 3000,
+        response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -76,17 +110,57 @@ export async function callJsonChat(
     );
   }
 
-  const data = (await response.json()) as {
+  return (await response.json()) as {
     choices?: Array<{ message?: { content?: string } }>;
     usage?: ApiUsage;
   };
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error("Story JSON request returned empty content.");
+}
 
-  return {
-    data: extractJson(content),
-    usage: data.usage,
+async function repairJsonChat(
+  config: AiConfig,
+  invalidJsonText: string,
+  parseError: string,
+) {
+  const response = await fetch(
+    `${config.baseUrl.replace(/\/$/, "")}/chat/completions`,
+    {
+      method: "POST",
+      headers: headers(config),
+      body: JSON.stringify({
+        model: config.textModel,
+        max_completion_tokens: 3000,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              "You repair JSON only. Return valid JSON with no markdown, no explanation, and no extra text.",
+          },
+          {
+            role: "user",
+            content: [
+              `The JSON below failed to parse with this error: ${parseError}`,
+              "Repair syntax only. Preserve the exact schema, keys, story text, and values as much as possible.",
+              jsonSlice(invalidJsonText),
+            ].join("\n\n"),
+          },
+        ],
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Story JSON repair failed with ${response.status}: ${await response.text()}`,
+    );
+  }
+
+  const data = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
   };
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error("Story JSON repair returned empty content.");
+  return content;
 }
 
 export async function callMultimodalImageModel(
@@ -95,18 +169,22 @@ export async function callMultimodalImageModel(
   imageConfig: { aspectRatio: string; imageSize: string },
   referenceImageUris: string[] = [],
 ) {
+  assertNoProviderReferenceImages(referenceImageUris);
   const contentParts = [
     { type: "text", text: prompt },
-    ...(
-      await Promise.all(
-        referenceImageUris.map(async (uri) => {
-          const url = await toImageDataUrl(uri).catch(() => null);
-          return url
-            ? { type: "image_url", image_url: { url, detail: "high" as const } }
-            : null;
-        }),
-      )
-    ).filter(Boolean),
+    ...(await Promise.all(
+      referenceImageUris.map(async (uri) => {
+        const url = await toImageDataUrl(uri).catch((error) => {
+          throw new Error(
+            `Reference image could not be attached: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        });
+        return {
+          type: "image_url",
+          image_url: { url, detail: "high" as const },
+        };
+      }),
+    )),
   ];
 
   const response = await fetch(

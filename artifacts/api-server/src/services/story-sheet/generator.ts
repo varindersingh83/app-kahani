@@ -14,6 +14,7 @@ import { buildGeneratedStory } from "./mapper";
 import { planStoryIssues } from "./planner";
 import { promptPath, slicerScriptPath } from "./paths";
 import { renderBookHtml } from "./html";
+import { sanitizeProviderReferenceImageUris } from "../safety/providerPayloadPolicy";
 import type {
   AiConfig,
   ApiUsage,
@@ -47,7 +48,13 @@ export async function runStorySheetGeneration(input: {
     "utf8",
   );
   const behavior = buildBehaviorPrompt(request);
-  const storyPrompt = buildStoryPrompt(storyPromptTemplate, behavior, "Mom");
+  const storyPrompt = buildStoryPrompt(
+    storyPromptTemplate,
+    behavior,
+    request.character.name,
+    parentNameForRequest(request),
+    buildChildIdentityForStory(request),
+  );
   const storyResult = await callJsonChat(
     config,
     "You write exact JSON only. Follow the user's schema and return valid JSON with no markdown or explanation.",
@@ -77,7 +84,7 @@ export async function runStorySheetGeneration(input: {
     config,
     sheetPrompt,
     { aspectRatio: "1:1", imageSize: "4K" },
-    request.character.photoUri ? [request.character.photoUri] : [],
+    buildReferenceImageUris(request),
   );
   await writeFile(
     path.join(outputDir, "sheet-response.json"),
@@ -108,6 +115,7 @@ export async function runStorySheetGeneration(input: {
     bookId,
     sheetImagePath: sheetPath,
     slices,
+    referenceImages: buildReferenceImageQa(request),
   });
   await writeFile(
     path.join(outputDir, "image-qa.json"),
@@ -167,11 +175,15 @@ function buildBehaviorPrompt(request: GenerateStoryRequest) {
 function buildStoryPrompt(
   template: string,
   behavior: string,
+  childName: string,
   parentName: string,
+  childIdentity: string,
 ) {
   return template
     .replaceAll("{{BEHAVIOR}}", behavior)
-    .replaceAll("{{PARENT_NAME}}", parentName);
+    .replaceAll("{{CHILD_NAME}}", childName.trim())
+    .replaceAll("{{PARENT_NAME}}", parentName)
+    .replaceAll("{{CHILD_IDENTITY}}", childIdentity);
 }
 
 export function buildSheetPrompt(
@@ -180,35 +192,159 @@ export function buildSheetPrompt(
   request: GenerateStoryRequest,
 ) {
   return template
-    .replace("{{JSON_INPUT}}", JSON.stringify(story, null, 2))
+    .replace(
+      "{{JSON_INPUT}}",
+      JSON.stringify(redactStoryForImagePrompt(story, request), null, 2),
+    )
     .replace("{{IMAGE_SPEC}}", buildImageSpec(request));
 }
 
 export function buildImageSpec(request: GenerateStoryRequest) {
-  const childName = request.character.name.trim();
   const appearance = request.character.appearance?.trim();
   const supportingCharacters = request.supportingCharacters ?? [];
+  const parentReference = supportingCharacters.find((character) =>
+    isParentRelationship(character.relationship),
+  );
   const lines = [
-    `Main child: ${childName}.`,
-    request.character.photoUri
-      ? "Use the uploaded child reference image as the canonical face, hair, skin tone, proportions, and overall likeness. Translate it into the watercolor storybook style without changing identity."
-      : "No child reference image was provided, so keep the same invented face, hair, clothing, and proportions in every panel.",
+    "Main child: the child.",
+    "No child face photo is available to the provider. Use only the non-photo appearance descriptor below and keep an invented, consistent storybook face in every panel.",
     appearance
-      ? `Appearance lock: ${appearance}. Keep these traits consistent in every panel.`
+      ? `Appearance descriptor: ${appearance}. Keep these traits consistent in every panel.`
       : "If clothing is not specified, choose one simple outfit and keep it identical in every panel.",
     supportingCharacters.length > 0
       ? `Supporting cast, only when the story calls for them: ${supportingCharacters
           .map(
-            (character: { name: string; relationship: string }) =>
-              `${character.name} (${character.relationship})`,
+            (character: {
+              name: string;
+              relationship: string;
+              appearance?: string;
+              photoUri?: string;
+            }) =>
+              isParentRelationship(character.relationship)
+                ? "adult caregiver (parent)"
+                : `supporting child or family member (${character.relationship})`,
           )
-          .join(", ")}. Keep each supporting character visually consistent across panels.`
+          .join(
+            ", ",
+          )}. Keep each supporting character visually consistent across panels.`
       : "Do not add recurring supporting characters unless the story scene clearly requires them.",
+    "No parent or caregiver face photo is available to the provider. Use only non-photo adult descriptors and do not make adult figures the main child.",
+    parentReference?.appearance
+      ? `Adult appearance descriptor: ${parentReference.appearance}. Keep these adult traits consistent in every panel.`
+      : undefined,
     "Never change the main child's outfit, hair, age, body proportions, or facial structure between panels.",
+    "Never switch the main child's gender presentation between the story text, cover, and page illustrations.",
     "Keep parent/adult figures visually consistent when present, including clothing color and hairstyle.",
-  ];
+  ].filter(Boolean);
 
   return lines.join("\n");
+}
+
+function buildChildIdentityForStory(request: GenerateStoryRequest) {
+  const appearance = request.character.appearance?.trim();
+  if (appearance) {
+    return `Child identity lock: ${appearance} Keep the main child consistent. Do not infer gender from the child's name if it conflicts with this identity lock.`;
+  }
+  return "Child identity lock: do not infer gender from the child's name. Use neutral wording unless a gender is explicitly provided.";
+}
+
+export function buildReferenceImageUris(request: GenerateStoryRequest) {
+  return sanitizeProviderReferenceImageUris([
+    request.character.photoUri,
+    ...(request.supportingCharacters ?? [])
+      .filter((character) => isParentRelationship(character.relationship))
+      .map((character) => character.photoUri),
+  ].filter((uri): uri is string => Boolean(uri)));
+}
+
+function buildReferenceImageQa(
+  request: GenerateStoryRequest,
+): StorySheetRunResult["imageQa"]["referenceImages"] {
+  return [
+    request.character.photoUri
+      ? {
+          role: "main_child" as const,
+          uriKind: referenceUriKind(request.character.photoUri),
+          attached: isAttachableReferenceUri(request.character.photoUri),
+        }
+      : undefined,
+    ...(request.supportingCharacters ?? [])
+      .filter((character) => isParentRelationship(character.relationship))
+      .map((character) =>
+        character.photoUri
+          ? {
+              role: "parent" as const,
+              uriKind: referenceUriKind(character.photoUri),
+              attached: isAttachableReferenceUri(character.photoUri),
+            }
+          : undefined,
+      ),
+  ].filter(
+    (
+      reference,
+    ): reference is StorySheetRunResult["imageQa"]["referenceImages"][number] =>
+      Boolean(reference),
+  );
+}
+
+function isAttachableReferenceUri(uri: string) {
+  return (
+    uri.startsWith("data:image/") ||
+    uri.startsWith("http://") ||
+    uri.startsWith("https://")
+  );
+}
+
+function referenceUriKind(uri: string) {
+  if (uri.startsWith("data:")) return "data" as const;
+  if (uri.startsWith("http://") || uri.startsWith("https://"))
+    return "http" as const;
+  if (uri.startsWith("file://")) return "file" as const;
+  return "other" as const;
+}
+
+function parentNameForRequest(request: GenerateStoryRequest) {
+  return (
+    request.supportingCharacters?.find((character) =>
+      isParentRelationship(character.relationship),
+    )?.name ?? "Mom"
+  );
+}
+
+function redactStoryForImagePrompt(
+  story: StorySheetInput,
+  request: GenerateStoryRequest,
+): StorySheetInput {
+  const childName = request.character.name.trim() || story.child_name;
+  const parentName = parentNameForRequest(request);
+  const redactText = (value: string) =>
+    replaceName(replaceName(value, childName, "the child"), parentName, "the caregiver");
+
+  return {
+    ...story,
+    title: redactText(story.title),
+    child_name: "the child",
+    parent_name: "the caregiver",
+    parent_role: story.parent_role || "caregiver",
+    pages: story.pages.map((page) => ({
+      ...page,
+      text: redactText(page.text),
+      scene: redactText(page.scene),
+    })),
+  };
+}
+
+function replaceName(value: string, name: string, replacement: string) {
+  const trimmed = name.trim();
+  if (!trimmed) return value;
+  return value.replace(
+    new RegExp(`\\b${escapeRegExp(trimmed)}\\b`, "g"),
+    replacement,
+  );
+}
+
+function isParentRelationship(relationship: string) {
+  return /parent|mom|mum|mama|mother|dad|dada|papa|father/i.test(relationship);
 }
 
 export function normalizeStoryJson(
@@ -240,10 +376,8 @@ export function normalizeStoryJson(
   };
 }
 
-function replaceName(value: string, fromName: string, toName: string) {
-  if (fromName === toName) return value;
-  const escaped = fromName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return value.replace(new RegExp(`\\b${escaped}\\b`, "g"), toName);
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 async function saveImageAsset(source: string, destinationBasePath: string) {

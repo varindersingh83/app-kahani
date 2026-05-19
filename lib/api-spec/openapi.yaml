@@ -45,6 +45,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StoryGenerationJob"
+        "400":
+          description: Story generation request was rejected before generation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuardrailBlockedMessage"
+        "403":
+          description: External text AI consent is required before generation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsentRequiredMessage"
         "503":
           description: Story generation is not configured
           content:
@@ -114,6 +126,34 @@ components:
           type: string
       required:
         - message
+    GuardrailBlockedMessage:
+      allOf:
+        - $ref: "#/components/schemas/ErrorMessage"
+        - type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - input_guardrail_blocked
+            category:
+              type: string
+              enum:
+                - prompt_injection
+                - high_risk_safety
+          required:
+            - code
+            - category
+    ConsentRequiredMessage:
+      allOf:
+        - $ref: "#/components/schemas/ErrorMessage"
+        - type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - external_text_ai_consent_required
+          required:
+            - code
     HealthStatus:
       type: object
       properties:
@@ -129,9 +169,11 @@ components:
           minLength: 1
         photoUri:
           type: string
+          deprecated: true
+          description: Local preview URI only. Production generation ignores this field and never sends family photos to AI providers.
         appearance:
           type: string
-          description: Optional short appearance description for illustration consistency.
+          description: Optional non-photo appearance descriptor for illustration consistency.
       required:
         - name
     StoryMode:
@@ -146,6 +188,13 @@ components:
           type: string
         relationship:
           type: string
+        photoUri:
+          type: string
+          deprecated: true
+          description: Local preview URI only. Production generation ignores this field and never sends family photos to AI providers.
+        appearance:
+          type: string
+          description: Optional non-photo appearance descriptor for illustration consistency.
       required:
         - name
         - relationship
@@ -164,6 +213,9 @@ components:
           items:
             $ref: "#/components/schemas/SupportingCharacter"
           description: Optional list of other characters to include if the story calls for them.
+        externalTextAiConsent:
+          type: boolean
+          description: Explicit parent consent for sending prompt and behavior details to an external text AI provider.
       required:
         - mode
         - character

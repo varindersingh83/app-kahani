@@ -30,6 +30,7 @@ import {
   type CharacterRelationship,
 } from "@/context/StoryContext";
 import { useKahaniTheme } from "@/context/ThemeContext";
+import { buildCharacterDescriptor } from "@/services/photoDescriptors";
 
 export default function CharactersScreen() {
   const { colors } = useKahaniTheme();
@@ -44,6 +45,10 @@ export default function CharactersScreen() {
   const [photoUri, setPhotoUri] = useState<string | undefined>();
   const [relationship, setRelationship] =
     useState<CharacterRelationship>("child");
+  const [presentation, setPresentation] = useState<
+    "from-photo" | "girl" | "boy"
+  >("from-photo");
+  const [appearanceNotes, setAppearanceNotes] = useState("");
 
   const pickPhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -55,9 +60,13 @@ export default function CharactersScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
+      base64: true,
+      quality: 0.7,
     });
-    if (!result.canceled) setPhotoUri(result.assets[0]?.uri);
+    if (!result.canceled) {
+      const asset = result.assets[0];
+      setPhotoUri(asset ? await persistableImageUri(asset) : undefined);
+    }
   };
 
   const save = async () => {
@@ -65,10 +74,19 @@ export default function CharactersScreen() {
       Alert.alert("Add a name", "Enter a name before saving.");
       return;
     }
-    await addCharacter(name.trim(), photoUri, relationship);
+    await addCharacter(
+      name.trim(),
+      photoUri,
+      relationship,
+      relationship === "child"
+        ? buildCharacterDescriptor({ presentation, notes: appearanceNotes })
+        : undefined,
+    );
     setName("");
     setPhotoUri(undefined);
     setRelationship("child");
+    setPresentation("from-photo");
+    setAppearanceNotes("");
     if (Platform.OS !== "web") {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
@@ -107,14 +125,20 @@ export default function CharactersScreen() {
         ]}
       >
         {photoUri ? (
-          <Image source={{ uri: photoUri }} style={styles.fill} resizeMode="cover" />
+          <Image
+            source={{ uri: photoUri }}
+            style={styles.fill}
+            resizeMode="cover"
+          />
         ) : (
           <View style={styles.photoEmpty}>
-            <View style={[styles.photoIcon, { backgroundColor: colors.secondary }]}>
+            <View
+              style={[styles.photoIcon, { backgroundColor: colors.secondary }]}
+            >
               <Feather name="camera" color={colors.bark} size={28} />
             </View>
             <Text style={[styles.photoTitle, { color: colors.foreground }]}>
-              Add a photo
+              Add character photo
             </Text>
           </View>
         )}
@@ -137,6 +161,62 @@ export default function CharactersScreen() {
           ]}
           returnKeyType="done"
           testID="character-name-input"
+        />
+      </View>
+
+      <View style={styles.identityBlock}>
+        <Text style={[styles.fieldLabel, { color: colors.foreground }]}>
+          Character identity
+        </Text>
+        <View style={styles.identityOptions}>
+          {IDENTITY_OPTIONS.map((option) => {
+            const selected = presentation === option.value;
+            return (
+              <Pressable
+                key={option.value}
+                onPress={() => setPresentation(option.value)}
+                style={[
+                  styles.identityOption,
+                  {
+                    backgroundColor: selected ? colors.primary : colors.card,
+                    borderColor: selected ? colors.primary : colors.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.identityText,
+                    {
+                      color: selected
+                        ? colors.primaryForeground
+                        : colors.foreground,
+                    },
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      <View
+        style={[
+          styles.nameInputWrap,
+          { backgroundColor: colors.card, borderColor: colors.border },
+        ]}
+      >
+        <TextInput
+          value={appearanceNotes}
+          onChangeText={setAppearanceNotes}
+          placeholder="Blonde hair, pink shirt, bright smile"
+          placeholderTextColor={colors.mutedForeground}
+          style={[
+            styles.nameInput,
+            { color: colors.foreground, outlineColor: "transparent" },
+          ]}
+          returnKeyType="done"
         />
       </View>
 
@@ -169,7 +249,10 @@ export default function CharactersScreen() {
                   onPress={() => removeCharacter(character.id)}
                   style={[
                     styles.removeButton,
-                    { backgroundColor: colors.secondary, borderColor: colors.border },
+                    {
+                      backgroundColor: colors.secondary,
+                      borderColor: colors.border,
+                    },
                   ]}
                 >
                   <Feather name="trash-2" color={colors.bark} size={15} />
@@ -237,6 +320,32 @@ const styles = StyleSheet.create({
     fontFamily: tokens.typography.sansMedium,
     fontSize: 18,
   },
+  identityBlock: {
+    marginBottom: 16,
+    gap: 10,
+  },
+  fieldLabel: {
+    fontFamily: tokens.typography.sansBold,
+    fontSize: 15,
+  },
+  identityOptions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  identityOption: {
+    minHeight: 44,
+    flex: 1,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  identityText: {
+    fontFamily: tokens.typography.sansBold,
+    fontSize: 14,
+    textAlign: "center",
+  },
   savedSection: {
     marginTop: 34,
   },
@@ -273,3 +382,36 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 });
+
+const IDENTITY_OPTIONS = [
+  { label: "Describe", value: "from-photo" },
+  { label: "Girl", value: "girl" },
+  { label: "Boy", value: "boy" },
+] as const;
+
+async function persistableImageUri(asset: ImagePicker.ImagePickerAsset) {
+  if (asset.base64) {
+    const mimeType = asset.mimeType ?? detectMimeType(asset.uri);
+    return `data:${mimeType};base64,${asset.base64}`;
+  }
+
+  if (Platform.OS !== "web" || !asset.uri.startsWith("blob:")) {
+    return asset.uri;
+  }
+
+  const response = await fetch(asset.uri);
+  const blob = await response.blob();
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+function detectMimeType(uri: string) {
+  const lower = uri.toLowerCase();
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  if (lower.endsWith(".webp")) return "image/webp";
+  return "image/png";
+}

@@ -23,6 +23,7 @@ export type Character = {
   name: string;
   photoUri?: string;
   relationship?: CharacterRelationship;
+  appearance?: string;
 };
 
 export type CharacterRelationship = "child" | "mom" | "dad";
@@ -55,6 +56,7 @@ type StoryContextValue = {
     name: string,
     photoUri?: string,
     relationship?: CharacterRelationship,
+    appearance?: string,
   ) => Promise<void>;
   removeCharacter: (id: string) => Promise<void>;
   selectCharacter: (id: string) => Promise<void>;
@@ -77,17 +79,29 @@ function createId() {
 
 function getDevProfileId() {
   if (typeof window === "undefined") return "local_profile";
+  if (!window.location?.href) return "local_profile";
 
   const url = new URL(window.location.href);
+  const storage =
+    typeof window.localStorage === "undefined" ? null : window.localStorage;
   const profileId =
     url.searchParams.get("profile") ?? url.searchParams.get("devProfileId");
   if (profileId) {
-    window.localStorage.setItem("kahani-active-profile-id", profileId);
+    storage?.setItem("kahani-active-profile-id", profileId);
     return profileId;
   }
 
+  return storage?.getItem("kahani-active-profile-id") ?? "local_profile";
+}
+
+function isParentLikeName(name: string) {
+  return /^(mom|mum|mama|mother|dad|dada|papa|father)$/i.test(name.trim());
+}
+
+function isChildCharacter(character: Pick<Character, "name" | "relationship">) {
   return (
-    window.localStorage.getItem("kahani-active-profile-id") ?? "local_profile"
+    (character.relationship ?? "child") === "child" &&
+    !isParentLikeName(character.name)
   );
 }
 
@@ -145,12 +159,11 @@ export function StoryProvider({
     setCharacters: React.Dispatch<React.SetStateAction<Character[]>>;
     setSavedStories: React.Dispatch<React.SetStateAction<Story[]>>;
     setCurrentStory: React.Dispatch<React.SetStateAction<Story | null>>;
-    setSelectedCharacterId: React.Dispatch<
-      React.SetStateAction<string | null>
-    >;
+    setSelectedCharacterId: React.Dispatch<React.SetStateAction<string | null>>;
     storageKey: string;
   }) {
     if (typeof window === "undefined") return;
+    if (!window.location?.href) return;
 
     const url = new URL(window.location.href);
     const seedUrl = url.searchParams.get("devSeedStoryUrl");
@@ -163,7 +176,7 @@ export function StoryProvider({
     url.searchParams.delete("devSeedStoryUrl");
     url.searchParams.delete("devSeedCharacterName");
     url.searchParams.delete("devSeedCharacterPhotoUri");
-    window.history.replaceState({}, "", url.toString());
+    window.history?.replaceState?.({}, "", url.toString());
 
     const response = await fetch(seedUrl);
     if (!response.ok) return;
@@ -224,22 +237,28 @@ export function StoryProvider({
       name: string,
       photoUri?: string,
       relationship?: CharacterRelationship,
+      appearance?: string,
     ) => {
       const character = {
         id: createId(),
         name: name.trim(),
         photoUri,
         relationship: relationship ?? "child",
+        appearance: appearance?.trim() || undefined,
       };
       const nextCharacters = [character, ...characters];
+      const nextSelectedCharacterId =
+        !selectedCharacterId || isChildCharacter(character)
+          ? character.id
+          : selectedCharacterId;
       setCharacters(nextCharacters);
-      setSelectedCharacterId(character.id);
+      setSelectedCharacterId(nextSelectedCharacterId);
       await persist({
         characters: nextCharacters,
-        selectedCharacterId: character.id,
+        selectedCharacterId: nextSelectedCharacterId,
       });
     },
-    [characters, persist],
+    [characters, persist, selectedCharacterId],
   );
 
   const removeCharacter = useCallback(
@@ -323,10 +342,13 @@ export function StoryProvider({
   const removeStory = useCallback(
     async (id: string) => {
       const nextStories = savedStories.filter((story) => story.id !== id);
+      if (currentStory?.id === id) {
+        setCurrentStory(null);
+      }
       setSavedStories(nextStories);
       await persist({ savedStories: nextStories });
     },
-    [persist, savedStories],
+    [currentStory, persist, savedStories],
   );
 
   const selectedCharacter = useMemo(

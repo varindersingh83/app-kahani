@@ -12,7 +12,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
-  IconButton,
   PlaceholderArt,
   ProgressDots,
   ReaderNavButton,
@@ -66,7 +65,7 @@ export default function BookReaderScreen() {
           { backgroundColor: colors.background, paddingTop: insets.top + 24 },
         ]}
       >
-        <IconButton icon="chevron-left" onPress={() => router.back()} />
+        <ReaderBackButton />
         <Text style={[styles.emptyText, { color: colors.foreground }]}>
           No story loaded.
         </Text>
@@ -107,11 +106,7 @@ export default function BookReaderScreen() {
       ) : null}
 
       <View style={[styles.readerTop, { top: insets.top + 16 }]}>
-        <IconButton
-          icon="chevron-left"
-          onPress={() => router.back()}
-          testID="reader-back-button"
-        />
+        <ReaderBackButton testID="reader-back-button" />
         <ThemeToggle />
       </View>
 
@@ -332,6 +327,30 @@ function EndPage({
   );
 }
 
+function ReaderBackButton({ testID }: { testID?: string }) {
+  const { colors } = useKahaniTheme();
+
+  return (
+    <Pressable
+      onPress={() => router.back()}
+      accessibilityLabel="Go back"
+      accessibilityRole="button"
+      testID={testID}
+      hitSlop={10}
+      style={({ pressed }) => [
+        styles.readerBackButton,
+        {
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+          opacity: pressed ? 0.78 : 1,
+        },
+      ]}
+    >
+      <Feather name="chevron-left" color={colors.bark} size={23} />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
@@ -361,11 +380,19 @@ const styles = StyleSheet.create({
   },
   readerTop: {
     position: "absolute",
-    left: 24,
-    right: 24,
+    left: 28,
+    right: 28,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+  readerBackButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   readerTitle: {
     fontFamily: serifFamily(),

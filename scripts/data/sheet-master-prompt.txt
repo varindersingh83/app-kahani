@@ -50,8 +50,10 @@ watercolor children's storybook illustration, hand-painted, soft pastel palette,
 
 Character consistency:
 - Main child from JSON child_name must have same face, hair, clothing, and proportions across all panels.
+- Main child gender presentation must match the uploaded child reference image and/or Image spec. Never infer boy/girl from the child's name if the reference image or Image spec says otherwise.
 - Second child, if present, must have same face, hair, clothing, and clothing color across all panels.
 - Parent, if present, must have same appearance and outfit across all panels.
+- If the image spec says a parent reference image was uploaded, the parent/adult face must follow that reference photo consistently across every panel where the parent appears.
 - Objects must remain consistent across panels.
 
 Scene rules:

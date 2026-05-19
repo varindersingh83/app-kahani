@@ -23,49 +23,47 @@ import {
   KahaniButton,
   KahaniScreen,
   SectionTitle,
-  SegmentedControl,
   StoryCard,
   ThemeToggle,
   cardShadow,
   serifFamily,
 } from "@/components/KahaniDesign";
 import tokens from "@/constants/colors";
-import { useStoryStudio } from "@/context/StoryContext";
+import { useStoryStudio, type Character } from "@/context/StoryContext";
 import { useKahaniTheme } from "@/context/ThemeContext";
 
-type StoryMode = "behavior" | "random";
+const BEHAVIOR_PROMPT_PLACEHOLDER =
+  "sharing toys, bedtime resistance, using gentle hands";
 
-const SAMPLE_TITLE = "The Little Seed's Journey";
-const SAMPLE_TEXT =
-  "A tiny seed dreams big and learns that growth takes time, love and little by little.";
+function isChildCharacter(character: Character) {
+  return (
+    (character.relationship ?? "child") === "child" &&
+    !/^(mom|mum|mama|mother|dad|dada|papa|father)$/i.test(
+      character.name.trim(),
+    )
+  );
+}
 
 export default function StudioScreen() {
   const { colors } = useKahaniTheme();
   const {
     characters,
-    selectedCharacterId,
+    selectedCharacter,
     selectCharacter,
     currentStory,
     createGeneratedStory,
   } = useStoryStudio();
-  const [mode, setMode] = useState<StoryMode>("behavior");
   const [prompt, setPrompt] = useState("");
+  const [isPromptFocused, setIsPromptFocused] = useState(false);
   const [generationMessage, setGenerationMessage] = useState("");
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [issueNotice, setIssueNotice] = useState<string | null>(null);
-  const childCharacters = characters.filter(
-    (character) => (character.relationship ?? "child") === "child",
-  );
-  const selectedChild =
-    childCharacters.find((character) => character.id === selectedCharacterId) ??
-    childCharacters[0] ??
-    null;
-  const supportingCharacters = characters
-    .filter((character) => (character.relationship ?? "child") !== "child")
-    .map((character) => ({
-      name: character.name,
-      relationship: character.relationship ?? "family",
-    }));
+  const [hasExternalTextAiConsent, setHasExternalTextAiConsent] =
+    useState(false);
+  const promptPlaceholderColor =
+    colors.scheme === "dark"
+      ? "rgba(188, 167, 134, 0.48)"
+      : "rgba(129, 113, 94, 0.48)";
 
   const mutation = useGenerateStory({
     mutation: {
@@ -75,22 +73,43 @@ export default function StudioScreen() {
             ? error.message
             : "The story service could not finish. Try again in a moment.";
         setGenerationError(message);
-        Alert.alert(
-          "Story not ready",
-          message,
-        );
+        Alert.alert("Story not ready", message);
       },
     },
   });
 
+  const childCharacters = characters.filter(isChildCharacter);
+  const selectedStoryCharacter =
+    selectedCharacter && isChildCharacter(selectedCharacter)
+      ? selectedCharacter
+      : (childCharacters[0] ?? null);
+  const supportingCharacters = characters
+    .filter(
+      (character) =>
+        character.id !== selectedStoryCharacter?.id &&
+        !isChildCharacter(character),
+    )
+    .map((character) => ({
+      name: character.name,
+      relationship: character.relationship ?? "parent",
+    }));
+
   const generate = async () => {
-    if (!selectedChild) {
+    if (!selectedStoryCharacter) {
       Alert.alert(
         "Add a character",
         "Create a child character before generating a story.",
       );
       router.push("/(tabs)/characters");
       return;
+    }
+
+    const consented = await ensureExternalTextAiConsent(
+      hasExternalTextAiConsent,
+    );
+    if (!consented) return;
+    if (!hasExternalTextAiConsent) {
+      setHasExternalTextAiConsent(true);
     }
 
     try {
@@ -100,13 +119,17 @@ export default function StudioScreen() {
       setGenerationMessage("Starting your book...");
       const job = await mutation.mutateAsync({
         data: {
-          mode,
+          mode: "behavior",
           prompt: storyPrompt,
           character: {
-            name: selectedChild.name,
-            photoUri: selectedChild.photoUri,
+            name: selectedStoryCharacter.name,
+            appearance:
+              selectedStoryCharacter.appearance ??
+              "Use only the parent-entered appearance description; do not infer gender from the child's name.",
           },
-          supportingCharacters,
+          externalTextAiConsent: true,
+          supportingCharacters:
+            supportingCharacters.length > 0 ? supportingCharacters : undefined,
         },
       });
       setIssueNotice(job.issueNotice ?? null);
@@ -122,12 +145,14 @@ export default function StudioScreen() {
         endImageUrl: story.endImageUrl ?? undefined,
         sheetImageUrl: story.sheetImageUrl ?? undefined,
         artifactLinks: story.artifactLinks,
-        characterName: selectedChild.name,
-        characterPhotoUri: selectedChild.photoUri ?? undefined,
+        characterName: selectedStoryCharacter.name,
+        characterPhotoUri: selectedStoryCharacter.photoUri ?? undefined,
       });
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
+      setPrompt("");
+      setIsPromptFocused(false);
       setGenerationMessage("");
       router.push({
         pathname: "/book-reader",
@@ -140,16 +165,10 @@ export default function StudioScreen() {
           ? error.message
           : "The story service could not finish. Try again in a moment.";
       setGenerationError(message);
-      Alert.alert(
-        "Story not ready",
-        message,
-      );
+      Alert.alert("Story not ready", message);
     }
   };
 
-  const storyTitle = currentStory?.title ?? SAMPLE_TITLE;
-  const storyText = currentStory?.pages[0]?.text ?? SAMPLE_TEXT;
-  const visibleCharacters = childCharacters.slice(0, 3);
   const isGenerating = mutation.isPending || Boolean(generationMessage);
 
   return (
@@ -160,12 +179,12 @@ export default function StudioScreen() {
 
       <SectionTitle>Choose a character</SectionTitle>
       <View style={styles.characterRow}>
-        {visibleCharacters.map((character) => (
+        {childCharacters.map((character) => (
           <CharacterAvatar
             key={character.id}
             label={character.name}
             imageUri={character.photoUri}
-            selected={character.id === selectedChild?.id}
+            selected={character.id === selectedStoryCharacter?.id}
             onPress={() => selectCharacter(character.id)}
             testID={`story-character-${character.name}`}
           />
@@ -179,16 +198,6 @@ export default function StudioScreen() {
           testID="add-character-shortcut"
         />
       </View>
-
-      <SectionTitle>Story type</SectionTitle>
-      <SegmentedControl
-        value={mode}
-        onChange={setMode}
-        options={[
-          { value: "behavior", label: "Behavior support" },
-          { value: "random", label: "Random story" },
-        ]}
-      />
 
       <View
         style={[
@@ -204,12 +213,10 @@ export default function StudioScreen() {
           value={prompt}
           onChangeText={setPrompt}
           multiline
-          placeholder={
-            mode === "behavior"
-              ? "sharing toys, bedtime resistance, using gentle hands"
-              : "picnic with parents, drive home from school, rainy day adventure"
-          }
-          placeholderTextColor={colors.mutedForeground}
+          onBlur={() => setIsPromptFocused(false)}
+          onFocus={() => setIsPromptFocused(true)}
+          placeholder={isPromptFocused ? "" : BEHAVIOR_PROMPT_PLACEHOLDER}
+          placeholderTextColor={promptPlaceholderColor}
           style={[
             styles.promptInput,
             { color: colors.foreground, outlineColor: "transparent" },
@@ -250,34 +257,49 @@ export default function StudioScreen() {
 
       <View style={styles.sectionHeader}>
         <Text style={[styles.cardSectionTitle, { color: colors.foreground }]}>
-          Newly created
+          Created books
         </Text>
-        <Text style={[styles.viewAll, { color: colors.bark }]}>View all</Text>
+        {currentStory ? (
+          <Text style={[styles.viewAll, { color: colors.bark }]}>View all</Text>
+        ) : null}
       </View>
-      <StoryCard
-        featured
-        title={storyTitle}
-        description={storyText}
-        imageUri={
-          currentStory?.coverImageUrl ?? currentStory?.characterPhotoUri
-        }
-        pages={currentStory?.pages.length ?? 24}
-        onPress={() => {
-          if (currentStory) {
-            router.push("/book-reader");
-          }
-        }}
-        testID="newly-created-story-card"
-      />
 
-      {!currentStory ? (
-        <View style={styles.hintRow}>
-          <Feather name="info" color={colors.leaf} size={16} />
-          <Text style={[styles.hintText, { color: colors.mutedForeground }]}>
-            Generate a story to replace this sample card with your child's book.
+      {currentStory ? (
+        <StoryCard
+          featured
+          title={currentStory.title}
+          description={currentStory.pages[0]?.text}
+          imageUri={
+            currentStory.coverImageUrl ?? currentStory.characterPhotoUri
+          }
+          pages={currentStory.pages.length}
+          onPress={() => router.push("/book-reader")}
+          testID="newly-created-story-card"
+        />
+      ) : (
+        <View
+          style={[
+            styles.emptyBooks,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <View
+            style={[styles.emptyIcon, { backgroundColor: colors.secondary }]}
+          >
+            <Feather name="book-open" color={colors.primary} size={24} />
+          </View>
+          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+            No books yet
+          </Text>
+          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+            Generate a book and it will appear here, ready to open and save to
+            your library.
           </Text>
         </View>
-      ) : null}
+      )}
     </KahaniScreen>
   );
 }
@@ -342,17 +364,35 @@ const styles = StyleSheet.create({
     fontFamily: tokens.typography.sansBold,
     fontSize: 14,
   },
-  hintRow: {
-    flexDirection: "row",
+  emptyBooks: {
+    borderWidth: 1,
+    borderRadius: 24,
+    minHeight: 190,
+    paddingHorizontal: 24,
+    paddingVertical: 28,
     alignItems: "center",
-    gap: 8,
-    marginTop: 14,
+    justifyContent: "center",
   },
-  hintText: {
-    flex: 1,
+  emptyIcon: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontFamily: serifFamily(),
+    fontSize: 30,
+    lineHeight: 36,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  emptyText: {
     fontFamily: tokens.typography.sansMedium,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: "center",
   },
 });
 
@@ -381,6 +421,24 @@ async function waitForGeneratedStory(
   throw new Error(
     "The story is taking longer than expected. Please try again.",
   );
+}
+
+function ensureExternalTextAiConsent(alreadyConsented: boolean) {
+  if (alreadyConsented) return Promise.resolve(true);
+
+  const message =
+    "Kahani sends your story prompt and behavior details to an external AI text provider to generate the book. Family photos are not sent. Do you consent to continue?";
+
+  if (Platform.OS === "web") {
+    return Promise.resolve(window.confirm(message));
+  }
+
+  return new Promise<boolean>((resolve) => {
+    Alert.alert("AI text processing", message, [
+      { text: "Not now", style: "cancel", onPress: () => resolve(false) },
+      { text: "I consent", onPress: () => resolve(true) },
+    ]);
+  });
 }
 
 function delay(ms: number) {

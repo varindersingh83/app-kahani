@@ -141,7 +141,7 @@ export function ThemeToggle() {
   const thumbProgress = React.useRef(new Animated.Value(isDark ? 1 : 0)).current;
   const thumbTranslateX = thumbProgress.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 68],
+    outputRange: [0, 18],
   });
 
   React.useEffect(() => {
@@ -176,11 +176,11 @@ export function ThemeToggle() {
         <Feather
           name={isDark ? "moon" : "sun"}
           color={isDark ? colors.gold : colors.gold}
-          size={22}
+          size={13}
         />
       </Animated.View>
-      <Feather name="sun" color={colors.goldMuted} size={18} />
-      <Feather name="moon" color={colors.bark} size={18} />
+      <Feather name="sun" color={colors.goldMuted} size={10} />
+      <Feather name="moon" color={colors.bark} size={10} />
     </Pressable>
   );
 }
@@ -473,6 +473,7 @@ export function StoryCard({
   imageUri,
   pages,
   onPress,
+  onDelete,
   featured = false,
   testID,
 }: {
@@ -481,6 +482,7 @@ export function StoryCard({
   imageUri?: string;
   pages?: number;
   onPress?: () => void;
+  onDelete?: () => void;
   featured?: boolean;
   testID?: string;
 }) {
@@ -539,11 +541,27 @@ export function StoryCard({
         <View style={[styles.cardArrow, { backgroundColor: colors.primary }]}>
           <Feather name="chevron-right" color={colors.primaryForeground} size={26} />
         </View>
-      ) : (
-        <View style={[styles.moreButton, { backgroundColor: colors.card }]}>
-          <Feather name="more-horizontal" color={colors.bark} size={20} />
-        </View>
-      )}
+      ) : onDelete ? (
+        <Pressable
+          onPress={(event) => {
+            event.stopPropagation();
+            onDelete();
+          }}
+          accessibilityLabel={`Delete ${title}`}
+          accessibilityRole="button"
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.moreButton,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              opacity: pressed ? 0.74 : 1,
+            },
+          ]}
+        >
+          <Feather name="trash-2" color={colors.destructive} size={19} />
+        </Pressable>
+      ) : null}
     </Pressable>
   );
 }
@@ -708,22 +726,22 @@ const styles = StyleSheet.create({
   },
   themeTrack: {
     position: "relative",
-    width: 126,
-    height: 54,
-    borderRadius: 27,
+    width: 46,
+    height: 26,
+    borderRadius: 13,
     borderWidth: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    paddingHorizontal: 16,
+    paddingHorizontal: 6,
   },
   themeThumb: {
     position: "absolute",
     top: -1,
     left: -1,
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
@@ -913,6 +931,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -5,8 +5,9 @@ type GenerateStoryRequestBody = {
   prompt?: string;
   character: {
     name: string;
-    photoUri?: string;
+    appearance?: string;
   };
+  externalTextAiConsent?: boolean;
   supportingCharacters?: Array<{
     name: string;
     relationship: string;
@@ -76,6 +77,7 @@ test("adds child, mom, and dad, creates a story with correct names, and saves it
   });
 
   const profile = `e2e-${Date.now()}`;
+  page.on("dialog", (dialog) => dialog.accept());
   await page.goto(`/?profile=${profile}`);
   await expect(page.getByText("Choose a character")).toBeVisible();
 
@@ -97,6 +99,7 @@ test("adds child, mom, and dad, creates a story with correct names, and saves it
     mode: "behavior",
     prompt: "rainy day disappointment with Mom and Dad nearby",
     character: { name: "Liam" },
+    externalTextAiConsent: true,
   });
   expect(generateRequest?.supportingCharacters).toEqual(
     expect.arrayContaining([
