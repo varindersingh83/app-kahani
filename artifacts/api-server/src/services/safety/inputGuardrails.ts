@@ -20,7 +20,7 @@ const PROMPT_INJECTION_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
   },
   {
     pattern:
-      /\b(system|developer|hidden|secret)\b.{0,80}\b(prompt|instruction|message|rules?)\b/i,
+      /\b(system|developer|hidden|secret)\b.{0,80}\b(prompt|instruction|messages?|rules?)\b/i,
     reason: "Requests hidden prompts or internal instructions.",
   },
   {
@@ -35,7 +35,8 @@ const PROMPT_INJECTION_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
 
 const HIGH_RISK_SAFETY_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
   {
-    pattern: /\b(self[-\s]?harm|suicid(?:e|al)|kill (?:myself|himself|herself|themselves)|hurt (?:myself|himself|herself|themselves))\b/i,
+    pattern:
+      /\b(self[-\s]?harm|suicid(?:e|al)|kill(?:ing)? (?:myself|himself|herself|themselves)|hurt(?:ing)? (?:myself|himself|herself|themselves))\b/i,
     reason: "References self-harm or suicide risk.",
   },
   {
