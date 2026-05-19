@@ -8,6 +8,8 @@ import {
   bookPages,
   books,
   characters,
+  consentRecords,
+  deletionRequests,
   generationJobs,
   learningEvents,
   users,
@@ -19,6 +21,11 @@ test("exports production-readiness database tables", () => {
   assert.equal(generationJobs[Symbol.for("drizzle:Name")], "generation_jobs");
   assert.equal(assets[Symbol.for("drizzle:Name")], "assets");
   assert.equal(auditEvents[Symbol.for("drizzle:Name")], "audit_events");
+  assert.equal(consentRecords[Symbol.for("drizzle:Name")], "consent_records");
+  assert.equal(
+    deletionRequests[Symbol.for("drizzle:Name")],
+    "deletion_requests",
+  );
   assert.equal(books[Symbol.for("drizzle:Name")], "books");
   assert.equal(bookPages[Symbol.for("drizzle:Name")], "book_pages");
   assert.equal(bookEvents[Symbol.for("drizzle:Name")], "book_events");

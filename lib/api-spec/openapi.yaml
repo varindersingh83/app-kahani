@@ -12,6 +12,8 @@ tags:
     description: Health operations
   - name: stories
     description: Story generation operations
+  - name: account
+    description: Account privacy and deletion operations
 paths:
   /healthz:
     get:
@@ -117,6 +119,43 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StoryGenerationStatus"
+  /account/deletion-request:
+    post:
+      operationId: requestAccountDeletion
+      tags: [account]
+      summary: Request account deletion
+      description: Queues deletion of user-linked records after fresh parent re-authentication.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountDeletionRequest"
+      responses:
+        "202":
+          description: Account deletion request queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountDeletionAccepted"
+        "400":
+          description: Re-authentication timestamp is invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorCodeMessage"
+        "401":
+          description: Sign-in is required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorCodeMessage"
+        "403":
+          description: Fresh re-authentication is required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorCodeMessage"
 components:
   schemas:
     ErrorMessage:
@@ -126,6 +165,40 @@ components:
           type: string
       required:
         - message
+    ErrorCodeMessage:
+      allOf:
+        - $ref: "#/components/schemas/ErrorMessage"
+        - type: object
+          properties:
+            code:
+              type: string
+          required:
+            - code
+    AccountDeletionRequest:
+      type: object
+      properties:
+        reauthenticatedAt:
+          type: string
+          format: date-time
+          description: Timestamp from the parent re-authentication challenge.
+      required:
+        - reauthenticatedAt
+    AccountDeletionAccepted:
+      type: object
+      properties:
+        deletionRequestId:
+          type: string
+        status:
+          type: string
+          enum:
+            - queued
+        requestedAt:
+          type: string
+          format: date-time
+      required:
+        - deletionRequestId
+        - status
+        - requestedAt
     GuardrailBlockedMessage:
       allOf:
         - $ref: "#/components/schemas/ErrorMessage"
