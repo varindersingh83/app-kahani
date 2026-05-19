@@ -19,12 +19,16 @@ import {
   IconButton,
   KahaniButton,
   KahaniScreen,
+  SegmentedControl,
   ThemeToggle,
   cardShadow,
   serifFamily,
 } from "@/components/KahaniDesign";
 import tokens from "@/constants/colors";
-import { useStoryStudio } from "@/context/StoryContext";
+import {
+  useStoryStudio,
+  type CharacterRelationship,
+} from "@/context/StoryContext";
 import { useKahaniTheme } from "@/context/ThemeContext";
 import { buildCharacterDescriptor } from "@/services/photoDescriptors";
 
@@ -39,6 +43,8 @@ export default function CharactersScreen() {
   } = useStoryStudio();
   const [name, setName] = useState("");
   const [photoUri, setPhotoUri] = useState<string | undefined>();
+  const [relationship, setRelationship] =
+    useState<CharacterRelationship>("child");
   const [presentation, setPresentation] = useState<
     "from-photo" | "girl" | "boy"
   >("from-photo");
@@ -71,10 +77,14 @@ export default function CharactersScreen() {
     await addCharacter(
       name.trim(),
       photoUri,
-      buildCharacterDescriptor({ presentation, notes: appearanceNotes }),
+      relationship,
+      relationship === "child"
+        ? buildCharacterDescriptor({ presentation, notes: appearanceNotes })
+        : undefined,
     );
     setName("");
     setPhotoUri(undefined);
+    setRelationship("child");
     setPresentation("from-photo");
     setAppearanceNotes("");
     if (Platform.OS !== "web") {
@@ -94,8 +104,20 @@ export default function CharactersScreen() {
         Add character
       </Text>
 
+      <SegmentedControl
+        value={relationship}
+        onChange={setRelationship}
+        testID="relationship"
+        options={[
+          { value: "child", label: "Child" },
+          { value: "mom", label: "Mom" },
+          { value: "dad", label: "Dad" },
+        ]}
+      />
+
       <Pressable
         onPress={pickPhoto}
+        testID="character-photo-picker"
         style={[
           styles.photoPicker,
           { backgroundColor: colors.card, borderColor: colors.border },
@@ -138,6 +160,7 @@ export default function CharactersScreen() {
             { color: colors.foreground, outlineColor: "transparent" },
           ]}
           returnKeyType="done"
+          testID="character-name-input"
         />
       </View>
 
@@ -198,9 +221,10 @@ export default function CharactersScreen() {
       </View>
 
       <KahaniButton
-        label="Add character"
+        label="Save character"
         onPress={save}
         disabled={!name.trim()}
+        testID="save-character-button"
       />
 
       {characters.length > 0 ? (
@@ -216,7 +240,11 @@ export default function CharactersScreen() {
                   imageUri={character.photoUri}
                   selected={character.id === selectedCharacterId}
                   onPress={() => selectCharacter(character.id)}
+                  testID={`saved-character-${character.name}`}
                 />
+                <Text style={[styles.relationshipLabel, { color: colors.bark }]}>
+                  {character.relationship ?? "child"}
+                </Text>
                 <Pressable
                   onPress={() => removeCharacter(character.id)}
                   style={[
@@ -256,6 +284,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     overflow: "hidden",
+    marginTop: 16,
     marginBottom: 16,
   },
   photoEmpty: {
@@ -333,6 +362,13 @@ const styles = StyleSheet.create({
   },
   savedCharacter: {
     position: "relative",
+    alignItems: "center",
+  },
+  relationshipLabel: {
+    marginTop: 4,
+    fontFamily: tokens.typography.sansMedium,
+    fontSize: 12,
+    textTransform: "capitalize",
   },
   removeButton: {
     position: "absolute",

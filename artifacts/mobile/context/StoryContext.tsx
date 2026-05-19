@@ -22,8 +22,11 @@ export type Character = {
   id: string;
   name: string;
   photoUri?: string;
+  relationship?: CharacterRelationship;
   appearance?: string;
 };
+
+export type CharacterRelationship = "child" | "mom" | "dad";
 
 export type Story = {
   id: string;
@@ -52,6 +55,7 @@ type StoryContextValue = {
   addCharacter: (
     name: string,
     photoUri?: string,
+    relationship?: CharacterRelationship,
     appearance?: string,
   ) => Promise<void>;
   removeCharacter: (id: string) => Promise<void>;
@@ -92,6 +96,13 @@ function getDevProfileId() {
 
 function isParentLikeName(name: string) {
   return /^(mom|mum|mama|mother|dad|dada|papa|father)$/i.test(name.trim());
+}
+
+function isChildCharacter(character: Pick<Character, "name" | "relationship">) {
+  return (
+    (character.relationship ?? "child") === "child" &&
+    !isParentLikeName(character.name)
+  );
 }
 
 export function StoryProvider({
@@ -222,16 +233,22 @@ export function StoryProvider({
   );
 
   const addCharacter = useCallback(
-    async (name: string, photoUri?: string, appearance?: string) => {
+    async (
+      name: string,
+      photoUri?: string,
+      relationship?: CharacterRelationship,
+      appearance?: string,
+    ) => {
       const character = {
         id: createId(),
         name: name.trim(),
         photoUri,
+        relationship: relationship ?? "child",
         appearance: appearance?.trim() || undefined,
       };
       const nextCharacters = [character, ...characters];
       const nextSelectedCharacterId =
-        !selectedCharacterId || !isParentLikeName(character.name)
+        !selectedCharacterId || isChildCharacter(character)
           ? character.id
           : selectedCharacterId;
       setCharacters(nextCharacters);

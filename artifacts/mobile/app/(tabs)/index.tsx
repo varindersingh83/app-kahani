@@ -29,14 +29,19 @@ import {
   serifFamily,
 } from "@/components/KahaniDesign";
 import tokens from "@/constants/colors";
-import { useStoryStudio } from "@/context/StoryContext";
+import { useStoryStudio, type Character } from "@/context/StoryContext";
 import { useKahaniTheme } from "@/context/ThemeContext";
 
 const BEHAVIOR_PROMPT_PLACEHOLDER =
   "sharing toys, bedtime resistance, using gentle hands";
 
-function isParentCharacterName(name: string) {
-  return /^(mom|mum|mama|mother|dad|dada|papa|father)$/i.test(name.trim());
+function isChildCharacter(character: Character) {
+  return (
+    (character.relationship ?? "child") === "child" &&
+    !/^(mom|mum|mama|mother|dad|dada|papa|father)$/i.test(
+      character.name.trim(),
+    )
+  );
 }
 
 export default function StudioScreen() {
@@ -51,6 +56,7 @@ export default function StudioScreen() {
   const [prompt, setPrompt] = useState("");
   const [isPromptFocused, setIsPromptFocused] = useState(false);
   const [generationMessage, setGenerationMessage] = useState("");
+  const [generationError, setGenerationError] = useState<string | null>(null);
   const [issueNotice, setIssueNotice] = useState<string | null>(null);
   const [hasExternalTextAiConsent, setHasExternalTextAiConsent] =
     useState(false);
@@ -61,33 +67,38 @@ export default function StudioScreen() {
 
   const mutation = useGenerateStory({
     mutation: {
-      onError: () => {
-        Alert.alert(
-          "Story not ready",
-          "The story service could not finish. Try again in a moment.",
-        );
+      onError: (error) => {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "The story service could not finish. Try again in a moment.";
+        setGenerationError(message);
+        Alert.alert("Story not ready", message);
       },
     },
   });
 
-  const childCharacters = characters.filter(
-    (character) => !isParentCharacterName(character.name),
-  );
+  const childCharacters = characters.filter(isChildCharacter);
   const selectedStoryCharacter =
-    selectedCharacter && !isParentCharacterName(selectedCharacter.name)
+    selectedCharacter && isChildCharacter(selectedCharacter)
       ? selectedCharacter
-      : (childCharacters[0] ?? selectedCharacter);
-  const parentCharacter = characters.find(
-    (character) =>
-      character.id !== selectedStoryCharacter?.id &&
-      isParentCharacterName(character.name),
-  );
+      : (childCharacters[0] ?? null);
+  const supportingCharacters = characters
+    .filter(
+      (character) =>
+        character.id !== selectedStoryCharacter?.id &&
+        !isChildCharacter(character),
+    )
+    .map((character) => ({
+      name: character.name,
+      relationship: character.relationship ?? "parent",
+    }));
 
   const generate = async () => {
     if (!selectedStoryCharacter) {
       Alert.alert(
         "Add a character",
-        "Create a character before generating a story.",
+        "Create a child character before generating a story.",
       );
       router.push("/(tabs)/characters");
       return;
@@ -104,6 +115,7 @@ export default function StudioScreen() {
     try {
       const storyPrompt = prompt.trim() || undefined;
       setIssueNotice(null);
+      setGenerationError(null);
       setGenerationMessage("Starting your book...");
       const job = await mutation.mutateAsync({
         data: {
@@ -116,15 +128,8 @@ export default function StudioScreen() {
               "Use only the parent-entered appearance description; do not infer gender from the child's name.",
           },
           externalTextAiConsent: true,
-          supportingCharacters: parentCharacter
-            ? [
-                {
-                  name: parentCharacter.name,
-                  relationship: "parent",
-                  appearance: parentCharacter.appearance,
-                },
-              ]
-            : undefined,
+          supportingCharacters:
+            supportingCharacters.length > 0 ? supportingCharacters : undefined,
         },
       });
       setIssueNotice(job.issueNotice ?? null);
@@ -155,16 +160,15 @@ export default function StudioScreen() {
       });
     } catch (error) {
       setGenerationMessage("");
-      Alert.alert(
-        "Story not ready",
+      const message =
         error instanceof Error
           ? error.message
-          : "The story service could not finish. Try again in a moment.",
-      );
+          : "The story service could not finish. Try again in a moment.";
+      setGenerationError(message);
+      Alert.alert("Story not ready", message);
     }
   };
 
-  const visibleCharacters = characters;
   const isGenerating = mutation.isPending || Boolean(generationMessage);
 
   return (
@@ -175,13 +179,14 @@ export default function StudioScreen() {
 
       <SectionTitle>Choose a character</SectionTitle>
       <View style={styles.characterRow}>
-        {visibleCharacters.map((character) => (
+        {childCharacters.map((character) => (
           <CharacterAvatar
             key={character.id}
             label={character.name}
             imageUri={character.photoUri}
             selected={character.id === selectedStoryCharacter?.id}
             onPress={() => selectCharacter(character.id)}
+            testID={`story-character-${character.name}`}
           />
         ))}
         <CharacterAvatar
@@ -190,6 +195,7 @@ export default function StudioScreen() {
           icon="plus"
           muted
           onPress={() => router.push("/(tabs)/characters")}
+          testID="add-character-shortcut"
         />
       </View>
 
@@ -215,6 +221,7 @@ export default function StudioScreen() {
             styles.promptInput,
             { color: colors.foreground, outlineColor: "transparent" },
           ]}
+          testID="story-prompt-input"
         />
       </View>
 
@@ -228,6 +235,7 @@ export default function StudioScreen() {
           icon="zap"
           onPress={() => generate()}
           disabled={isGenerating}
+          testID="generate-book-button"
         />
         {isGenerating ? (
           <ActivityIndicator style={styles.loader} color={colors.primary} />
@@ -235,6 +243,14 @@ export default function StudioScreen() {
         {issueNotice ? (
           <Text style={[styles.issueNotice, { color: colors.mutedForeground }]}>
             {issueNotice}
+          </Text>
+        ) : null}
+        {generationError ? (
+          <Text
+            testID="generation-error"
+            style={[styles.generationError, { color: colors.primary }]}
+          >
+            {generationError}
           </Text>
         ) : null}
       </View>
@@ -258,6 +274,7 @@ export default function StudioScreen() {
           }
           pages={currentStory.pages.length}
           onPress={() => router.push("/book-reader")}
+          testID="newly-created-story-card"
         />
       ) : (
         <View
@@ -325,6 +342,12 @@ const styles = StyleSheet.create({
     fontFamily: tokens.typography.sansMedium,
     fontSize: 13,
     lineHeight: 19,
+  },
+  generationError: {
+    marginTop: 12,
+    fontFamily: tokens.typography.sansBold,
+    fontSize: 14,
+    lineHeight: 20,
   },
   sectionHeader: {
     flexDirection: "row",

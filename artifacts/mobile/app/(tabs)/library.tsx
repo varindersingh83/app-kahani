@@ -84,6 +84,7 @@ export default function LibraryScreen() {
           imageUri={featured.coverImageUrl ?? featured.characterPhotoUri}
           pages={featured.pages.length}
           onPress={() => handleRead(featured)}
+          testID="library-featured-story"
         />
       ) : (
         <View
@@ -119,6 +120,7 @@ export default function LibraryScreen() {
                   imageUri={story.coverImageUrl ?? story.characterPhotoUri}
                   pages={story.pages.length}
                   onPress={() => handleRead(story)}
+                  testID={`library-story-${story.title}`}
                   onDelete={() => confirmDelete(story)}
                 />
               </View>

@@ -86,6 +86,10 @@ export async function runStorySheetGeneration(input: {
     { aspectRatio: "1:1", imageSize: "4K" },
     buildReferenceImageUris(request),
   );
+  await writeFile(
+    path.join(outputDir, "sheet-response.json"),
+    `${JSON.stringify(imageData, null, 2)}\n`,
+  );
   const sheetImageUrl = extractImageUrl(imageData);
   if (!sheetImageUrl)
     throw new Error("Storyboard sheet request returned no image.");
@@ -348,27 +352,24 @@ export function normalizeStoryJson(
   request: GenerateStoryRequest,
   behavior: string,
 ): StorySheetInput {
-  const lockedChildName = request.character.name.trim() || story.child_name;
-  const generatedChildName = story.child_name?.trim();
-  const replaceGeneratedName = (value: string) =>
-    generatedChildName && generatedChildName !== lockedChildName
-      ? value.replace(
-          new RegExp(`\\b${escapeRegExp(generatedChildName)}\\b`, "g"),
-          lockedChildName,
-        )
+  const requestedChildName = request.character.name.trim();
+  const generatedChildName = story.child_name.trim();
+  const normalizeChildName = (value: string) =>
+    requestedChildName && generatedChildName
+      ? replaceName(value, generatedChildName, requestedChildName)
       : value;
 
   return {
     ...story,
-    title: replaceGeneratedName(story.title),
-    child_name: lockedChildName,
+    title: normalizeChildName(story.title),
+    child_name: requestedChildName || story.child_name,
     parent_name: story.parent_name || "Mom",
     parent_role: story.parent_role || "parent",
     behavior,
     pages: story.pages.slice(0, 12).map((page, index) => ({
       page: index + 1,
-      text: replaceGeneratedName(page.text),
-      scene: replaceGeneratedName(page.scene),
+      text: normalizeChildName(page.text),
+      scene: normalizeChildName(page.scene),
       composition: page.composition,
       emotion: page.emotion,
     })),

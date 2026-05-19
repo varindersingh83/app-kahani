@@ -189,10 +189,12 @@ export function IconButton({
   icon,
   onPress,
   variant = "light",
+  testID,
 }: {
   icon: keyof typeof Feather.glyphMap;
   onPress?: () => void;
   variant?: "light" | "primary";
+  testID?: string;
 }) {
   const { colors } = useKahaniTheme();
   const primary = variant === "primary";
@@ -200,6 +202,7 @@ export function IconButton({
   return (
     <Pressable
       onPress={onPress}
+      testID={testID}
       style={({ pressed }) => [
         styles.iconButton,
         {
@@ -225,12 +228,14 @@ export function KahaniButton({
   onPress,
   disabled,
   style,
+  testID,
 }: {
   label: string;
   icon?: keyof typeof Feather.glyphMap;
   onPress?: () => void;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
+  testID?: string;
 }) {
   const { colors } = useKahaniTheme();
 
@@ -238,6 +243,7 @@ export function KahaniButton({
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      testID={testID}
       style={({ pressed }) => [
         styles.primaryButton,
         {
@@ -271,10 +277,12 @@ export function SegmentedControl<T extends string>({
   value,
   options,
   onChange,
+  testID,
 }: {
   value: T;
   options: Array<{ value: T; label: string }>;
   onChange: (value: T) => void;
+  testID?: string;
 }) {
   const { colors } = useKahaniTheme();
 
@@ -286,6 +294,7 @@ export function SegmentedControl<T extends string>({
           <Pressable
             key={option.value}
             onPress={() => onChange(option.value)}
+            testID={testID ? `${testID}-${option.value}` : undefined}
             style={[
               styles.segment,
               {
@@ -359,6 +368,7 @@ export function CharacterAvatar({
   onPress,
   icon = "user",
   muted = false,
+  testID,
 }: {
   label: string;
   imageUri?: string;
@@ -366,6 +376,7 @@ export function CharacterAvatar({
   onPress?: () => void;
   icon?: keyof typeof Feather.glyphMap;
   muted?: boolean;
+  testID?: string;
 }) {
   const { colors } = useKahaniTheme();
   const initial = label.trim()[0]?.toUpperCase();
@@ -375,6 +386,7 @@ export function CharacterAvatar({
     <Pressable
       onPress={onPress}
       disabled={!onPress}
+      testID={testID}
       style={[styles.avatarSlot, muted && styles.avatarMuted]}
     >
       <View
@@ -463,6 +475,7 @@ export function StoryCard({
   onPress,
   onDelete,
   featured = false,
+  testID,
 }: {
   title: string;
   description?: string;
@@ -471,12 +484,14 @@ export function StoryCard({
   onPress?: () => void;
   onDelete?: () => void;
   featured?: boolean;
+  testID?: string;
 }) {
   const { colors } = useKahaniTheme();
 
   return (
     <Pressable
       onPress={onPress}
+      testID={testID}
       style={({ pressed }) => [
         featured ? styles.storyFeatured : styles.storyGrid,
         {
@@ -583,16 +598,19 @@ export function ReaderNavButton({
   direction,
   onPress,
   disabled,
+  testID,
 }: {
   direction: "left" | "right";
   onPress: () => void;
   disabled?: boolean;
+  testID?: string;
 }) {
   return (
     <IconButton
       icon={direction === "left" ? "arrow-left" : "arrow-right"}
       onPress={disabled ? undefined : onPress}
       variant={direction === "right" ? "primary" : "light"}
+      testID={testID}
     />
   );
 }

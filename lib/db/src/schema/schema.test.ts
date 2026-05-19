@@ -14,14 +14,18 @@ import {
 } from "./index";
 
 test("exports production-readiness database tables", () => {
-  assert.equal(users[Symbol.for("drizzle:Name")], "users");
-  assert.equal(characters[Symbol.for("drizzle:Name")], "characters");
-  assert.equal(generationJobs[Symbol.for("drizzle:Name")], "generation_jobs");
-  assert.equal(assets[Symbol.for("drizzle:Name")], "assets");
-  assert.equal(auditEvents[Symbol.for("drizzle:Name")], "audit_events");
-  assert.equal(books[Symbol.for("drizzle:Name")], "books");
-  assert.equal(bookPages[Symbol.for("drizzle:Name")], "book_pages");
-  assert.equal(bookEvents[Symbol.for("drizzle:Name")], "book_events");
-  assert.equal(agentRuns[Symbol.for("drizzle:Name")], "agent_runs");
-  assert.equal(learningEvents[Symbol.for("drizzle:Name")], "learning_events");
+  assert.equal(tableName(users), "users");
+  assert.equal(tableName(characters), "characters");
+  assert.equal(tableName(generationJobs), "generation_jobs");
+  assert.equal(tableName(assets), "assets");
+  assert.equal(tableName(auditEvents), "audit_events");
+  assert.equal(tableName(books), "books");
+  assert.equal(tableName(bookPages), "book_pages");
+  assert.equal(tableName(bookEvents), "book_events");
+  assert.equal(tableName(agentRuns), "agent_runs");
+  assert.equal(tableName(learningEvents), "learning_events");
 });
+
+function tableName(table: unknown) {
+  return (table as Record<symbol, string>)[Symbol.for("drizzle:Name")];
+}

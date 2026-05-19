@@ -27,7 +27,8 @@ Panel 3: closing illustration only, peaceful final image, no written ending text
 Panel 4: blank page, empty soft background, no text, no objects
 
 Rows 2-4:
-Use JSON pages 1-12 in order, left to right, top to bottom.
+Use only the JSON pages that exist, in order, left to right, top to bottom.
+If the story has fewer than 12 pages, render the remaining unused story panels as blank soft background panels with no characters, no objects, and no text.
 
 Critical text rule:
 - No text is allowed anywhere in the image.
