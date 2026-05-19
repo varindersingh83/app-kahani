@@ -6,13 +6,18 @@ export type AuthenticatedUser = {
 };
 
 type ClerkRequest = Request & {
-  auth?: {
-    userId?: string | null;
-  };
+  auth?:
+    | {
+        userId?: string | null;
+      }
+    | (() => {
+        userId?: string | null;
+      });
 };
 
 export function requireUser(req: Request): AuthenticatedUser | null {
-  const userId = (req as ClerkRequest).auth?.userId;
+  const auth = (req as ClerkRequest).auth;
+  const userId = typeof auth === "function" ? auth().userId : auth?.userId;
   if (userId) {
     return { userId, isDevelopmentBypass: false };
   }
