@@ -13,6 +13,21 @@ test("getCharacterCreationPolicy hides photos and notes in production by default
   });
 });
 
+test("getCharacterCreationPolicy keeps production photos hidden until model approval", () => {
+  assert.deepEqual(
+    getCharacterCreationPolicy({
+      nodeEnv: "production",
+      platform: "ios",
+      localPhotoExtractionEnabled: true,
+      localPhotoExtractionModelVersion: "candidate-1",
+    }),
+    {
+      canUsePhotoPicker: false,
+      canUseManualAppearanceNotes: false,
+    },
+  );
+});
+
 test("getCharacterCreationPolicy keeps dev-only controls outside production", () => {
   assert.deepEqual(getCharacterCreationPolicy({ nodeEnv: "development" }), {
     canUsePhotoPicker: true,

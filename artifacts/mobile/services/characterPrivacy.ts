@@ -1,3 +1,5 @@
+import { getPhotoExtractionGate } from "./photoExtractionGate";
+
 export type CharacterRole = "child" | "adult";
 export type CharacterPresentation = "girl" | "boy" | "neutral";
 
@@ -8,22 +10,27 @@ export type CharacterCreationPolicy = {
 
 export type CharacterCreationConfig = {
   nodeEnv?: string;
+  platform?: "ios" | "android" | "web" | "unknown";
   localPhotoExtractionEnabled?: string | boolean;
+  localPhotoExtractionModelVersion?: string;
+  localPhotoExtractionModelApproved?: string | boolean;
 };
 
 export function getCharacterCreationPolicy(
   config: CharacterCreationConfig = {},
 ): CharacterCreationPolicy {
   const nodeEnv = config.nodeEnv ?? process.env.NODE_ENV;
-  const extractionEnabled =
-    config.localPhotoExtractionEnabled ??
-    process.env.EXPO_PUBLIC_ENABLE_LOCAL_PHOTO_EXTRACTION;
-  const explicitExtractionEnabled =
-    extractionEnabled === true || extractionEnabled === "true";
+  const extractionGate = getPhotoExtractionGate({
+    nodeEnv,
+    platform: config.platform,
+    enabled: config.localPhotoExtractionEnabled,
+    modelVersion: config.localPhotoExtractionModelVersion,
+    modelApproved: config.localPhotoExtractionModelApproved,
+  });
 
   if (nodeEnv === "production") {
     return {
-      canUsePhotoPicker: explicitExtractionEnabled,
+      canUsePhotoPicker: extractionGate.enabled,
       canUseManualAppearanceNotes: false,
     };
   }
