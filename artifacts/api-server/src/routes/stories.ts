@@ -116,15 +116,20 @@ function withAbsoluteUrls(
   story: StorySheetGeneratedStory,
   origin: string,
 ): StorySheetGeneratedStory {
+  const production = process.env.NODE_ENV === "production";
   const absolutize = (value?: string) =>
     value?.startsWith("/") ? `${origin}${value}` : value;
+  const productionSafeUrl = (value?: string) => {
+    if (production && value?.startsWith("/api/story-runs")) return undefined;
+    return absolutize(value);
+  };
 
   return {
     ...story,
-    coverImageUrl: absolutize(story.coverImageUrl),
-    endImageUrl: absolutize(story.endImageUrl),
-    sheetImageUrl: absolutize(story.sheetImageUrl),
-    artifactLinks: story.artifactLinks
+    coverImageUrl: productionSafeUrl(story.coverImageUrl),
+    endImageUrl: productionSafeUrl(story.endImageUrl),
+    sheetImageUrl: productionSafeUrl(story.sheetImageUrl),
+    artifactLinks: !production && story.artifactLinks
       ? {
           bookHtmlUrl: absolutize(story.artifactLinks.bookHtmlUrl),
           storyJsonUrl: absolutize(story.artifactLinks.storyJsonUrl),
@@ -133,7 +138,7 @@ function withAbsoluteUrls(
       : undefined,
     pages: story.pages.map((page) => ({
       ...page,
-      imageUrl: absolutize(page.imageUrl),
+      imageUrl: productionSafeUrl(page.imageUrl),
     })),
   };
 }

@@ -14,6 +14,10 @@ tags:
     description: Story generation operations
   - name: account
     description: Account privacy and deletion operations
+  - name: assets
+    description: Private generated asset operations
+  - name: sharing
+    description: Expiring share-link operations
 paths:
   /healthz:
     get:
@@ -156,6 +160,112 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorCodeMessage"
+  /assets/{assetId}:
+    get:
+      operationId: getPrivateAsset
+      tags: [assets]
+      summary: Read a private generated asset
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Private asset bytes
+        "401":
+          description: Sign-in is required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Asset not found or not owned by the requester
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /share-links:
+    post:
+      operationId: createShareLink
+      tags: [sharing]
+      summary: Create a 24-hour share link for a private asset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateShareLinkRequest"
+      responses:
+        "201":
+          description: Share link created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateShareLinkResponse"
+        "401":
+          description: Sign-in is required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Asset not found or not owned by the requester
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /share-links/{token}:
+    get:
+      operationId: getShareLink
+      tags: [sharing]
+      summary: Open a redacted share link
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Redacted shared asset metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShareLinkView"
+        "404":
+          description: Share link not found, expired, revoked, or deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+  /share-links/{token}/revoke:
+    post:
+      operationId: revokeShareLink
+      tags: [sharing]
+      summary: Revoke a share link
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Share link revoked
+        "401":
+          description: Sign-in is required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
+        "404":
+          description: Share link not found or not owned by requester
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorMessage"
 components:
   schemas:
     ErrorMessage:
@@ -199,6 +309,41 @@ components:
         - deletionRequestId
         - status
         - requestedAt
+    CreateShareLinkRequest:
+      type: object
+      properties:
+        assetId:
+          type: string
+        title:
+          type: string
+          description: Optional title to redact before public sharing.
+      required:
+        - assetId
+    CreateShareLinkResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+      required:
+        - token
+        - expiresAt
+    ShareLinkView:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Redacted title safe for unauthenticated sharing.
+        assetKind:
+          type: string
+        assetId:
+          type: string
+      required:
+        - title
+        - assetKind
+        - assetId
     GuardrailBlockedMessage:
       allOf:
         - $ref: "#/components/schemas/ErrorMessage"
