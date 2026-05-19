@@ -9,7 +9,11 @@
 export interface CharacterInput {
   /** @minLength 1 */
   name: string;
+  /**
+   * Local preview URI only. Production generation ignores this field and never sends family photos to AI providers.
+   * @deprecated
+   */
   photoUri?: string;
-  /** Optional short appearance description for illustration consistency. */
+  /** Optional non-photo appearance descriptor for illustration consistency. */
   appearance?: string;
 }

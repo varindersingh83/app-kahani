@@ -1,4 +1,4 @@
-import { GenerateStoryResponse } from "@workspace/api-zod";
+import { GetGeneratedStoryResponse as GenerateStoryResponse } from "@workspace/api-zod";
 import type {
   AiConfig,
   PipelineResult,
@@ -97,7 +97,7 @@ export async function runBookPipeline(request: StoryRequest, config: AiConfig): 
       agentName: "CoverImageAgent",
       bookId: book.id,
       inputJson: { prompt: coverPrompt },
-      run: () => generateCoverImage(config, coverPrompt, request.character.photoUri),
+      run: () => generateCoverImage(config, coverPrompt),
       retryLabel: "cover image generation",
       allowUndefinedFinalValue: true,
     });

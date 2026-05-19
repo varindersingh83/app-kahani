@@ -9,7 +9,7 @@ import {
 } from "./generator";
 import type { StorySheetInput } from "./types";
 
-test("buildImageSpec preserves uploaded photo, appearance, and supporting cast constraints", () => {
+test("buildImageSpec preserves descriptors without forwarding uploaded photo constraints", () => {
   const request: GenerateStoryRequest = {
     mode: "behavior",
     prompt: "sharing toys",
@@ -31,17 +31,17 @@ test("buildImageSpec preserves uploaded photo, appearance, and supporting cast c
 
   const spec = buildImageSpec(request);
 
-  assert.match(spec, /Main child: Maya\./);
-  assert.match(spec, /uploaded child reference image/);
-  assert.match(spec, /curly black hair, yellow rain boots, red sweater/);
-  assert.match(spec, /Nico \(older brother\)/);
-  assert.match(spec, /Parent reference: Mom has an uploaded reference image/);
-  assert.match(spec, /long blonde hair, gray shirt/);
+  assert.match(spec, /Main child: the child\./);
+  assert.doesNotMatch(spec, /Maya|Mom|uploaded|reference image|file:\/\//);
+  assert.match(
+    spec,
+    /Appearance descriptor: curly black hair, yellow rain boots, red sweater/,
+  );
+  assert.match(spec, /supporting child or family member \(older brother\)/);
+  assert.match(spec, /adult caregiver \(parent\)/);
+  assert.match(spec, /Adult appearance descriptor: long blonde hair, gray shirt/);
   assert.match(spec, /Never change the main child's outfit/);
-  assert.deepEqual(buildReferenceImageUris(request), [
-    "file:///tmp/maya.png",
-    "file:///tmp/mom.png",
-  ]);
+  assert.deepEqual(buildReferenceImageUris(request), []);
 });
 
 test("buildSheetPrompt injects the story JSON and image spec without leaving placeholders", () => {
@@ -73,8 +73,8 @@ test("buildSheetPrompt injects the story JSON and image spec without leaving pla
     request,
   );
 
-  assert.match(prompt, /"title": "Maya Tries Again"/);
-  assert.match(prompt, /Appearance lock: red sweater/);
+  assert.match(prompt, /"title": "the child Tries Again"/);
+  assert.match(prompt, /Appearance descriptor: red sweater/);
   assert.doesNotMatch(prompt, /{{JSON_INPUT}}|{{IMAGE_SPEC}}/);
 });
 

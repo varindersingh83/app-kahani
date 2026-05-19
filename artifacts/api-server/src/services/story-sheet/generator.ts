@@ -14,6 +14,7 @@ import { buildGeneratedStory } from "./mapper";
 import { planStoryIssues } from "./planner";
 import { promptPath, slicerScriptPath } from "./paths";
 import { renderBookHtml } from "./html";
+import { sanitizeProviderReferenceImageUris } from "../safety/providerPayloadPolicy";
 import type {
   AiConfig,
   ApiUsage,
@@ -187,24 +188,24 @@ export function buildSheetPrompt(
   request: GenerateStoryRequest,
 ) {
   return template
-    .replace("{{JSON_INPUT}}", JSON.stringify(story, null, 2))
+    .replace(
+      "{{JSON_INPUT}}",
+      JSON.stringify(redactStoryForImagePrompt(story, request), null, 2),
+    )
     .replace("{{IMAGE_SPEC}}", buildImageSpec(request));
 }
 
 export function buildImageSpec(request: GenerateStoryRequest) {
-  const childName = request.character.name.trim();
   const appearance = request.character.appearance?.trim();
   const supportingCharacters = request.supportingCharacters ?? [];
   const parentReference = supportingCharacters.find((character) =>
     isParentRelationship(character.relationship),
   );
   const lines = [
-    `Main child: ${childName}.`,
-    request.character.photoUri
-      ? "Use the uploaded child reference image as the canonical face, hair, skin tone, gender presentation, proportions, and overall likeness. Translate it into the watercolor storybook style without changing identity. Do not infer gender from the child's name when it conflicts with the reference photo or appearance lock."
-      : "No child reference image was provided, so keep the same invented face, hair, clothing, and proportions in every panel.",
+    "Main child: the child.",
+    "No child face photo is available to the provider. Use only the non-photo appearance descriptor below and keep an invented, consistent storybook face in every panel.",
     appearance
-      ? `Appearance lock: ${appearance}. Keep these traits consistent in every panel.`
+      ? `Appearance descriptor: ${appearance}. Keep these traits consistent in every panel.`
       : "If clothing is not specified, choose one simple outfit and keep it identical in every panel.",
     supportingCharacters.length > 0
       ? `Supporting cast, only when the story calls for them: ${supportingCharacters
@@ -214,17 +215,18 @@ export function buildImageSpec(request: GenerateStoryRequest) {
               relationship: string;
               appearance?: string;
               photoUri?: string;
-            }) => `${character.name} (${character.relationship})`,
+            }) =>
+              isParentRelationship(character.relationship)
+                ? "adult caregiver (parent)"
+                : `supporting child or family member (${character.relationship})`,
           )
           .join(
             ", ",
           )}. Keep each supporting character visually consistent across panels.`
       : "Do not add recurring supporting characters unless the story scene clearly requires them.",
-    parentReference?.photoUri
-      ? `Parent reference: ${parentReference.name} has an uploaded reference image. Use that parent image as the canonical adult face, hair, skin tone, proportions, and overall likeness whenever the parent appears. Translate it into the watercolor storybook style without changing identity.`
-      : "No parent reference image was provided, so keep any parent/adult figure consistent but do not make them the main child.",
+    "No parent or caregiver face photo is available to the provider. Use only non-photo adult descriptors and do not make adult figures the main child.",
     parentReference?.appearance
-      ? `Parent appearance lock: ${parentReference.appearance}. Keep these adult traits consistent in every panel.`
+      ? `Adult appearance descriptor: ${parentReference.appearance}. Keep these adult traits consistent in every panel.`
       : undefined,
     "Never change the main child's outfit, hair, age, body proportions, or facial structure between panels.",
     "Never switch the main child's gender presentation between the story text, cover, and page illustrations.",
@@ -239,19 +241,16 @@ function buildChildIdentityForStory(request: GenerateStoryRequest) {
   if (appearance) {
     return `Child identity lock: ${appearance} Keep the main child consistent. Do not infer gender from the child's name if it conflicts with this identity lock.`;
   }
-  if (request.character.photoUri) {
-    return "Child identity lock: use the uploaded child reference photo as the source of truth for gender presentation and likeness. Avoid gendered pronouns unless clearly supported by the reference photo.";
-  }
   return "Child identity lock: do not infer gender from the child's name. Use neutral wording unless a gender is explicitly provided.";
 }
 
 export function buildReferenceImageUris(request: GenerateStoryRequest) {
-  return [
+  return sanitizeProviderReferenceImageUris([
     request.character.photoUri,
     ...(request.supportingCharacters ?? [])
       .filter((character) => isParentRelationship(character.relationship))
       .map((character) => character.photoUri),
-  ].filter((uri): uri is string => Boolean(uri));
+  ].filter((uri): uri is string => Boolean(uri)));
 }
 
 function buildReferenceImageQa(
@@ -305,6 +304,38 @@ function parentNameForRequest(request: GenerateStoryRequest) {
     request.supportingCharacters?.find((character) =>
       isParentRelationship(character.relationship),
     )?.name ?? "Mom"
+  );
+}
+
+function redactStoryForImagePrompt(
+  story: StorySheetInput,
+  request: GenerateStoryRequest,
+): StorySheetInput {
+  const childName = request.character.name.trim() || story.child_name;
+  const parentName = parentNameForRequest(request);
+  const redactText = (value: string) =>
+    replaceName(replaceName(value, childName, "the child"), parentName, "the caregiver");
+
+  return {
+    ...story,
+    title: redactText(story.title),
+    child_name: "the child",
+    parent_name: "the caregiver",
+    parent_role: story.parent_role || "caregiver",
+    pages: story.pages.map((page) => ({
+      ...page,
+      text: redactText(page.text),
+      scene: redactText(page.scene),
+    })),
+  };
+}
+
+function replaceName(value: string, name: string, replacement: string) {
+  const trimmed = name.trim();
+  if (!trimmed) return value;
+  return value.replace(
+    new RegExp(`\\b${escapeRegExp(trimmed)}\\b`, "g"),
+    replacement,
   );
 }
 
