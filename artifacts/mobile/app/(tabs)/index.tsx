@@ -52,6 +52,8 @@ export default function StudioScreen() {
   const [isPromptFocused, setIsPromptFocused] = useState(false);
   const [generationMessage, setGenerationMessage] = useState("");
   const [issueNotice, setIssueNotice] = useState<string | null>(null);
+  const [hasExternalTextAiConsent, setHasExternalTextAiConsent] =
+    useState(false);
   const promptPlaceholderColor =
     colors.scheme === "dark"
       ? "rgba(188, 167, 134, 0.48)"
@@ -91,13 +93,12 @@ export default function StudioScreen() {
       return;
     }
 
-    if (!isPortablePhotoUri(selectedStoryCharacter.photoUri)) {
-      Alert.alert(
-        "Re-add this photo",
-        "This character was saved with a phone-only photo path, so the story service cannot use it as a reference. Please add the character again so the photo can be sent with the book request.",
-      );
-      router.push("/(tabs)/characters");
-      return;
+    const consented = await ensureExternalTextAiConsent(
+      hasExternalTextAiConsent,
+    );
+    if (!consented) return;
+    if (!hasExternalTextAiConsent) {
+      setHasExternalTextAiConsent(true);
     }
 
     try {
@@ -110,19 +111,17 @@ export default function StudioScreen() {
           prompt: storyPrompt,
           character: {
             name: selectedStoryCharacter.name,
-            photoUri: selectedStoryCharacter.photoUri,
             appearance:
               selectedStoryCharacter.appearance ??
-              (selectedStoryCharacter.photoUri
-                ? "Use the uploaded photo as the source of truth for gender presentation; do not infer gender from the name."
-                : undefined),
+              "Use only the parent-entered appearance description; do not infer gender from the child's name.",
           },
+          externalTextAiConsent: true,
           supportingCharacters: parentCharacter
             ? [
                 {
                   name: parentCharacter.name,
                   relationship: "parent",
-                  photoUri: parentCharacter.photoUri,
+                  appearance: parentCharacter.appearance,
                 },
               ]
             : undefined,
@@ -288,15 +287,6 @@ export default function StudioScreen() {
   );
 }
 
-function isPortablePhotoUri(photoUri?: string) {
-  if (!photoUri) return true;
-  return (
-    photoUri.startsWith("data:image/") ||
-    photoUri.startsWith("http://") ||
-    photoUri.startsWith("https://")
-  );
-}
-
 const styles = StyleSheet.create({
   topControls: {
     alignItems: "flex-end",
@@ -408,6 +398,24 @@ async function waitForGeneratedStory(
   throw new Error(
     "The story is taking longer than expected. Please try again.",
   );
+}
+
+function ensureExternalTextAiConsent(alreadyConsented: boolean) {
+  if (alreadyConsented) return Promise.resolve(true);
+
+  const message =
+    "Kahani sends your story prompt and behavior details to an external AI text provider to generate the book. Family photos are not sent. Do you consent to continue?";
+
+  if (Platform.OS === "web") {
+    return Promise.resolve(window.confirm(message));
+  }
+
+  return new Promise<boolean>((resolve) => {
+    Alert.alert("AI text processing", message, [
+      { text: "Not now", style: "cancel", onPress: () => resolve(false) },
+      { text: "I consent", onPress: () => resolve(true) },
+    ]);
+  });
 }
 
 function delay(ms: number) {

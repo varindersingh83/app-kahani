@@ -16,4 +16,6 @@ export interface GenerateStoryRequest {
   character: CharacterInput;
   /** Optional list of other characters to include if the story calls for them. */
   supportingCharacters?: SupportingCharacter[];
+  /** Explicit parent consent for sending prompt and behavior details to an external text AI provider. */
+  externalTextAiConsent?: boolean;
 }

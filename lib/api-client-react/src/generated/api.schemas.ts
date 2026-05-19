@@ -9,6 +9,37 @@ export interface ErrorMessage {
   message: string;
 }
 
+export type GuardrailBlockedMessageCode =
+  (typeof GuardrailBlockedMessageCode)[keyof typeof GuardrailBlockedMessageCode];
+
+export const GuardrailBlockedMessageCode = {
+  input_guardrail_blocked: "input_guardrail_blocked",
+} as const;
+
+export type GuardrailBlockedMessageCategory =
+  (typeof GuardrailBlockedMessageCategory)[keyof typeof GuardrailBlockedMessageCategory];
+
+export const GuardrailBlockedMessageCategory = {
+  prompt_injection: "prompt_injection",
+  high_risk_safety: "high_risk_safety",
+} as const;
+
+export type GuardrailBlockedMessage = ErrorMessage & {
+  code: GuardrailBlockedMessageCode;
+  category: GuardrailBlockedMessageCategory;
+};
+
+export type ConsentRequiredMessageCode =
+  (typeof ConsentRequiredMessageCode)[keyof typeof ConsentRequiredMessageCode];
+
+export const ConsentRequiredMessageCode = {
+  external_text_ai_consent_required: "external_text_ai_consent_required",
+} as const;
+
+export type ConsentRequiredMessage = ErrorMessage & {
+  code: ConsentRequiredMessageCode;
+};
+
 export interface HealthStatus {
   status: string;
 }
@@ -16,8 +47,12 @@ export interface HealthStatus {
 export interface CharacterInput {
   /** @minLength 1 */
   name: string;
+  /**
+   * Local preview URI only. Production generation ignores this field and never sends family photos to AI providers.
+   * @deprecated
+   */
   photoUri?: string;
-  /** Optional short appearance description for illustration consistency. */
+  /** Optional non-photo appearance descriptor for illustration consistency. */
   appearance?: string;
 }
 
@@ -31,8 +66,12 @@ export const StoryMode = {
 export interface SupportingCharacter {
   name: string;
   relationship: string;
+  /**
+   * Local preview URI only. Production generation ignores this field and never sends family photos to AI providers.
+   * @deprecated
+   */
   photoUri?: string;
-  /** Optional short appearance description for illustration consistency. */
+  /** Optional non-photo appearance descriptor for illustration consistency. */
   appearance?: string;
 }
 
@@ -43,6 +82,8 @@ export interface GenerateStoryRequest {
   character: CharacterInput;
   /** Optional list of other characters to include if the story calls for them. */
   supportingCharacters?: SupportingCharacter[];
+  /** Explicit parent consent for sending prompt and behavior details to an external text AI provider. */
+  externalTextAiConsent?: boolean;
 }
 
 export interface StoryPage {

@@ -1,4 +1,4 @@
-import { GenerateStoryResponse } from "@workspace/api-zod";
+import { GetGeneratedStoryResponse as GenerateStoryResponse } from "@workspace/api-zod";
 import type { PipelineStory, PipelineStoryPage, SheetPlacement, SheetPlan } from "./types";
 
 export type ProducedPage = PipelineStoryPage & {

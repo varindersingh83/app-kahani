@@ -31,6 +31,7 @@ test("builds a per-panel no-text QA checklist for generated slices", () => {
     bookId: "book-123",
     sheetImagePath: "/tmp/sheet.png",
     slices,
+    referenceImages: [],
   });
 
   assert.equal(result.status, "needs_human_review");

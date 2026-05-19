@@ -17,9 +17,11 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  ConsentRequiredMessage,
   ErrorMessage,
   GenerateStoryRequest,
   GeneratedStory,
+  GuardrailBlockedMessage,
   HealthStatus,
   StoryGenerationJob,
   StoryGenerationStatus,
@@ -131,7 +133,9 @@ export const generateStory = async (
 };
 
 export const getGenerateStoryMutationOptions = <
-  TError = ErrorType<ErrorMessage>,
+  TError = ErrorType<
+    GuardrailBlockedMessage | ConsentRequiredMessage | ErrorMessage
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -172,13 +176,17 @@ export type GenerateStoryMutationResult = NonNullable<
   Awaited<ReturnType<typeof generateStory>>
 >;
 export type GenerateStoryMutationBody = BodyType<GenerateStoryRequest>;
-export type GenerateStoryMutationError = ErrorType<ErrorMessage>;
+export type GenerateStoryMutationError = ErrorType<
+  GuardrailBlockedMessage | ConsentRequiredMessage | ErrorMessage
+>;
 
 /**
  * @summary Generate a child picture book
  */
 export const useGenerateStory = <
-  TError = ErrorType<ErrorMessage>,
+  TError = ErrorType<
+    GuardrailBlockedMessage | ConsentRequiredMessage | ErrorMessage
+  >,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<

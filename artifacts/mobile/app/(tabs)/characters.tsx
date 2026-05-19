@@ -26,6 +26,7 @@ import {
 import tokens from "@/constants/colors";
 import { useStoryStudio } from "@/context/StoryContext";
 import { useKahaniTheme } from "@/context/ThemeContext";
+import { buildCharacterDescriptor } from "@/services/photoDescriptors";
 
 export default function CharactersScreen() {
   const { colors } = useKahaniTheme();
@@ -70,7 +71,7 @@ export default function CharactersScreen() {
     await addCharacter(
       name.trim(),
       photoUri,
-      buildAppearanceLock(presentation, appearanceNotes),
+      buildCharacterDescriptor({ presentation, notes: appearanceNotes }),
     );
     setName("");
     setPhotoUri(undefined);
@@ -347,22 +348,10 @@ const styles = StyleSheet.create({
 });
 
 const IDENTITY_OPTIONS = [
-  { label: "Use photo", value: "from-photo" },
+  { label: "Describe", value: "from-photo" },
   { label: "Girl", value: "girl" },
   { label: "Boy", value: "boy" },
 ] as const;
-
-function buildAppearanceLock(
-  presentation: "from-photo" | "girl" | "boy",
-  notes: string,
-) {
-  const trimmedNotes = notes.trim();
-  const identity =
-    presentation === "from-photo"
-      ? "Use the uploaded photo as the source of truth for gender presentation; do not infer gender from the name."
-      : `The main child is a ${presentation}.`;
-  return trimmedNotes ? `${identity} ${trimmedNotes}.` : identity;
-}
 
 async function persistableImageUri(asset: ImagePicker.ImagePickerAsset) {
   if (asset.base64) {

@@ -28,12 +28,17 @@ export const GenerateStoryBody = zod.object({
     .describe("Parent-provided behavior focus or story idea."),
   character: zod.object({
     name: zod.string().min(1),
-    photoUri: zod.string().optional(),
+    photoUri: zod
+      .string()
+      .optional()
+      .describe(
+        "Local preview URI only. Production generation ignores this field and never sends family photos to AI providers.",
+      ),
     appearance: zod
       .string()
       .optional()
       .describe(
-        "Optional short appearance description for illustration consistency.",
+        "Optional non-photo appearance descriptor for illustration consistency.",
       ),
   }),
   supportingCharacters: zod
@@ -41,18 +46,29 @@ export const GenerateStoryBody = zod.object({
       zod.object({
         name: zod.string(),
         relationship: zod.string(),
-        photoUri: zod.string().optional(),
+        photoUri: zod
+          .string()
+          .optional()
+          .describe(
+            "Local preview URI only. Production generation ignores this field and never sends family photos to AI providers.",
+          ),
         appearance: zod
           .string()
           .optional()
           .describe(
-            "Optional short appearance description for illustration consistency.",
+            "Optional non-photo appearance descriptor for illustration consistency.",
           ),
       }),
     )
     .optional()
     .describe(
       "Optional list of other characters to include if the story calls for them.",
+    ),
+  externalTextAiConsent: zod
+    .boolean()
+    .optional()
+    .describe(
+      "Explicit parent consent for sending prompt and behavior details to an external text AI provider.",
     ),
 });
 

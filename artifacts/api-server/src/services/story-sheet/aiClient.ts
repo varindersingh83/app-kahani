@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { assertNoProviderReferenceImages } from "../safety/providerPayloadPolicy";
 import type { AiConfig, ApiUsage } from "./types";
 
 export function getAiConfig(): AiConfig | null {
@@ -168,6 +169,7 @@ export async function callMultimodalImageModel(
   imageConfig: { aspectRatio: string; imageSize: string },
   referenceImageUris: string[] = [],
 ) {
+  assertNoProviderReferenceImages(referenceImageUris);
   const contentParts = [
     { type: "text", text: prompt },
     ...(await Promise.all(
