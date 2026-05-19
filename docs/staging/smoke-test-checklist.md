@@ -17,6 +17,9 @@ Run this checklist only after the branch has no conflicts, typecheck/build pass,
 |---|---|---|---|---|
 | Clean branch | Inspect git status and unresolved files | No unresolved conflicts; no accidental unrelated changes | Git status summary | |
 | Build gate | Run the agreed typecheck/build gate | Gate passes before deploy | Build output or CI link | |
+| Focused staging gate | Verify API typecheck, API build, and mobile typecheck | All focused checks pass; root workspace failures are documented separately if unrelated | API/mobile/build output summaries | |
+| Root typecheck debt | Run or review root workspace typecheck if required by policy | Known mockup sandbox React ref errors are either fixed or accepted as non-blocking for API staging | Error summary or fix link | |
+| Staging DB schema | Verify current schema is applied to staging Postgres | Schema push completed using external staging DB URL or from inside Render | Schema push summary without DB URL | |
 | Staging env | Compare Render env against `docs/staging/secrets-matrix.md` | All `needed` values present; no production credentials | Screenshot or env review note without values | |
 | Provider caps | Inspect OpenRouter staging key | Low staging spend cap is set | Provider dashboard note without key value | |
 | Sentry config | Inspect staging env names only | Backend/mobile DSNs exist and `SENTRY_ENVIRONMENT` is `staging` | Env review note without DSN values | |
@@ -92,3 +95,5 @@ Stop and do not promote staging if any of these occur:
 - staging uses production database, production Clerk app, or production provider key
 - typecheck/build fails
 - unresolved conflicts remain
+- staging DB schema has not been applied
+- Render service branch/build/start/env-group settings have not been verified

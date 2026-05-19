@@ -8,13 +8,32 @@ This is the shared handoff between conflict resolution, staging setup, smoke tes
 
 | Gate | Required state | Evidence |
 |---|---|---|
-| Branch state | No unresolved conflicts | Git status summary |
+| Branch state | No unresolved conflicts | Latest `feat/staging-parallel-readiness` commit pushed to `origin/feat/staging-parallel-readiness` |
 | Generated clients | API spec, generated React client, and generated Zod schemas are aligned if API changed | Codegen/typecheck output |
-| Typecheck/build | Agreed typecheck and build gates pass | Build output or CI link |
+| Typecheck/build | Focused API/mobile staging gates pass; root workspace typecheck may remain blocked by unrelated mockup sandbox typing debt | API typecheck passed; mobile typecheck passed; API build passed; root typecheck known-fails in `artifacts/mockup-sandbox/src/components/ui/calendar.tsx` and `artifacts/mockup-sandbox/src/components/ui/spinner.tsx` |
 | Staging providers | Provider decisions are recorded | `docs/staging/provider-decisions.md` |
 | Staging secrets | All `needed` env vars have owners and are entered in Render/Clerk/provider dashboards | `docs/staging/secrets-matrix.md` plus dashboard review |
 | Provider caps | OpenRouter staging key has low cap | Provider dashboard review without secret values |
 | Synthetic data | Testers use only approved synthetic fixtures | `docs/staging/synthetic-fixtures.md` |
+
+## Current Execution Status
+
+Updated: 2026-05-19
+
+| Gate | Status | Evidence / blocker |
+|---|---:|---|
+| Staging docs committed | Pass | Latest handoff commit is on `feat/staging-parallel-readiness` |
+| Branch pushed | Pass | `origin/feat/staging-parallel-readiness` exists |
+| Secret scan for committed files | Pass | No AWS, OpenRouter, Clerk, Sentry DSN, or staging Postgres secret values found in committed staging docs/env template |
+| API typecheck | Pass | `@workspace/api-server` typecheck completed |
+| Mobile typecheck | Pass | `@workspace/mobile` typecheck completed |
+| API build | Pass | `@workspace/api-server` build completed |
+| Root workspace typecheck | Non-blocking debt | Fails only in mockup sandbox React ref typing; not part of the API staging deploy gate |
+| Local `.env` syntax | Pass | `OPENROUTER_APP_TITLE` local value quoted so `.env` can be sourced |
+| Staging DB schema push | Blocked | Local `STAGING_DATABASE_URL` currently uses Render internal host `dpg-d8678od7vvec73er9klg-a`, which is only resolvable inside Render private networking |
+| Render service config verification | Blocked | This session has no Render CLI, Render connector, or `RENDER_*` API token |
+| Render deploy | Blocked | Requires Render dashboard/API access after service config verification |
+| Staging smoke | Blocked | Requires deployed staging API URL and schema-ready staging DB |
 
 ## Deployment Handoff
 
@@ -28,6 +47,15 @@ This is the shared handoff between conflict resolution, staging setup, smoke tes
 | AI provider | OpenRouter staging key and staging model choices | Founder/operator |
 | Storage/KMS | AWS S3 bucket `app-kahani-staging-assets-482311061919-us-east-2` and KMS alias `alias/app-kahani-staging-assets` | Founder/operator |
 | Alerts | Sentry backend/mobile DSNs configured for staging | Founder/operator |
+
+## Immediate Unblock Options
+
+Choose one path for the next execution pass:
+
+1. Provide a Render API token in local `.env` as `RENDER_API_KEY` so the agent can verify service settings and trigger/inspect deploys through Render's API.
+2. Provide a local Render CLI session and command access for `render` if the CLI is installed.
+3. Use the Render dashboard manually to verify `app-kahani-staging` branch, build command, start command, and env group, then trigger deploy and share the staging API URL.
+4. For the staging DB schema push, either provide the Render external Postgres URL locally as `STAGING_DATABASE_URL` for one-off schema work, or run the schema push from inside Render where the internal host is resolvable.
 
 ## Smoke Exit Criteria
 
