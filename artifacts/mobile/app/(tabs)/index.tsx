@@ -52,6 +52,10 @@ export default function StudioScreen() {
   const [isPromptFocused, setIsPromptFocused] = useState(false);
   const [generationMessage, setGenerationMessage] = useState("");
   const [issueNotice, setIssueNotice] = useState<string | null>(null);
+  const promptPlaceholderColor =
+    colors.scheme === "dark"
+      ? "rgba(188, 167, 134, 0.48)"
+      : "rgba(129, 113, 94, 0.48)";
 
   const mutation = useGenerateStory({
     mutation: {
@@ -143,6 +147,8 @@ export default function StudioScreen() {
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
+      setPrompt("");
+      setIsPromptFocused(false);
       setGenerationMessage("");
       router.push({
         pathname: "/book-reader",
@@ -205,7 +211,7 @@ export default function StudioScreen() {
           onBlur={() => setIsPromptFocused(false)}
           onFocus={() => setIsPromptFocused(true)}
           placeholder={isPromptFocused ? "" : BEHAVIOR_PROMPT_PLACEHOLDER}
-          placeholderTextColor={colors.mutedForeground}
+          placeholderTextColor={promptPlaceholderColor}
           style={[
             styles.promptInput,
             { color: colors.foreground, outlineColor: "transparent" },
