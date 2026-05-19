@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: kahani-api
+    runtime: node
+    plan: starter
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server run build
+    startCommand: pnpm --filter @workspace/api-server run start
+    healthCheckPath: /api/healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kahani-postgres
+          property: connectionString
+      - key: KAHANI_PROVIDER_PHOTO_POLICY
+        value: strip_family_photos
+      - fromGroup: kahani-production-secrets
+  - type: worker
+    name: kahani-worker
+    runtime: node
+    plan: starter
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server run build
+    startCommand: pnpm --filter @workspace/api-server run start:worker
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kahani-postgres
+          property: connectionString
+      - key: KAHANI_PROVIDER_PHOTO_POLICY
+        value: strip_family_photos
+      - fromGroup: kahani-production-secrets
+databases:
+  - name: kahani-postgres
+    plan: starter

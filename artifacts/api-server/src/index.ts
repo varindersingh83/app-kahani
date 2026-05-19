@@ -1,5 +1,8 @@
 import app from "./app";
+import { assertProductionEnv } from "./config/productionEnv";
 import { logger } from "./lib/logger";
+
+assertProductionEnv();
 
 const rawPort = process.env["PORT"];
 
