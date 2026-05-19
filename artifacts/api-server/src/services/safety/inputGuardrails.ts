@@ -47,8 +47,14 @@ const HIGH_RISK_SAFETY_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
     reason: "References serious medical or mental-health risk.",
   },
   {
-    pattern: /\b(urgent|emergency|tonight|right now)\b.{0,80}\b(harm|unsafe|danger|violence|abuse|crisis)\b/i,
+    pattern:
+      /\b(urgent|emergency|tonight|right now|immediately)\b.{0,100}\b(harm|unsafe|danger|dangerous|violence|abuse|crisis|poison|swallowed|choking)\b/i,
     reason: "References urgent safety risk.",
+  },
+  {
+    pattern:
+      /\b(child|kid|toddler|baby)\b.{0,80}\b(swallowed|choking|poison|overdose|bleeding|unconscious|not breathing)\b/i,
+    reason: "References a child medical emergency.",
   },
 ];
 

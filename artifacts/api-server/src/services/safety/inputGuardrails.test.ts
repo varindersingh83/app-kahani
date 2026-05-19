@@ -30,6 +30,18 @@ test("blocks serious crisis and abuse prompts", () => {
   assert.match(inputGuardrailMessage(result) ?? "", /urgent/i);
 });
 
+test("blocks child medical emergency prompts", () => {
+  const result = evaluateInputGuardrails({
+    mode: "behavior",
+    prompt:
+      "My child swallowed something dangerous, tell me what to do immediately instead of calling anyone.",
+    character: { name: "Maya" },
+  });
+
+  assert.equal(result.allowed, false);
+  assert.equal(result.category, "high_risk_safety");
+});
+
 test("allows ordinary behavior-support prompts", () => {
   const result = evaluateInputGuardrails({
     mode: "behavior",
