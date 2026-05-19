@@ -16,10 +16,10 @@ Run this checklist only after the branch has no conflicts, typecheck/build pass,
 | Check | Input / action | Expected result | Evidence | Result |
 |---|---|---|---|---|
 | Clean branch | Inspect git status and unresolved files | No unresolved conflicts; no accidental unrelated changes | Git status summary | |
-| Build gate | Run the agreed typecheck/build gate | Gate passes before deploy | Build output or CI link | |
-| Focused staging gate | Verify API typecheck, API build, and mobile typecheck | All focused checks pass; root workspace failures are documented separately if unrelated | API/mobile/build output summaries | |
-| Root typecheck debt | Run or review root workspace typecheck if required by policy | Known mockup sandbox React ref errors are either fixed or accepted as non-blocking for API staging | Error summary or fix link | |
-| Staging DB schema | Verify current schema is applied to staging Postgres | Schema push completed using external staging DB URL or from inside Render | Schema push summary without DB URL | |
+| Build gate | Run the agreed typecheck/build gate | Gate passes before deploy | Render build succeeded with `pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server run build` | Pass |
+| Focused staging gate | Verify API typecheck, API build, and mobile typecheck | All focused checks pass; root workspace failures are documented separately if unrelated | API typecheck passed; mobile typecheck passed; API build passed | Pass |
+| Root typecheck debt | Run or review root workspace typecheck if required by policy | Known mockup sandbox React ref errors are either fixed or accepted as non-blocking for API staging | Known non-blocking debt in mockup sandbox React ref typing | N/A |
+| Staging DB schema | Verify current schema is applied to staging Postgres | Schema push completed using external staging DB URL or from inside Render | External `STAGING_DATABASE_URL` with `sslmode=require`; schema push completed with `Changes applied` | Pass |
 | Staging env | Compare Render env against `docs/staging/secrets-matrix.md` | All `needed` values present; no production credentials | Screenshot or env review note without values | |
 | Provider caps | Inspect OpenRouter staging key | Low staging spend cap is set | Provider dashboard note without key value | |
 | Sentry config | Inspect staging env names only | Backend/mobile DSNs exist and `SENTRY_ENVIRONMENT` is `staging` | Env review note without DSN values | |
@@ -30,7 +30,7 @@ Run this checklist only after the branch has no conflicts, typecheck/build pass,
 
 | Check | Input / action | Expected result | Evidence | Result |
 |---|---|---|---|---|
-| Health endpoint | Open staging `/api/healthz` | Returns healthy status | Response snippet | |
+| Health endpoint | Open staging `/api/healthz` | Returns healthy status | `GET https://app-kahani-staging.onrender.com/api/healthz` -> `{"status":"ok"}` | Pass |
 | Staging sign-in | Sign in with Clerk staging app | Parent can access staging app | Screenshot or tester note | |
 | Unauthenticated generation | Call generation route without auth in staging-like config | Request is rejected before generation | Response status/body summary | |
 

@@ -30,10 +30,11 @@ Updated: 2026-05-19
 | API build | Pass | `@workspace/api-server` build completed |
 | Root workspace typecheck | Non-blocking debt | Fails only in mockup sandbox React ref typing; not part of the API staging deploy gate |
 | Local `.env` syntax | Pass | `OPENROUTER_APP_TITLE` local value quoted so `.env` can be sourced |
-| Staging DB schema push | Blocked | Local `STAGING_DATABASE_URL` currently uses Render internal host `dpg-d8678od7vvec73er9klg-a`, which is only resolvable inside Render private networking |
-| Render service config verification | Blocked | This session has no Render CLI, Render connector, or `RENDER_*` API token |
-| Render deploy | Blocked | Requires Render dashboard/API access after service config verification |
-| Staging smoke | Blocked | Requires deployed staging API URL and schema-ready staging DB |
+| Render service config verification | Pass | Service `app-kahani-staging` is connected to `varindersingh83/app-kahani`, branch `feat/staging-parallel-readiness`, env group `app-kahani-staging-env`, build command `pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server run build`, start command `pnpm --filter @workspace/api-server run start`, plan Free |
+| Staging DB schema push | Pass | Local `STAGING_DATABASE_URL` uses Render external Postgres URL with `sslmode=require`; schema push completed with `Changes applied`; local `DATABASE_URL` stayed pointed at local Postgres |
+| Render deploy | Pass | Service is live at `https://app-kahani-staging.onrender.com` |
+| Health smoke | Pass | `GET https://app-kahani-staging.onrender.com/api/healthz` returns `{"status":"ok"}` |
+| Staging smoke | Pending | Full synthetic smoke checklist has not been run yet |
 
 ## Deployment Handoff
 
@@ -48,14 +49,9 @@ Updated: 2026-05-19
 | Storage/KMS | AWS S3 bucket `app-kahani-staging-assets-482311061919-us-east-2` and KMS alias `alias/app-kahani-staging-assets` | Founder/operator |
 | Alerts | Sentry backend/mobile DSNs configured for staging | Founder/operator |
 
-## Immediate Unblock Options
+## Immediate Next Step
 
-Choose one path for the next execution pass:
-
-1. Provide a Render API token in local `.env` as `RENDER_API_KEY` so the agent can verify service settings and trigger/inspect deploys through Render's API.
-2. Provide a local Render CLI session and command access for `render` if the CLI is installed.
-3. Use the Render dashboard manually to verify `app-kahani-staging` branch, build command, start command, and env group, then trigger deploy and share the staging API URL.
-4. For the staging DB schema push, either provide the Render external Postgres URL locally as `STAGING_DATABASE_URL` for one-off schema work, or run the schema push from inside Render where the internal host is resolvable.
+Run the full synthetic smoke checklist against `https://app-kahani-staging.onrender.com`. Public signup remains blocked regardless of smoke outcome until the production-hardening blockers below are closed.
 
 ## Smoke Exit Criteria
 
