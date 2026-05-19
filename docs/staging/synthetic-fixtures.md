@@ -13,6 +13,14 @@ Use only these synthetic fixtures, or clearly fake equivalents, when testing sta
 | Supporting adult | Jordan Morgan | Synthetic parent/adult character |
 | Supporting sibling | Casey Morgan | Synthetic sibling character |
 
+## Staging Test Login Accounts
+
+Use only these synthetic accounts for staging sign-in smoke tests. Passwords are intentionally not stored in repo docs.
+
+| Account pattern | Count | Notes |
+|---|---:|---|
+| `kahani-staging-tester-01@example.com` through `kahani-staging-tester-10@example.com` | 10 | Clerk staging users with matching rows in staging Postgres |
+
 ## Generic Characters
 
 | Character | Role | Presentation | Photo use | Notes |

@@ -8,7 +8,7 @@ These limits apply to the path from locked staging to a small public beta. They 
 
 | Control | Initial value | Owner | Notes |
 |---|---:|---|---|
-| Staging users | 5 | Founder/operator | Internal testers only |
+| Staging users | 10 | Founder/operator | Internal testers only |
 | Public beta users | 25 | Founder/operator | Do not enable until launch blockers are cleared |
 | Generations per user per day | 3 | Product/engineering | Lower if provider cost is higher than expected |
 | Global generations per day | 50 | Product/engineering | Applies during capped beta |
