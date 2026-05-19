@@ -16,13 +16,26 @@ import { Stack } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
-import { Platform, View, type ViewProps } from "react-native";
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type ViewProps,
+} from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthScreen } from "@/components/AuthScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { StoryProvider } from "@/context/StoryContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import {
+  acceptOnboardingConsent,
+  declineOnboardingConsent,
+  getOnboardingConsent,
+  type OnboardingConsentState,
+} from "@/services/onboardingConsent";
 
 if (Platform.OS !== "web") {
   SplashScreen.preventAutoHideAsync();
@@ -100,6 +113,57 @@ function AuthenticatedRoot() {
   );
 }
 
+function OnboardingConsentGate({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [consent, setConsent] = React.useState<
+    OnboardingConsentState | null | undefined
+  >(undefined);
+
+  useEffect(() => {
+    let active = true;
+    getOnboardingConsent().then((existing) => {
+      if (active) setConsent(existing);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (consent === undefined) return null;
+  if (consent) return <>{children}</>;
+
+  return (
+    <View style={consentStyles.screen}>
+      <View style={consentStyles.panel}>
+        <Text style={consentStyles.title}>Kahani consent</Text>
+        <Text style={consentStyles.body}>
+          Kahani uses your family inputs to create stories and collects only
+          anonymous behavior metadata to improve the app. Photos are not sent to
+          text AI providers.
+        </Text>
+        <Pressable
+          style={[consentStyles.button, consentStyles.primaryButton]}
+          onPress={async () => setConsent(await acceptOnboardingConsent())}
+        >
+          <Text style={consentStyles.primaryText}>I consent</Text>
+        </Pressable>
+        <Pressable
+          style={[consentStyles.button, consentStyles.secondaryButton]}
+          onPress={async () => {
+            await declineOnboardingConsent();
+            setConsent(null);
+          }}
+        >
+          <Text style={consentStyles.secondaryText}>I do not consent</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
@@ -120,15 +184,19 @@ export default function RootLayout() {
     <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
       <ClerkLoaded>
         <InteractionRoot>
-          <AuthenticatedRoot />
+          <OnboardingConsentGate>
+            <AuthenticatedRoot />
+          </OnboardingConsentGate>
         </InteractionRoot>
       </ClerkLoaded>
     </ClerkProvider>
   ) : (
     <InteractionRoot>
-      <StoryProvider>
-        <RootLayoutNav />
-      </StoryProvider>
+      <OnboardingConsentGate>
+        <StoryProvider>
+          <RootLayoutNav />
+        </StoryProvider>
+      </OnboardingConsentGate>
     </InteractionRoot>
   );
 
@@ -142,3 +210,51 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+const consentStyles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: "#F8F1E7",
+  },
+  panel: {
+    gap: 16,
+  },
+  title: {
+    color: "#3C2F24",
+    fontFamily: "Inter_700Bold",
+    fontSize: 30,
+    lineHeight: 36,
+  },
+  body: {
+    color: "#5B4B3D",
+    fontFamily: "Inter_500Medium",
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  button: {
+    minHeight: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+    paddingHorizontal: 18,
+  },
+  primaryButton: {
+    backgroundColor: "#7C4A28",
+  },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: "#CDBBA7",
+  },
+  primaryText: {
+    color: "#FFF8ED",
+    fontFamily: "Inter_700Bold",
+    fontSize: 16,
+  },
+  secondaryText: {
+    color: "#3C2F24",
+    fontFamily: "Inter_700Bold",
+    fontSize: 16,
+  },
+});

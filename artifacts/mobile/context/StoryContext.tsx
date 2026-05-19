@@ -7,6 +7,11 @@ import React, {
   useMemo,
   useState,
 } from "react";
+import type {
+  CharacterPresentation,
+  CharacterRole,
+} from "@/services/characterPrivacy";
+import { buildGenericCharacterAppearance } from "@/services/characterPrivacy";
 
 export type StoryPage = {
   pageNumber: number;
@@ -21,6 +26,8 @@ export type StoryPage = {
 export type Character = {
   id: string;
   name: string;
+  role?: CharacterRole;
+  presentation?: CharacterPresentation;
   photoUri?: string;
   appearance?: string;
 };
@@ -50,9 +57,13 @@ type StoryContextValue = {
   currentStory: Story | null;
   selectedCharacter: Character | null;
   addCharacter: (
-    name: string,
-    photoUri?: string,
-    appearance?: string,
+    input: {
+      name: string;
+      role?: CharacterRole;
+      presentation?: CharacterPresentation;
+      photoUri?: string;
+      appearance?: string;
+    },
   ) => Promise<void>;
   removeCharacter: (id: string) => Promise<void>;
   selectCharacter: (id: string) => Promise<void>;
@@ -92,6 +103,10 @@ function getDevProfileId() {
 
 function isParentLikeName(name: string) {
   return /^(mom|mum|mama|mother|dad|dada|papa|father)$/i.test(name.trim());
+}
+
+function isAdultCharacter(character: Pick<Character, "name" | "role">) {
+  return character.role === "adult" || isParentLikeName(character.name);
 }
 
 export function StoryProvider({
@@ -184,6 +199,8 @@ export function StoryProvider({
     const character: Character = {
       id: createId(),
       name: characterName,
+      role: isParentLikeName(characterName) ? "adult" : "child",
+      presentation: "neutral",
       photoUri: characterPhotoUri,
     };
     const nextCharacters = [character, ...input.characters];
@@ -222,16 +239,28 @@ export function StoryProvider({
   );
 
   const addCharacter = useCallback(
-    async (name: string, photoUri?: string, appearance?: string) => {
+    async (input: {
+      name: string;
+      role?: CharacterRole;
+      presentation?: CharacterPresentation;
+      photoUri?: string;
+      appearance?: string;
+    }) => {
+      const role = input.role ?? "child";
+      const presentation = input.presentation ?? "neutral";
       const character = {
         id: createId(),
-        name: name.trim(),
-        photoUri,
-        appearance: appearance?.trim() || undefined,
+        name: input.name.trim(),
+        role,
+        presentation,
+        photoUri: input.photoUri,
+        appearance:
+          input.appearance?.trim() ||
+          buildGenericCharacterAppearance({ role, presentation }),
       };
       const nextCharacters = [character, ...characters];
       const nextSelectedCharacterId =
-        !selectedCharacterId || !isParentLikeName(character.name)
+        !selectedCharacterId || !isAdultCharacter(character)
           ? character.id
           : selectedCharacterId;
       setCharacters(nextCharacters);

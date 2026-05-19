@@ -26,6 +26,12 @@ import {
 import tokens from "@/constants/colors";
 import { useStoryStudio } from "@/context/StoryContext";
 import { useKahaniTheme } from "@/context/ThemeContext";
+import {
+  buildGenericCharacterAppearance,
+  getCharacterCreationPolicy,
+  type CharacterPresentation,
+  type CharacterRole,
+} from "@/services/characterPrivacy";
 import { buildCharacterDescriptor } from "@/services/photoDescriptors";
 
 export default function CharactersScreen() {
@@ -39,12 +45,15 @@ export default function CharactersScreen() {
   } = useStoryStudio();
   const [name, setName] = useState("");
   const [photoUri, setPhotoUri] = useState<string | undefined>();
-  const [presentation, setPresentation] = useState<
-    "from-photo" | "girl" | "boy"
-  >("from-photo");
+  const [role, setRole] = useState<CharacterRole>("child");
+  const [presentation, setPresentation] =
+    useState<CharacterPresentation>("neutral");
   const [appearanceNotes, setAppearanceNotes] = useState("");
+  const creationPolicy = getCharacterCreationPolicy();
 
   const pickPhoto = async () => {
+    if (!creationPolicy.canUsePhotoPicker) return;
+
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert("Photos needed", "Allow photo access to upload an image.");
@@ -68,14 +77,25 @@ export default function CharactersScreen() {
       Alert.alert("Add a name", "Enter a name before saving.");
       return;
     }
-    await addCharacter(
-      name.trim(),
-      photoUri,
-      buildCharacterDescriptor({ presentation, notes: appearanceNotes }),
-    );
+    const appearance = creationPolicy.canUseManualAppearanceNotes
+      ? buildCharacterDescriptor({
+          presentation,
+          notes: appearanceNotes,
+          role,
+        })
+      : buildGenericCharacterAppearance({ role, presentation });
+
+    await addCharacter({
+      name: name.trim(),
+      role,
+      presentation,
+      photoUri: creationPolicy.canUsePhotoPicker ? photoUri : undefined,
+      appearance,
+    });
     setName("");
     setPhotoUri(undefined);
-    setPresentation("from-photo");
+    setRole("child");
+    setPresentation("neutral");
     setAppearanceNotes("");
     if (Platform.OS !== "web") {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -94,33 +114,38 @@ export default function CharactersScreen() {
         Add character
       </Text>
 
-      <Pressable
-        onPress={pickPhoto}
-        style={[
-          styles.photoPicker,
-          { backgroundColor: colors.card, borderColor: colors.border },
-          cardShadow(colors.shadow),
-        ]}
-      >
-        {photoUri ? (
-          <Image
-            source={{ uri: photoUri }}
-            style={styles.fill}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={styles.photoEmpty}>
-            <View
-              style={[styles.photoIcon, { backgroundColor: colors.secondary }]}
-            >
-              <Feather name="camera" color={colors.bark} size={28} />
+      {creationPolicy.canUsePhotoPicker ? (
+        <Pressable
+          onPress={pickPhoto}
+          style={[
+            styles.photoPicker,
+            { backgroundColor: colors.card, borderColor: colors.border },
+            cardShadow(colors.shadow),
+          ]}
+        >
+          {photoUri ? (
+            <Image
+              source={{ uri: photoUri }}
+              style={styles.fill}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.photoEmpty}>
+              <View
+                style={[
+                  styles.photoIcon,
+                  { backgroundColor: colors.secondary },
+                ]}
+              >
+                <Feather name="camera" color={colors.bark} size={28} />
+              </View>
+              <Text style={[styles.photoTitle, { color: colors.foreground }]}>
+                Add character photo
+              </Text>
             </View>
-            <Text style={[styles.photoTitle, { color: colors.foreground }]}>
-              Add character photo
-            </Text>
-          </View>
-        )}
-      </Pressable>
+          )}
+        </Pressable>
+      ) : null}
 
       <View
         style={[
@@ -143,7 +168,44 @@ export default function CharactersScreen() {
 
       <View style={styles.identityBlock}>
         <Text style={[styles.fieldLabel, { color: colors.foreground }]}>
-          Character identity
+          Character role
+        </Text>
+        <View style={styles.identityOptions}>
+          {ROLE_OPTIONS.map((option) => {
+            const selected = role === option.value;
+            return (
+              <Pressable
+                key={option.value}
+                onPress={() => setRole(option.value)}
+                style={[
+                  styles.identityOption,
+                  {
+                    backgroundColor: selected ? colors.primary : colors.card,
+                    borderColor: selected ? colors.primary : colors.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.identityText,
+                    {
+                      color: selected
+                        ? colors.primaryForeground
+                        : colors.foreground,
+                    },
+                  ]}
+                >
+                  {option.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      <View style={styles.identityBlock}>
+        <Text style={[styles.fieldLabel, { color: colors.foreground }]}>
+          Presentation
         </Text>
         <View style={styles.identityOptions}>
           {IDENTITY_OPTIONS.map((option) => {
@@ -178,24 +240,26 @@ export default function CharactersScreen() {
         </View>
       </View>
 
-      <View
-        style={[
-          styles.nameInputWrap,
-          { backgroundColor: colors.card, borderColor: colors.border },
-        ]}
-      >
-        <TextInput
-          value={appearanceNotes}
-          onChangeText={setAppearanceNotes}
-          placeholder="Blonde hair, pink shirt, bright smile"
-          placeholderTextColor={colors.mutedForeground}
+      {creationPolicy.canUseManualAppearanceNotes ? (
+        <View
           style={[
-            styles.nameInput,
-            { color: colors.foreground, outlineColor: "transparent" },
+            styles.nameInputWrap,
+            { backgroundColor: colors.card, borderColor: colors.border },
           ]}
-          returnKeyType="done"
-        />
-      </View>
+        >
+          <TextInput
+            value={appearanceNotes}
+            onChangeText={setAppearanceNotes}
+            placeholder="Blonde hair, pink shirt, bright smile"
+            placeholderTextColor={colors.mutedForeground}
+            style={[
+              styles.nameInput,
+              { color: colors.foreground, outlineColor: "transparent" },
+            ]}
+            returnKeyType="done"
+          />
+        </View>
+      ) : null}
 
       <KahaniButton
         label="Add character"
@@ -348,9 +412,14 @@ const styles = StyleSheet.create({
 });
 
 const IDENTITY_OPTIONS = [
-  { label: "Describe", value: "from-photo" },
+  { label: "Neutral", value: "neutral" },
   { label: "Girl", value: "girl" },
   { label: "Boy", value: "boy" },
+] as const;
+
+const ROLE_OPTIONS = [
+  { label: "Child", value: "child" },
+  { label: "Adult", value: "adult" },
 ] as const;
 
 async function persistableImageUri(asset: ImagePicker.ImagePickerAsset) {

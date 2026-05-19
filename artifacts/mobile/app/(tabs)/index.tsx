@@ -29,14 +29,20 @@ import {
   serifFamily,
 } from "@/components/KahaniDesign";
 import tokens from "@/constants/colors";
-import { useStoryStudio } from "@/context/StoryContext";
+import { useStoryStudio, type Character } from "@/context/StoryContext";
 import { useKahaniTheme } from "@/context/ThemeContext";
+import { sanitizeCharacterForGeneration } from "@/services/characterPrivacy";
 
 const BEHAVIOR_PROMPT_PLACEHOLDER =
   "sharing toys, bedtime resistance, using gentle hands";
 
-function isParentCharacterName(name: string) {
-  return /^(mom|mum|mama|mother|dad|dada|papa|father)$/i.test(name.trim());
+function isParentCharacter(character: Character) {
+  return (
+    character.role === "adult" ||
+    /^(mom|mum|mama|mother|dad|dada|papa|father)$/i.test(
+      character.name.trim(),
+    )
+  );
 }
 
 export default function StudioScreen() {
@@ -71,16 +77,16 @@ export default function StudioScreen() {
   });
 
   const childCharacters = characters.filter(
-    (character) => !isParentCharacterName(character.name),
+    (character) => !isParentCharacter(character),
   );
   const selectedStoryCharacter =
-    selectedCharacter && !isParentCharacterName(selectedCharacter.name)
+    selectedCharacter && !isParentCharacter(selectedCharacter)
       ? selectedCharacter
       : (childCharacters[0] ?? selectedCharacter);
   const parentCharacter = characters.find(
     (character) =>
       character.id !== selectedStoryCharacter?.id &&
-      isParentCharacterName(character.name),
+      isParentCharacter(character),
   );
 
   const generate = async () => {
@@ -103,6 +109,22 @@ export default function StudioScreen() {
 
     try {
       const storyPrompt = prompt.trim() || undefined;
+      const generationCharacter = sanitizeCharacterForGeneration({
+        name: selectedStoryCharacter.name,
+        role: selectedStoryCharacter.role,
+        presentation: selectedStoryCharacter.presentation,
+        appearance: selectedStoryCharacter.appearance,
+        photoUri: selectedStoryCharacter.photoUri,
+      });
+      const generationParent = parentCharacter
+        ? sanitizeCharacterForGeneration({
+            name: parentCharacter.name,
+            role: "adult",
+            presentation: parentCharacter.presentation,
+            appearance: parentCharacter.appearance,
+            photoUri: parentCharacter.photoUri,
+          })
+        : null;
       setIssueNotice(null);
       setGenerationMessage("Starting your book...");
       const job = await mutation.mutateAsync({
@@ -110,18 +132,16 @@ export default function StudioScreen() {
           mode: "behavior",
           prompt: storyPrompt,
           character: {
-            name: selectedStoryCharacter.name,
-            appearance:
-              selectedStoryCharacter.appearance ??
-              "Use only the parent-entered appearance description; do not infer gender from the child's name.",
+            name: generationCharacter.name,
+            appearance: generationCharacter.appearance,
           },
           externalTextAiConsent: true,
-          supportingCharacters: parentCharacter
+          supportingCharacters: generationParent
             ? [
                 {
-                  name: parentCharacter.name,
+                  name: generationParent.name,
                   relationship: "parent",
-                  appearance: parentCharacter.appearance,
+                  appearance: generationParent.appearance,
                 },
               ]
             : undefined,
@@ -141,7 +161,7 @@ export default function StudioScreen() {
         sheetImageUrl: story.sheetImageUrl ?? undefined,
         artifactLinks: story.artifactLinks,
         characterName: selectedStoryCharacter.name,
-        characterPhotoUri: selectedStoryCharacter.photoUri ?? undefined,
+        characterPhotoUri: undefined,
       });
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
