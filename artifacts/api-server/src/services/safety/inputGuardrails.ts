@@ -20,7 +20,7 @@ const PROMPT_INJECTION_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
   },
   {
     pattern:
-      /\b(system|developer|hidden|secret)\b.{0,80}\b(prompt|instruction|message|rules?)\b/i,
+      /\b(system|developer|hidden|secret)\b.{0,80}\b(prompt|instruction|messages?|rules?)\b/i,
     reason: "Requests hidden prompts or internal instructions.",
   },
   {
@@ -35,7 +35,8 @@ const PROMPT_INJECTION_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
 
 const HIGH_RISK_SAFETY_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
   {
-    pattern: /\b(self[-\s]?harm|suicid(?:e|al)|kill (?:myself|himself|herself|themselves)|hurt (?:myself|himself|herself|themselves))\b/i,
+    pattern:
+      /\b(self[-\s]?harm|suicid(?:e|al)|kill(?:ing)? (?:myself|himself|herself|themselves)|hurt(?:ing)? (?:myself|himself|herself|themselves))\b/i,
     reason: "References self-harm or suicide risk.",
   },
   {
@@ -47,8 +48,14 @@ const HIGH_RISK_SAFETY_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
     reason: "References serious medical or mental-health risk.",
   },
   {
-    pattern: /\b(urgent|emergency|tonight|right now)\b.{0,80}\b(harm|unsafe|danger|violence|abuse|crisis)\b/i,
+    pattern:
+      /\b(urgent|emergency|tonight|right now|immediately)\b.{0,100}\b(harm|unsafe|danger|dangerous|violence|abuse|crisis|poison|swallowed|choking)\b/i,
     reason: "References urgent safety risk.",
+  },
+  {
+    pattern:
+      /\b(child|kid|toddler|baby)\b.{0,80}\b(swallowed|choking|poison|overdose|bleeding|unconscious|not breathing)\b/i,
+    reason: "References a child medical emergency.",
   },
 ];
 

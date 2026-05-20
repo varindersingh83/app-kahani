@@ -159,6 +159,8 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
       "--no-dev",
       "--minify",
       "--localhost",
+      "--port",
+      "8081",
     ],
     {
       stdio: ["ignore", "pipe", "pipe"],
@@ -181,7 +183,11 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
     });
   }
 
-  for (let i = 0; i < 60; i++) {
+  const metroStartupTimeoutSeconds = Number(
+    process.env.METRO_STARTUP_TIMEOUT_SECONDS || 180,
+  );
+
+  for (let i = 0; i < metroStartupTimeoutSeconds; i++) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     const healthy = await checkMetroHealth();

@@ -8,6 +8,12 @@ import React, {
   useState,
 } from "react";
 
+import {
+  sanitizeCharacterForStorage,
+  sanitizeCharactersForStorage,
+  type AppearanceSource,
+} from "@/services/characterPrivacy";
+
 export type StoryPage = {
   pageNumber: number;
   text: string;
@@ -24,6 +30,7 @@ export type Character = {
   photoUri?: string;
   relationship?: CharacterRelationship;
   appearance?: string;
+  appearanceSource?: AppearanceSource;
 };
 
 export type CharacterRelationship = "child" | "mom" | "dad";
@@ -57,6 +64,7 @@ type StoryContextValue = {
     photoUri?: string,
     relationship?: CharacterRelationship,
     appearance?: string,
+    appearanceSource?: AppearanceSource,
   ) => Promise<void>;
   removeCharacter: (id: string) => Promise<void>;
   selectCharacter: (id: string) => Promise<void>;
@@ -130,7 +138,9 @@ export function StoryProvider({
             selectedCharacterId?: string | null;
           })
         : {};
-      const nextCharacters = saved.characters ?? [];
+      const nextCharacters = sanitizeCharactersForStorage(
+        saved.characters ?? [],
+      ) as Character[];
       const nextSavedStories = saved.savedStories ?? [];
       const nextSelectedCharacterId = saved.selectedCharacterId ?? null;
 
@@ -138,6 +148,14 @@ export function StoryProvider({
       setSavedStories(nextSavedStories);
       setSelectedCharacterId(nextSelectedCharacterId);
       setCurrentStory(null);
+      void AsyncStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          characters: nextCharacters,
+          savedStories: nextSavedStories,
+          selectedCharacterId: nextSelectedCharacterId,
+        }),
+      );
 
       if (process.env.NODE_ENV !== "production") {
         void seedStoryFromUrl({
@@ -192,11 +210,11 @@ export function StoryProvider({
       characterPhotoUri,
       createdAt: new Date().toISOString(),
     };
-    const character: Character = {
+    const character: Character = sanitizeCharacterForStorage({
       id: createId(),
       name: characterName,
       photoUri: characterPhotoUri,
-    };
+    }) as Character;
     const nextCharacters = [character, ...input.characters];
     const nextStories = [story, ...input.savedStories];
 
@@ -207,7 +225,9 @@ export function StoryProvider({
     await AsyncStorage.setItem(
       input.storageKey,
       JSON.stringify({
-        characters: nextCharacters,
+        characters: sanitizeCharactersForStorage(
+          nextCharacters,
+        ) as Character[],
         savedStories: nextStories,
         selectedCharacterId: character.id,
       }),
@@ -223,7 +243,9 @@ export function StoryProvider({
       await AsyncStorage.setItem(
         storageKey,
         JSON.stringify({
-          characters: next?.characters ?? characters,
+          characters: sanitizeCharactersForStorage(
+            next?.characters ?? characters,
+          ) as Character[],
           savedStories: next?.savedStories ?? savedStories,
           selectedCharacterId: next?.selectedCharacterId ?? selectedCharacterId,
         }),
@@ -238,14 +260,16 @@ export function StoryProvider({
       photoUri?: string,
       relationship?: CharacterRelationship,
       appearance?: string,
+      appearanceSource?: AppearanceSource,
     ) => {
-      const character = {
+      const character = sanitizeCharacterForStorage({
         id: createId(),
         name: name.trim(),
         photoUri,
         relationship: relationship ?? "child",
         appearance: appearance?.trim() || undefined,
-      };
+        appearanceSource,
+      }) as Character;
       const nextCharacters = [character, ...characters];
       const nextSelectedCharacterId =
         !selectedCharacterId || isChildCharacter(character)

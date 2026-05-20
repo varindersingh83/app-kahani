@@ -18,3 +18,13 @@ test("buildCharacterDescriptor supports explicit parent-entered presentation", (
     "The main child is a girl.",
   );
 });
+
+test("buildCharacterDescriptor preserves approved local-photo descriptors without photo instructions", () => {
+  assert.equal(
+    buildCharacterDescriptor({
+      source: "local-photo",
+      notes: "Appearance descriptor: brown hair, blue clothing.",
+    }),
+    "Appearance descriptor: brown hair, blue clothing.",
+  );
+});

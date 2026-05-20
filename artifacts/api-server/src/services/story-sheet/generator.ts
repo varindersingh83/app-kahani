@@ -1,8 +1,7 @@
-import { execFile as execFileCallback } from "node:child_process";
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import sharp from "sharp";
 import type { GenerateStoryRequest } from "@workspace/api-zod";
 import {
   callJsonChat,
@@ -12,7 +11,7 @@ import {
 import { buildImageQaChecklist } from "./imageQa";
 import { buildGeneratedStory } from "./mapper";
 import { planStoryIssues } from "./planner";
-import { promptPath, slicerScriptPath } from "./paths";
+import { promptPath } from "./paths";
 import { renderBookHtml } from "./html";
 import { sanitizeProviderReferenceImageUris } from "../safety/providerPayloadPolicy";
 import type {
@@ -22,8 +21,6 @@ import type {
   StorySheetInput,
   StorySheetRunResult,
 } from "./types";
-
-const execFile = promisify(execFileCallback);
 
 export async function runStorySheetGeneration(input: {
   bookId: string;
@@ -434,27 +431,66 @@ function detectExtension(source: string) {
 }
 
 async function sliceStoryboardSheet(sheetImagePath: string, outputDir: string) {
-  const pythonExecutable = process.env.CODEX_PYTHON_BIN ?? "python3";
-  await execFile(pythonExecutable, [
-    slicerScriptPath(),
-    sheetImagePath,
-    outputDir,
-    "--rows",
-    "4",
-    "--cols",
-    "4",
-    "--inset",
-    "12",
-    "--prefix",
-    "page",
-    "--format",
-    "png",
-  ]);
+  await mkdir(outputDir, { recursive: true });
+
+  const metadata = await sharp(sheetImagePath).metadata();
+  const width = metadata.width;
+  const height = metadata.height;
+  if (!width || !height) {
+    throw new Error("Storyboard sheet dimensions could not be read.");
+  }
+  if (width !== height) {
+    throw new Error(`Storyboard sheet must be square. Got ${width}x${height}.`);
+  }
+  if (width % 4 !== 0 || height % 4 !== 0) {
+    throw new Error(
+      `Storyboard sheet size must divide cleanly by 4. Got ${width}x${height}.`,
+    );
+  }
+
+  const panelWidth = width / 4;
+  const panelHeight = height / 4;
+  const manifest: SheetSliceManifestEntry[] = [];
+
+  for (let row = 0; row < 4; row += 1) {
+    for (let col = 0; col < 4; col += 1) {
+      const left = col * panelWidth;
+      const top = row * panelHeight;
+      const outputPath = path.join(outputDir, sliceFileName(row, col));
+
+      await sharp(sheetImagePath)
+        .extract({ left, top, width: panelWidth, height: panelHeight })
+        .png({ quality: 95 })
+        .toFile(outputPath);
+
+      manifest.push({
+        pageNumber: manifest.length + 1,
+        row: row + 1,
+        col: col + 1,
+        output: pathToFileURL(outputPath).href,
+        crop: {
+          left,
+          top,
+          right: left + panelWidth,
+          bottom: top + panelHeight,
+        },
+      });
+    }
+  }
 
   const manifestPath = path.join(outputDir, "manifest.json");
-  return JSON.parse(
-    await readFile(manifestPath, "utf8"),
-  ) as SheetSliceManifestEntry[];
+  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  return manifest;
+}
+
+function sliceFileName(row: number, col: number) {
+  if (row === 0 && col === 0) return "01_cover.png";
+  if (row === 0 && col === 1) return "02_belongs_to.png";
+  if (row === 0 && col === 2) return "03_the_end.png";
+  if (row === 0 && col === 3) return "04_blank.png";
+
+  const storyPage = (row - 1) * 4 + col + 1;
+  return `story_page_${storyPage.toString().padStart(2, "0")}.png`;
 }
 
 function sumUsage(usages: Array<ApiUsage | undefined>): ApiUsage {

@@ -14,6 +14,17 @@ test("uses Clerk user id when present", () => {
   });
 });
 
+test("uses Clerk Express auth function when present", () => {
+  const user = requireUser({
+    auth: () => ({ userId: "user_456" }),
+  } as unknown as Request);
+
+  assert.deepEqual(user, {
+    userId: "user_456",
+    isDevelopmentBypass: false,
+  });
+});
+
 test("allows explicit local development bypass without Clerk env", () => {
   const previousNodeEnv = process.env.NODE_ENV;
   const previousPublishable = process.env.CLERK_PUBLISHABLE_KEY;
