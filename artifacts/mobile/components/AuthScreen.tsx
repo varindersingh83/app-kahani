@@ -13,10 +13,8 @@ import {
 } from "react-native";
 
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
-import { useColors } from "@/hooks/useColors";
 
 export function AuthScreen() {
-  const colors = useColors();
   const { startSSOFlow } = useSSO();
   const [loadingProvider, setLoadingProvider] = useState<ProviderStrategy | null>(null);
 
@@ -66,16 +64,15 @@ export function AuthScreen() {
             </View>
           </View>
         </View>
-        <Text style={[styles.authTitle, { color: colors.foreground }]}>
+        <Text style={styles.authTitle}>
           Kahani
         </Text>
-        <Text style={[styles.authSubtitle, { color: colors.mutedForeground }]}>
+        <Text style={styles.authSubtitle}>
           Stop the Power Struggles. Start the Stories.
         </Text>
 
         <View style={styles.form}>
           <SocialButton
-            colors={colors}
             icon="google"
             label="Continue with Google"
             tone="blush"
@@ -84,7 +81,6 @@ export function AuthScreen() {
             onPress={() => continueWithProvider("oauth_google")}
           />
           <SocialButton
-            colors={colors}
             icon="facebook"
             label="Continue with Facebook"
             tone="sky"
@@ -93,7 +89,6 @@ export function AuthScreen() {
             onPress={() => continueWithProvider("oauth_facebook")}
           />
           <SocialButton
-            colors={colors}
             icon="apple"
             label="Continue with Apple"
             tone="sage"
@@ -102,7 +97,7 @@ export function AuthScreen() {
             onPress={() => continueWithProvider("oauth_apple")}
           />
         </View>
-        <Text style={[styles.authFootnote, { color: colors.mutedForeground }]}>
+        <Text style={styles.authFootnote}>
           Your account is handled securely by the provider you choose.
         </Text>
       </KeyboardAwareScrollViewCompat>
@@ -138,7 +133,6 @@ function StuffedToyBackground() {
 type ProviderStrategy = "oauth_google" | "oauth_facebook" | "oauth_apple";
 
 function SocialButton({
-  colors,
   icon,
   label,
   tone,
@@ -146,7 +140,6 @@ function SocialButton({
   disabled,
   onPress,
 }: {
-  colors: ReturnType<typeof useColors>;
   icon: "google" | "facebook" | "apple";
   label: string;
   tone: "blush" | "sky" | "sage";
@@ -171,31 +164,38 @@ function SocialButton({
     >
       <View style={[styles.buttonWash, { backgroundColor: watercolor.wash }]} />
       {loading ? (
-        <ActivityIndicator color={colors.foreground} />
+        <ActivityIndicator color={authPalette.text} />
       ) : (
         <>
           <FontAwesome name={icon} color={watercolor.icon} size={20} />
-          <Text style={[styles.socialButtonText, { color: colors.foreground }]}>{label}</Text>
+          <Text style={styles.socialButtonText}>{label}</Text>
         </>
       )}
     </Pressable>
   );
 }
 
+const authPalette = {
+  background: "#FFF9F0",
+  text: "#31281E",
+  mutedText: "#6F5E4B",
+  shadow: "#523C24",
+};
+
 const styles = StyleSheet.create({
   authRoot: {
     flex: 1,
-    backgroundColor: "#FFFCF6",
+    backgroundColor: authPalette.background,
   },
   stuffedBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#FFFCF6",
+    backgroundColor: authPalette.background,
     overflow: "hidden",
     pointerEvents: "none",
   },
   plushPatch: {
     position: "absolute",
-    backgroundColor: "rgba(244, 239, 229, 0.62)",
+    backgroundColor: "rgba(239, 229, 213, 0.42)",
     borderRadius: 999,
   },
   plushPatchTop: {
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     height: 220,
     top: 250,
     right: -118,
-    backgroundColor: "rgba(250, 245, 235, 0.82)",
+    backgroundColor: "rgba(242, 214, 172, 0.22)",
     transform: [{ rotate: "18deg" }],
   },
   plushPatchBottom: {
@@ -218,14 +218,14 @@ const styles = StyleSheet.create({
     height: 230,
     bottom: -72,
     left: -94,
-    backgroundColor: "rgba(243, 237, 226, 0.54)",
+    backgroundColor: "rgba(166, 178, 122, 0.16)",
     transform: [{ rotate: "9deg" }],
   },
   plushFiber: {
     position: "absolute",
     height: 1,
     borderRadius: 2,
-    backgroundColor: "#E5DED1",
+    backgroundColor: "rgba(139, 111, 71, 0.16)",
   },
   authScroll: {
     flexGrow: 1,
@@ -310,31 +310,38 @@ const styles = StyleSheet.create({
   },
   authTitle: {
     fontFamily: "Inter_700Bold",
-    fontSize: 34,
-    letterSpacing: -1,
+    fontSize: 38,
+    letterSpacing: 0,
     marginBottom: 12,
     textAlign: "center",
+    color: authPalette.text,
   },
   authSubtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 36,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 17,
+    lineHeight: 25,
+    marginBottom: 38,
     textAlign: "center",
+    color: authPalette.mutedText,
   },
   form: {
     gap: 14,
   },
   socialButton: {
     borderWidth: 1,
-    borderRadius: 18,
-    minHeight: 58,
-    paddingHorizontal: 18,
+    borderRadius: 20,
+    minHeight: 62,
+    paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
     overflow: "hidden",
+    shadowColor: authPalette.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 2,
   },
   buttonWash: {
     position: "absolute",
@@ -342,19 +349,21 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 28,
     left: 18,
-    opacity: 0.42,
+    opacity: 0.34,
     transform: [{ rotate: "-4deg" }],
   },
   socialButtonText: {
     fontFamily: "Inter_700Bold",
-    fontSize: 16,
+    fontSize: 17,
+    color: authPalette.text,
   },
   authFootnote: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    lineHeight: 19,
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    lineHeight: 21,
     textAlign: "center",
     marginTop: 22,
+    color: authPalette.mutedText,
   },
 });
 
@@ -380,21 +389,21 @@ const plushFibers = [
 
 const watercolorButtons = {
   blush: {
-    background: "#FFF2EC",
-    border: "#EBC8B8",
+    background: "#FFF8F3",
+    border: "#D8A894",
     wash: "#F7CBBE",
-    icon: "#9F6B54",
+    icon: "#7C4E3B",
   },
   sky: {
-    background: "#EEF8FA",
-    border: "#BFDDE5",
+    background: "#F2FBFD",
+    border: "#94C4D0",
     wash: "#CBE8EF",
-    icon: "#517A8C",
+    icon: "#345F70",
   },
   sage: {
-    background: "#F0F8EF",
-    border: "#C7DEC4",
+    background: "#F5FCF2",
+    border: "#A9CDA5",
     wash: "#CFE5C9",
-    icon: "#62795F",
+    icon: "#405C3C",
   },
 };
