@@ -1,6 +1,7 @@
 import path from "node:path";
 import type {
   SheetSliceManifestEntry,
+  BehaviorClassificationSummary,
   StorySheetGeneratedStory,
   StorySheetInput,
 } from "./types";
@@ -9,6 +10,8 @@ export function buildGeneratedStory(input: {
   bookId: string;
   story: StorySheetInput;
   slices: SheetSliceManifestEntry[];
+  behaviorFocus?: BehaviorClassificationSummary;
+  parentNote?: string;
   includeArtifactLinks: boolean;
   sheetFileName?: string;
 }): StorySheetGeneratedStory {
@@ -25,6 +28,9 @@ export function buildGeneratedStory(input: {
   return {
     title: story.title,
     reflectionQuestion: `What helped ${story.child_name} feel safe enough to try again?`,
+    behaviorFocus: input.behaviorFocus,
+    parentNote: input.parentNote,
+    classification: input.behaviorFocus,
     coverImageUrl: pageImageUrl("01_cover.png"),
     endImageUrl: pageImageUrl("03_the_end.png"),
     sheetImageUrl: `/api/story-runs/${bookId}/${input.sheetFileName ?? "sheet.jpg"}`,
@@ -54,8 +60,11 @@ export function buildReaderCards(input: {
   slices: SheetSliceManifestEntry[];
 }) {
   const { story, slices } = input;
-  const imageForSlice = (sliceIndex: number) => {
-    const output = slices[sliceIndex]?.output;
+  const sliceByName = new Map(
+    slices.map((slice) => [path.basename(slice.output), slice]),
+  );
+  const imageForFile = (fileName: string) => {
+    const output = sliceByName.get(fileName)?.output;
     return output ? `pages/${path.basename(output)}` : "";
   };
 
@@ -65,7 +74,7 @@ export function buildReaderCards(input: {
       label: "Cover",
       title: story.title,
       body: "Book cover",
-      image: imageForSlice(0),
+      image: imageForFile("01_cover.png"),
     },
     ...story.pages.map((page, index) => ({
       kind: "story",
@@ -74,14 +83,14 @@ export function buildReaderCards(input: {
       body: page.text,
       scene: page.scene,
       meta: [page.composition, page.emotion].filter(Boolean),
-      image: imageForSlice(index + 4),
+      image: imageForFile(`story_page_${String(index + 1).padStart(2, "0")}.png`),
     })),
     {
       kind: "end",
       label: "End",
       title: "The End",
       body: "Closing page",
-      image: imageForSlice(2),
+      image: imageForFile("03_the_end.png"),
     },
   ];
 }

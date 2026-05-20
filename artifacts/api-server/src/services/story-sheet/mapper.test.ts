@@ -3,14 +3,14 @@ import test from "node:test";
 import { buildGeneratedStory } from "./mapper";
 import type { SheetSliceManifestEntry, StorySheetInput } from "./types";
 
-test("maps a 16-panel story sheet into cover plus 12 reader pages, excluding the blank panel", () => {
+test("maps a 25-panel story sheet into cover plus 20 reader pages, excluding blank panels", () => {
   const story: StorySheetInput = {
     title: "When the Towers Fall",
     child_name: "Leo",
     parent_name: "Mom",
     parent_role: "parent",
     behavior: "Hitting when upset",
-    pages: Array.from({ length: 12 }, (_, index) => ({
+    pages: Array.from({ length: 20 }, (_, index) => ({
       page: index + 1,
       text: `Story text ${index + 1}`,
       scene: `Scene ${index + 1}`,
@@ -23,8 +23,9 @@ test("maps a 16-panel story sheet into cover plus 12 reader pages, excluding the
     "02_belongs_to.png",
     "03_the_end.png",
     "04_blank.png",
+    "05_blank.png",
     ...Array.from(
-      { length: 12 },
+      { length: 20 },
       (_, index) => `story_page_${String(index + 1).padStart(2, "0")}.png`,
     ),
   ];
@@ -50,17 +51,18 @@ test("maps a 16-panel story sheet into cover plus 12 reader pages, excluding the
     result.endImageUrl,
     "/api/story-runs/book-123/pages/03_the_end.png",
   );
-  assert.equal(result.pages.length, 12);
+  assert.equal(result.pages.length, 20);
   assert.equal(result.pages[0]?.text, "Story text 1");
   assert.equal(
     result.pages[0]?.imageUrl,
     "/api/story-runs/book-123/pages/story_page_01.png",
   );
   assert.equal(
-    result.pages[11]?.imageUrl,
-    "/api/story-runs/book-123/pages/story_page_12.png",
+    result.pages[19]?.imageUrl,
+    "/api/story-runs/book-123/pages/story_page_20.png",
   );
   assert.ok(!result.pages.some((page) => page.imageUrl?.includes("04_blank")));
+  assert.ok(!result.pages.some((page) => page.imageUrl?.includes("05_blank")));
   assert.equal(
     result.artifactLinks?.bookHtmlUrl,
     "/api/story-runs/book-123/book.html",

@@ -7,6 +7,7 @@
  */
 
 export * from "./characterInput";
+export * from "./behaviorClassificationSummary";
 export * from "./consentRequiredMessage";
 export * from "./consentRequiredMessageCode";
 export * from "./errorMessage";
@@ -23,4 +24,5 @@ export * from "./storyGenerationStatusValue";
 export * from "./storyGenerationStep";
 export * from "./storyMode";
 export * from "./storyPage";
+export * from "./storyPlanningResponse";
 export * from "./supportingCharacter";

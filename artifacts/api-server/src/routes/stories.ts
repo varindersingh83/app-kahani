@@ -6,6 +6,7 @@ import {
   startStorySheetJob,
 } from "../services/story-sheet/jobs";
 import type { StorySheetGeneratedStory } from "../services/story-sheet/types";
+import { classifyStoryRequest } from "../services/story-sheet/planner";
 import {
   evaluateInputGuardrails,
   inputGuardrailMessage,
@@ -39,6 +40,28 @@ router.post("/stories/generate", async (req, res) => {
       return;
     }
 
+    const classification = classifyStoryRequest(body);
+    if (classification.status === "blocked") {
+      res.status(400).json({
+        message: classification.message,
+        code: "input_guardrail_blocked",
+        category: classification.reasonCategory,
+      });
+      return;
+    }
+
+    if (classification.status === "needs_clarification") {
+      res.status(200).json({
+        status: "needs_clarification",
+        message: "Kahani needs one more detail before making the story.",
+        clarification: {
+          question: classification.question,
+          choices: classification.choices,
+        },
+      });
+      return;
+    }
+
     const consent = requireExternalTextAiConsent(body);
     if (!consent.allowed) {
       res.status(403).json({
@@ -54,7 +77,7 @@ router.post("/stories/generate", async (req, res) => {
       return;
     }
 
-    const job = await startStorySheetJob(body, config);
+    const job = await startStorySheetJob(body, config, classification);
     res.status(202).json({
       bookId: job.bookId,
       status: job.status,
@@ -62,6 +85,9 @@ router.post("/stories/generate", async (req, res) => {
       message: job.message,
       activeIssue: job.activeIssue,
       issueNotice: job.issueNotice,
+      behaviorFocus: job.behaviorFocus,
+      parentNote: job.parentNote,
+      classification: job.behaviorFocus,
     });
   } catch (error) {
     req.log.error({ err: error }, "Story job could not start");
@@ -84,6 +110,9 @@ router.get("/stories/:bookId/status", async (req, res) => {
     error: job.error,
     activeIssue: job.activeIssue,
     issueNotice: job.issueNotice,
+    behaviorFocus: job.behaviorFocus,
+    parentNote: job.parentNote,
+    classification: job.behaviorFocus,
   });
 });
 
@@ -103,6 +132,9 @@ router.get("/stories/:bookId", async (req, res) => {
       error: job.error,
       activeIssue: job.activeIssue,
       issueNotice: job.issueNotice,
+      behaviorFocus: job.behaviorFocus,
+      parentNote: job.parentNote,
+      classification: job.behaviorFocus,
     });
     return;
   }

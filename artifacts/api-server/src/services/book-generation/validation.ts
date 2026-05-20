@@ -2,11 +2,15 @@ import type { PageCandidate, PipelineStory, PipelineStoryPage, ValidationResult 
 
 const MAX_PROMPT_WORDS = 140;
 const MIN_ALIGNMENT_SCORE = 0.72;
+const MIN_STORY_PAGES = 8;
+const MAX_STORY_PAGES = 20;
 
 export function validateStory(story: PipelineStory): ValidationResult {
   const failures: string[] = [];
-  if (story.pages.length !== 12) {
-    failures.push(`expected 12 pages, received ${story.pages.length}`);
+  if (story.pages.length < MIN_STORY_PAGES || story.pages.length > MAX_STORY_PAGES) {
+    failures.push(
+      `expected ${MIN_STORY_PAGES}-${MAX_STORY_PAGES} pages, received ${story.pages.length}`,
+    );
   }
 
   const seen = new Set<number>();
@@ -15,7 +19,7 @@ export function validateStory(story: PipelineStory): ValidationResult {
     failures.push(...validatePage(page).failures.map((failure) => `page ${page.pageNumber}: ${failure}`));
   }
 
-  for (let pageNumber = 1; pageNumber <= 12; pageNumber += 1) {
+  for (let pageNumber = 1; pageNumber <= story.pages.length; pageNumber += 1) {
     if (!seen.has(pageNumber)) {
       failures.push(`missing page ${pageNumber}`);
     }

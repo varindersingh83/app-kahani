@@ -14,7 +14,7 @@ test("validatePage reports deterministic prompt and text failures", () => {
   assert.match(result.failures.join("\n"), /watercolor style/);
 });
 
-test("validateStory catches missing pages", () => {
+test("validateStory catches page count and sequence problems", () => {
   const result = validateStory({
     title: "Tiny Test",
     reflectionQuestion: "What felt kind?",
@@ -28,8 +28,21 @@ test("validateStory catches missing pages", () => {
   });
 
   assert.equal(result.ok, false);
-  assert.match(result.failures.join("\n"), /expected 12 pages/);
-  assert.match(result.failures.join("\n"), /missing page 12/);
+  assert.match(result.failures.join("\n"), /expected 8-20 pages/);
+});
+
+test("validateStory accepts flexible 8-20 page counts", () => {
+  const result = validateStory({
+    title: "Tiny Test",
+    reflectionQuestion: "What felt kind?",
+    pages: Array.from({ length: 8 }, (_, index) => ({
+      pageNumber: index + 1,
+      text: "Mia smiles.",
+      illustrationPrompt: "Warm watercolor scene with Mia smiling.",
+    })),
+  });
+
+  assert.equal(result.ok, true);
 });
 
 test("alignment scoring rewards child name and watercolor consistency", () => {

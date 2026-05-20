@@ -45,6 +45,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StoryGenerationJob"
+        "200":
+          description: Story request needs one local clarification before generation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoryPlanningResponse"
         "400":
           description: Story generation request was rejected before generation
           content:
@@ -140,6 +146,7 @@ components:
               enum:
                 - prompt_injection
                 - high_risk_safety
+                - developmental_or_medical_red_flag
           required:
             - code
             - category
@@ -216,9 +223,72 @@ components:
         externalTextAiConsent:
           type: boolean
           description: Explicit parent consent for sending prompt and behavior details to an external text AI provider.
+        clarification:
+          type: object
+          description: One-turn guided chat clarification context after Kahani asks a follow-up question.
+          properties:
+            originalPrompt:
+              type: string
+            answer:
+              type: string
       required:
         - mode
         - character
+    BehaviorClassificationSummary:
+      type: object
+      properties:
+        categoryId:
+          type: string
+        scene:
+          type: string
+        visibleBehavior:
+          type: string
+        mechanism:
+          type: string
+        strategy:
+          type: string
+        childStorySkill:
+          type: string
+        parentGuidance:
+          type: string
+        targetOutcome:
+          type: string
+        storyFocusLabel:
+          type: string
+      required:
+        - categoryId
+        - scene
+        - visibleBehavior
+        - mechanism
+        - strategy
+        - childStorySkill
+        - parentGuidance
+        - targetOutcome
+        - storyFocusLabel
+    StoryPlanningResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - needs_clarification
+        message:
+          type: string
+        clarification:
+          type: object
+          properties:
+            question:
+              type: string
+            choices:
+              type: array
+              items:
+                type: string
+          required:
+            - question
+      required:
+        - status
+        - message
+        - clarification
     StoryPage:
       type: object
       properties:
@@ -276,6 +346,12 @@ components:
           type: string
         issueNotice:
           type: string
+        behaviorFocus:
+          $ref: "#/components/schemas/BehaviorClassificationSummary"
+        parentNote:
+          type: string
+        classification:
+          $ref: "#/components/schemas/BehaviorClassificationSummary"
       required:
         - bookId
         - status
@@ -306,7 +382,7 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/StoryPage"
-          minItems: 10
+          minItems: 8
           maxItems: 20
         reflectionQuestion:
           type: string
@@ -318,7 +394,13 @@ components:
           description: URL of the sliced end-page illustration.
         sheetImageUrl:
           type: string
-          description: URL of the full 4x4 storyboard sheet.
+          description: URL of the full storyboard sheet.
+        behaviorFocus:
+          $ref: "#/components/schemas/BehaviorClassificationSummary"
+        parentNote:
+          type: string
+        classification:
+          $ref: "#/components/schemas/BehaviorClassificationSummary"
         artifactLinks:
           $ref: "#/components/schemas/StoryArtifactLinks"
       required:

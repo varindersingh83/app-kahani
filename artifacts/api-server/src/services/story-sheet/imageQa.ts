@@ -36,7 +36,7 @@ export function buildImageQaChecklist(input: {
       fileName,
       role: panelRole(fileName),
       criteria:
-        fileName === "04_blank.png"
+        fileName.endsWith("_blank.png")
           ? [...noTextCriteria, "empty soft background", "no objects"]
           : [...childIdentityCriteria, ...noTextCriteria],
     };
@@ -57,6 +57,6 @@ function panelRole(fileName: string): PanelRole {
   if (fileName === "01_cover.png") return "cover_illustration";
   if (fileName === "02_belongs_to.png") return "opening_illustration";
   if (fileName === "03_the_end.png") return "closing_illustration";
-  if (fileName === "04_blank.png") return "blank_panel";
+  if (fileName.endsWith("_blank.png")) return "blank_panel";
   return "story_illustration";
 }

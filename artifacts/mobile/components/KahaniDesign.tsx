@@ -4,7 +4,9 @@ import { router } from "expo-router";
 import React from "react";
 import {
   Image,
+  ImageResizeMode,
   ImageSourcePropType,
+  ImageStyle,
   Animated,
   Easing,
   Platform,
@@ -16,6 +18,7 @@ import {
   ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SvgXml } from "react-native-svg";
 
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import tokens from "@/constants/colors";
@@ -38,6 +41,35 @@ export function cardShadow(color: string): ViewStyle {
     shadowRadius: 22,
     elevation: 5,
   };
+}
+
+export function KahaniImage({
+  uri,
+  style,
+  resizeMode,
+}: {
+  uri: string;
+  style?: StyleProp<ImageStyle>;
+  resizeMode?: ImageResizeMode;
+}) {
+  const svgXml = svgXmlFromDataUri(uri);
+  if (svgXml) {
+    return <SvgXml xml={svgXml} width="100%" height="100%" style={style} />;
+  }
+
+  return <Image source={{ uri }} style={style} resizeMode={resizeMode} />;
+}
+
+function svgXmlFromDataUri(uri: string) {
+  if (!/^data:image\/svg\+xml(?:;charset=utf-8)?,/i.test(uri.trim())) {
+    return null;
+  }
+
+  try {
+    return decodeURIComponent(uri.split(",", 2)[1] ?? "");
+  } catch {
+    return null;
+  }
 }
 
 export function KahaniScreen({
@@ -400,7 +432,7 @@ export function CharacterAvatar({
         ]}
       >
         {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.fill} />
+          <KahaniImage uri={imageUri} style={styles.fill} />
         ) : showIcon ? (
           <Feather name={icon} color={colors.bark} size={28} />
         ) : initial ? (
@@ -453,11 +485,7 @@ export function BookCoverCard({
       ]}
     >
       {imageUri ? (
-        <Image
-          source={{ uri: imageUri }}
-          style={styles.fill}
-          resizeMode="cover"
-        />
+        <KahaniImage uri={imageUri} style={styles.fill} resizeMode="cover" />
       ) : (
         <PlaceholderArt title={title} />
       )}

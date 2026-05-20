@@ -7,6 +7,7 @@
  */
 import type { StoryGenerationStatusValue } from "./storyGenerationStatusValue";
 import type { StoryGenerationStep } from "./storyGenerationStep";
+import type { BehaviorClassificationSummary } from "./behaviorClassificationSummary";
 
 export interface StoryGenerationJob {
   bookId: string;
@@ -15,4 +16,7 @@ export interface StoryGenerationJob {
   message: string;
   activeIssue?: string;
   issueNotice?: string;
+  behaviorFocus?: BehaviorClassificationSummary;
+  parentNote?: string;
+  classification?: BehaviorClassificationSummary;
 }

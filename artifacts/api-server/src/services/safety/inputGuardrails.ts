@@ -2,7 +2,8 @@ import type { GenerateStoryRequest } from "@workspace/api-zod";
 
 export type InputGuardrailCategory =
   | "prompt_injection"
-  | "high_risk_safety";
+  | "high_risk_safety"
+  | "developmental_or_medical_red_flag";
 
 export type InputGuardrailResult =
   | { allowed: true }
@@ -59,6 +60,32 @@ const HIGH_RISK_SAFETY_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
   },
 ];
 
+const DEVELOPMENTAL_OR_MEDICAL_RED_FLAG_PATTERNS: Array<{
+  pattern: RegExp;
+  reason: string;
+}> = [
+  {
+    pattern:
+      /\b(not speaking|stopped speaking|lost speech|speech regression|regression)\b/i,
+    reason: "References developmental regression or delayed speech that needs professional guidance.",
+  },
+  {
+    pattern:
+      /\b(won't eat|wont eat|not eating|refuses food)\b.{0,80}\b(losing weight|weight loss|dehydrated|dehydration|fainting)\b/i,
+    reason: "References eating concern with medical risk signs.",
+  },
+  {
+    pattern:
+      /\b(hurts animals|hurting animals|kills animals|cruel to animals)\b/i,
+    reason: "References severe repeated harm that needs professional support.",
+  },
+  {
+    pattern:
+      /\b(violent every day|severe violence|serious violence|repeated violence)\b/i,
+    reason: "References severe repeated violence that needs professional support.",
+  },
+];
+
 export function evaluateInputGuardrails(
   request: Pick<GenerateStoryRequest, "mode" | "prompt" | "character">,
 ): InputGuardrailResult {
@@ -89,6 +116,18 @@ export function evaluateInputGuardrails(
     };
   }
 
+  const redFlagReasons = matchingReasons(
+    input,
+    DEVELOPMENTAL_OR_MEDICAL_RED_FLAG_PATTERNS,
+  );
+  if (redFlagReasons.length > 0) {
+    return {
+      allowed: false,
+      category: "developmental_or_medical_red_flag",
+      reasons: redFlagReasons,
+    };
+  }
+
   return { allowed: true };
 }
 
@@ -97,6 +136,10 @@ export function inputGuardrailMessage(result: InputGuardrailResult) {
 
   if (result.category === "prompt_injection") {
     return "Please rewrite the request as a normal parenting/story concern without instructions for the AI system.";
+  }
+
+  if (result.category === "developmental_or_medical_red_flag") {
+    return "This may need guidance from a pediatrician, child-development professional, or another trusted real-world support. Kahani should not turn it into a behavior story.";
   }
 
   return "This sounds urgent or serious enough that Kahani should not turn it into a story. Please seek real-world support from a trusted professional or emergency resource.";

@@ -1,17 +1,11 @@
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  Dimensions,
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Dimensions, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
+  KahaniImage,
   PlaceholderArt,
   ProgressDots,
   ReaderNavButton,
@@ -52,9 +46,7 @@ export default function BookReaderScreen() {
   );
 
   useEffect(() => {
-    setCurrentIndex((index) =>
-      Math.max(0, Math.min(items.length - 1, index)),
-    );
+    setCurrentIndex((index) => Math.max(0, Math.min(items.length - 1, index)));
   }, [items.length]);
 
   if (!currentStory) {
@@ -162,8 +154,8 @@ function CoverPage({ pageCount }: { pageCount: number }) {
           ]}
         >
           {currentStory.coverImageUrl ? (
-            <Image
-              source={{ uri: currentStory.coverImageUrl }}
+            <KahaniImage
+              uri={currentStory.coverImageUrl}
               style={styles.fill}
               resizeMode="cover"
             />
@@ -215,8 +207,8 @@ function StoryReaderPage({
           ]}
         >
           {imageUri ? (
-            <Image
-              source={{ uri: imageUri }}
+            <KahaniImage
+              uri={imageUri}
               style={styles.fill}
               resizeMode="cover"
             />
@@ -264,8 +256,8 @@ function EndPage({
               cardShadow(colors.shadow),
             ]}
           >
-            <Image
-              source={{ uri: imageUrl }}
+            <KahaniImage
+              uri={imageUrl}
               style={styles.fill}
               resizeMode="cover"
             />

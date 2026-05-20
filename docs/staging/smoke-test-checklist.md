@@ -42,6 +42,19 @@ Run this checklist only after the branch has no conflicts, typecheck/build pass,
 | Consent accepted | Use `consent-accepted` fixture | Generation can proceed if guardrails pass | Job/result evidence | |
 | Consent stale | Use `consent-stale` if supported | Current consent is required | Response status/body summary | |
 
+## Behavior Taxonomy Chat
+
+Use `docs/staging/behavior-taxonomy-smoke-fixtures.md`.
+
+| Check | Input / action | Expected result | Evidence | Result |
+|---|---|---|---|---|
+| Clear classification | Submit `bedtime-separation` or `bedtime-transition` | Request classifies without asking the parent to choose a category | Response/body summary | |
+| One clarification | Submit `vague-bedtime` | Returns one clarification question and no story job starts | Response/body summary | |
+| Clarification answer | Answer the vague bedtime question with a specific visible behavior | Classified story job can start after consent | Response/body summary | |
+| Primary issue auto-pick | Submit `multi-issue-bedtime` | Primary focus uses the most intense visible behavior; secondary issues do not become story goals | Response/body summary | |
+| Developmental red flag | Submit `developmental-red-flag` | Blocked with professional-support guidance before provider work | Response/body summary | |
+| Medical red flag | Submit `medical-red-flag` | Blocked with professional-support guidance before provider work | Response/body summary | |
+
 ## Character Creation
 
 | Check | Input / action | Expected result | Evidence | Result |
@@ -55,6 +68,7 @@ Run this checklist only after the branch has no conflicts, typecheck/build pass,
 | Check | Input / action | Expected result | Evidence | Result |
 |---|---|---|---|---|
 | Allowed story | Submit `allowed-sharing` after consent | Story generation starts and completes, or fails safely with redacted error | Job ID/result summary | |
+| Flexible page boundary | Verify 8, 12, and 20 page service fixtures | Reader/story mapping preserves all pages without a 12-page cap | Test output or artifact summary | |
 | Reader opens | Open generated story in reader | Pages render without app crash | Screenshot | |
 | Library path | Save/open generated story in Library | Story is visible or documented current flow is confirmed | Screenshot | |
 

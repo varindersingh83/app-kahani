@@ -70,6 +70,36 @@ export const GenerateStoryBody = zod.object({
     .describe(
       "Explicit parent consent for sending prompt and behavior details to an external text AI provider.",
     ),
+  clarification: zod
+    .object({
+      originalPrompt: zod.string().optional(),
+      answer: zod.string().optional(),
+    })
+    .optional()
+    .describe(
+      "One-turn guided chat clarification context after Kahani asks a follow-up question.",
+    ),
+});
+
+export const BehaviorClassificationSummarySchema = zod.object({
+  categoryId: zod.string(),
+  scene: zod.string(),
+  visibleBehavior: zod.string(),
+  mechanism: zod.string(),
+  strategy: zod.string(),
+  childStorySkill: zod.string(),
+  parentGuidance: zod.string(),
+  targetOutcome: zod.string(),
+  storyFocusLabel: zod.string(),
+});
+
+export const StoryPlanningResponseSchema = zod.object({
+  status: zod.literal("needs_clarification"),
+  message: zod.string(),
+  clarification: zod.object({
+    question: zod.string(),
+    choices: zod.array(zod.string()).optional(),
+  }),
 });
 
 /**
@@ -95,6 +125,9 @@ export const GetStoryStatusResponse = zod
     message: zod.string(),
     activeIssue: zod.string().optional(),
     issueNotice: zod.string().optional(),
+    behaviorFocus: BehaviorClassificationSummarySchema.optional(),
+    parentNote: zod.string().optional(),
+    classification: BehaviorClassificationSummarySchema.optional(),
   })
   .and(
     zod.object({
@@ -109,7 +142,7 @@ export const GetGeneratedStoryParams = zod.object({
   bookId: zod.coerce.string(),
 });
 
-export const getGeneratedStoryResponsePagesMin = 10;
+export const getGeneratedStoryResponsePagesMin = 8;
 export const getGeneratedStoryResponsePagesMax = 20;
 
 export const GetGeneratedStoryResponse = zod.object({
@@ -149,7 +182,10 @@ export const GetGeneratedStoryResponse = zod.object({
   sheetImageUrl: zod
     .string()
     .optional()
-    .describe("URL of the full 4x4 storyboard sheet."),
+    .describe("URL of the full storyboard sheet."),
+  behaviorFocus: BehaviorClassificationSummarySchema.optional(),
+  parentNote: zod.string().optional(),
+  classification: BehaviorClassificationSummarySchema.optional(),
   artifactLinks: zod
     .object({
       bookHtmlUrl: zod.string().optional(),

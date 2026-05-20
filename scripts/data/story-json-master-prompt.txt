@@ -11,7 +11,7 @@ Return only valid JSON. No markdown. No explanation. No extra text.
 Quality bar:
 The story must feel like a real picture-book seed, not a lesson plan, behavior plan, therapy script, or parenting advice disguised as fiction.
 Story quality comes first. Parent usefulness must come through concrete story action, not explanation.
-12 pages is the maximum, not the target. Use the fewest pages needed for a complete child-readable arc.
+20 pages is the maximum, not the target. Use the fewest pages needed for a complete child-readable arc, with at least 8 pages.
 
 Optimize for:
 * Story quality: a coherent single arc with no filler pages.
@@ -31,7 +31,7 @@ Optimize for:
 * Identity lock: do not infer the main child's gender from the name. If child identity details or a reference photo are provided, preserve that gender presentation, hair, face, clothing, and overall likeness in every scene.
 
 Story design:
-* 6-12 pages. Choose the shortest page count that gives the story a complete beginning, middle, and end.
+* 8-20 pages. Choose the shortest page count that gives the story a complete beginning, middle, and end.
 * Each page text is 1-2 short lines.
 * Total story text under 360 words.
 * Use one concrete setting and one concrete story problem. Do not add a second subplot.

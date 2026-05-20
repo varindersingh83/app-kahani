@@ -18,10 +18,10 @@ test("learning lesson records page retry failures in reusable language", () => {
 test("learning lesson handles setup-level failures", () => {
   const lesson = buildRetryLearningLesson({
     retryCount: 0,
-    failures: ["expected 12 pages, received 9"],
+    failures: ["expected 8-20 pages, received 7"],
   });
 
-  assert.equal(lesson, "Book setup needed retry 0 because expected 12 pages, received 9");
+  assert.equal(lesson, "Book setup needed retry 0 because expected 8-20 pages, received 7");
 });
 
 test("learning hints are empty when there are no lessons", () => {

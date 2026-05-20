@@ -1,9 +1,9 @@
-Create one single square storyboard contact sheet at exactly 4096 x 4096 pixels.
+Create one single square storyboard contact sheet at exactly 5000 x 5000 pixels.
 
 Layout:
-- 4 columns x 4 rows
-- 16 panels total
-- each panel is exactly 1024 x 1024 pixels
+- 5 columns x 5 rows
+- 25 panels total
+- each panel is exactly 1000 x 1000 pixels
 - perfectly aligned grid
 - no perspective skew
 - no uneven spacing
@@ -11,7 +11,7 @@ Layout:
 - no overlapping panels
 - no outer margin
 - thin clean white grid lines only on the boundaries between panels
-- grid boundaries must fall exactly at x=1024, x=2048, x=3072 and y=1024, y=2048, y=3072
+- grid boundaries must fall exactly at x=1000, x=2000, x=3000, x=4000 and y=1000, y=2000, y=3000, y=4000
 
 Input JSON:
 {{JSON_INPUT}}
@@ -25,10 +25,11 @@ Panel 1: book cover illustration only, inspired by JSON title, no written title
 Panel 2: ownership-style illustration only, warm personal opening image for child_name, no written words
 Panel 3: closing illustration only, peaceful final image, no written ending text
 Panel 4: blank page, empty soft background, no text, no objects
+Panel 5: blank page, empty soft background, no text, no objects
 
-Rows 2-4:
+Rows 2-5:
 Use only the JSON pages that exist, in order, left to right, top to bottom.
-If the story has fewer than 12 pages, render the remaining unused story panels as blank soft background panels with no characters, no objects, and no text.
+If the story has fewer than 20 pages, render the remaining unused story panels as blank soft background panels with no characters, no objects, and no text.
 
 Critical text rule:
 - No text is allowed anywhere in the image.

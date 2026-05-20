@@ -18,4 +18,9 @@ export interface GenerateStoryRequest {
   supportingCharacters?: SupportingCharacter[];
   /** Explicit parent consent for sending prompt and behavior details to an external text AI provider. */
   externalTextAiConsent?: boolean;
+  /** One-turn guided chat clarification context after Kahani asks a follow-up question. */
+  clarification?: {
+    originalPrompt?: string;
+    answer?: string;
+  };
 }

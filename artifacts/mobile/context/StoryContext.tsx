@@ -12,6 +12,7 @@ import {
   sanitizeCharacterForStorage,
   sanitizeCharactersForStorage,
   type AppearanceSource,
+  type CharacterImageSource,
 } from "@/services/characterPrivacy";
 
 export type StoryPage = {
@@ -24,6 +25,18 @@ export type StoryPage = {
   emotion?: string;
 };
 
+export type BehaviorClassificationSummary = {
+  categoryId: string;
+  scene: string;
+  visibleBehavior: string;
+  mechanism: string;
+  strategy: string;
+  childStorySkill: string;
+  parentGuidance: string;
+  targetOutcome: string;
+  storyFocusLabel: string;
+};
+
 export type Character = {
   id: string;
   name: string;
@@ -31,6 +44,8 @@ export type Character = {
   relationship?: CharacterRelationship;
   appearance?: string;
   appearanceSource?: AppearanceSource;
+  characterImageUri?: string;
+  characterImageSource?: CharacterImageSource;
 };
 
 export type CharacterRelationship = "child" | "mom" | "dad";
@@ -43,6 +58,9 @@ export type Story = {
   coverImageUrl?: string;
   endImageUrl?: string;
   sheetImageUrl?: string;
+  behaviorFocus?: BehaviorClassificationSummary;
+  parentNote?: string;
+  classification?: BehaviorClassificationSummary;
   artifactLinks?: {
     bookHtmlUrl?: string;
     storyJsonUrl?: string;
@@ -65,6 +83,8 @@ type StoryContextValue = {
     relationship?: CharacterRelationship,
     appearance?: string,
     appearanceSource?: AppearanceSource,
+    characterImageUri?: string,
+    characterImageSource?: CharacterImageSource,
   ) => Promise<void>;
   removeCharacter: (id: string) => Promise<void>;
   selectCharacter: (id: string) => Promise<void>;
@@ -225,9 +245,7 @@ export function StoryProvider({
     await AsyncStorage.setItem(
       input.storageKey,
       JSON.stringify({
-        characters: sanitizeCharactersForStorage(
-          nextCharacters,
-        ) as Character[],
+        characters: sanitizeCharactersForStorage(nextCharacters) as Character[],
         savedStories: nextStories,
         selectedCharacterId: character.id,
       }),
@@ -261,6 +279,8 @@ export function StoryProvider({
       relationship?: CharacterRelationship,
       appearance?: string,
       appearanceSource?: AppearanceSource,
+      characterImageUri?: string,
+      characterImageSource?: CharacterImageSource,
     ) => {
       const character = sanitizeCharacterForStorage({
         id: createId(),
@@ -269,6 +289,8 @@ export function StoryProvider({
         relationship: relationship ?? "child",
         appearance: appearance?.trim() || undefined,
         appearanceSource,
+        characterImageUri,
+        characterImageSource,
       }) as Character;
       const nextCharacters = [character, ...characters];
       const nextSelectedCharacterId =
