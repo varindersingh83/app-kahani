@@ -65,6 +65,7 @@ export default function StudioScreen() {
     createGeneratedStory,
   } = useStoryStudio();
   const [prompt, setPrompt] = useState("");
+  const [isPromptFocused, setIsPromptFocused] = useState(false);
   const [chatMessages, setChatMessages] = useState<StoryChatMessage[]>(
     buildInitialStoryChat,
   );
@@ -79,6 +80,9 @@ export default function StudioScreen() {
     colors.scheme === "dark"
       ? "rgba(188, 167, 134, 0.48)"
       : "rgba(129, 113, 94, 0.48)";
+  const promptPlaceholder = clarification
+    ? "Answer the question..."
+    : BEHAVIOR_PROMPT_PLACEHOLDER;
 
   const mutation = useGenerateStory();
 
@@ -356,16 +360,23 @@ export default function StudioScreen() {
           ) : null}
         </ScrollView>
         <View style={[styles.composer, { borderColor: colors.border }]}>
+          {!prompt && !isPromptFocused ? (
+            <Text
+              pointerEvents="none"
+              style={[
+                styles.promptPlaceholder,
+                { color: promptPlaceholderColor },
+              ]}
+            >
+              {promptPlaceholder}
+            </Text>
+          ) : null}
           <TextInput
             value={prompt}
             onChangeText={setPrompt}
             multiline
-            placeholder={
-              clarification
-                ? "Answer the question..."
-                : BEHAVIOR_PROMPT_PLACEHOLDER
-            }
-            placeholderTextColor={promptPlaceholderColor}
+            onFocus={() => setIsPromptFocused(true)}
+            onBlur={() => setIsPromptFocused(false)}
             style={[
               styles.promptInput,
               { color: colors.foreground, outlineColor: "transparent" },
@@ -512,6 +523,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 10,
+    position: "relative",
+  },
+  promptPlaceholder: {
+    position: "absolute",
+    left: 14,
+    top: 10,
+    fontFamily: tokens.typography.sansMedium,
+    fontSize: 16,
+    lineHeight: 23,
   },
   promptInput: {
     minHeight: 56,
