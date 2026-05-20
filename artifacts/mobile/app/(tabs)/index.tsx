@@ -49,9 +49,7 @@ const BEHAVIOR_PROMPT_PLACEHOLDER =
 function isChildCharacter(character: Character) {
   return (
     (character.relationship ?? "child") === "child" &&
-    !/^(mom|mum|mama|mother|dad|dada|papa|father)$/i.test(
-      character.name.trim(),
-    )
+    !/^(mom|mum|mama|mother|dad|dada|papa|father)$/i.test(character.name.trim())
   );
 }
 
@@ -246,7 +244,10 @@ export default function StudioScreen() {
       classification: story.classification ?? job.classification,
       artifactLinks: story.artifactLinks,
       characterName: selectedStoryCharacter.name,
-      characterPhotoUri: undefined,
+      characterPhotoUri:
+        selectedStoryCharacter.characterImageSource === "generated-cartoon"
+          ? selectedStoryCharacter.characterImageUri
+          : undefined,
     });
     if (Platform.OS !== "web") {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -291,6 +292,7 @@ export default function StudioScreen() {
           <CharacterAvatar
             key={character.id}
             label={character.name}
+            imageUri={character.characterImageUri}
             selected={character.id === selectedStoryCharacter?.id}
             onPress={() => selectCharacter(character.id)}
             testID={`story-character-${character.name}`}

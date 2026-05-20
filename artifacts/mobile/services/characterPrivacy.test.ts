@@ -23,6 +23,80 @@ test("sanitizeCharacterForStorage strips raw photo references", () => {
   );
 });
 
+test("sanitizeCharacterForStorage preserves generated cartoon references", () => {
+  const cartoonUri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+    '<svg data-kahani-cartoon="v1"><circle cx="1" cy="1" r="1"/></svg>',
+  )}`;
+
+  assert.deepEqual(
+    sanitizeCharacterForStorage({
+      id: "1",
+      name: "Maya",
+      characterImageUri: cartoonUri,
+      characterImageSource: "generated-cartoon",
+    }),
+    {
+      id: "1",
+      name: "Maya",
+      characterImageUri: cartoonUri,
+      characterImageSource: "generated-cartoon",
+      appearanceSource: "generic",
+    },
+  );
+});
+
+test("sanitizeCharacterForStorage strips unsafe generated image references", () => {
+  assert.deepEqual(
+    sanitizeCharacterForStorage({
+      id: "1",
+      name: "Maya",
+      characterImageUri: "file:///tmp/maya.jpg",
+      characterImageSource: "generated-cartoon",
+    }),
+    {
+      id: "1",
+      name: "Maya",
+      appearanceSource: "generic",
+    },
+  );
+});
+
+test("sanitizeCharacterForStorage strips unmarked svg image references", () => {
+  assert.deepEqual(
+    sanitizeCharacterForStorage({
+      id: "1",
+      name: "Maya",
+      characterImageUri: "data:image/svg+xml;charset=utf-8,%3Csvg%2F%3E",
+      characterImageSource: "generated-cartoon",
+    }),
+    {
+      id: "1",
+      name: "Maya",
+      appearanceSource: "generic",
+    },
+  );
+});
+
+test("sanitizeCharacterForStorage strips active or embedded svg content", () => {
+  const unsafeCartoonUri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+    '<svg data-kahani-cartoon="v1" onload="alert(1)"><foreignObject><img src="data:image/png;base64,abc"/></foreignObject></svg>',
+  )}`;
+
+  assert.deepEqual(
+    sanitizeCharacterForStorage({
+      id: "1",
+      name: "Maya",
+      characterImageUri: unsafeCartoonUri,
+      characterImageSource: "generated-cartoon",
+    }),
+    {
+      id: "1",
+      name: "Maya",
+      appearanceSource: "generic",
+    },
+  );
+});
+
 test("sanitizeCharactersForStorage removes stale photos from all characters", () => {
   assert.deepEqual(
     sanitizeCharactersForStorage([

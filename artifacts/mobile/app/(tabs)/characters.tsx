@@ -2,7 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   Alert,
   Platform,
@@ -16,6 +16,7 @@ import {
 import {
   CharacterAvatar,
   IconButton,
+  KahaniImage,
   KahaniButton,
   KahaniScreen,
   SegmentedControl,
@@ -30,6 +31,7 @@ import {
 } from "@/context/StoryContext";
 import { useKahaniTheme } from "@/context/ThemeContext";
 import { createAnalyticsEvent } from "@/services/analytics";
+import { createCartoonCharacterReplacement } from "@/services/cartoonCharacter";
 import { decidePhotoCreationFlow } from "@/services/characterPrivacy";
 import { getRuntimePhotoExtractionAvailability } from "@/services/photoExtractionGate";
 import { buildCharacterDescriptor } from "@/services/photoDescriptors";
@@ -47,6 +49,8 @@ export default function CharactersScreen() {
   const [name, setName] = useState("");
   const [relationship, setRelationship] =
     useState<CharacterRelationship>("child");
+  const relationshipRef = useRef<CharacterRelationship>("child");
+  const photoAttemptIdRef = useRef(0);
   const [presentation, setPresentation] = useState<
     "from-photo" | "girl" | "boy"
   >("from-photo");
@@ -57,6 +61,12 @@ export default function CharactersScreen() {
   const [localPhotoDescriptor, setLocalPhotoDescriptor] = useState<
     string | undefined
   >();
+  const [temporaryPhotoPreviewUri, setTemporaryPhotoPreviewUri] = useState<
+    string | undefined
+  >();
+  const [characterImageUri, setCharacterImageUri] = useState<
+    string | undefined
+  >();
   const photoAvailability = useMemo(
     () => getRuntimePhotoExtractionAvailability(Platform.OS),
     [],
@@ -64,8 +74,23 @@ export default function CharactersScreen() {
   const photoPickerCaption = photoAvailability.available
     ? "The photo is processed on this device and discarded."
     : "If the photo cannot be read locally, Kahani will ask for simple details instead.";
+  const previewImageUri = characterImageUri ?? temporaryPhotoPreviewUri;
+
+  const changeRelationship = (nextRelationship: CharacterRelationship) => {
+    relationshipRef.current = nextRelationship;
+    setRelationship(nextRelationship);
+    if (nextRelationship !== "child") {
+      setTemporaryPhotoPreviewUri(undefined);
+      setCharacterImageUri(undefined);
+      setLocalPhotoDescriptor(undefined);
+      setManualFallbackVisible(false);
+      setPhotoNotice(null);
+    }
+  };
 
   const pickPhoto = async () => {
+    const attemptId = photoAttemptIdRef.current + 1;
+    photoAttemptIdRef.current = attemptId;
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert("Photos needed", "Allow photo access to upload an image.");
@@ -81,6 +106,9 @@ export default function CharactersScreen() {
     if (!result.canceled) {
       const asset = result.assets[0];
       if (!asset) return;
+      setTemporaryPhotoPreviewUri(asset.uri);
+      setCharacterImageUri(undefined);
+      setPhotoNotice("Checking this photo on your device...");
 
       const extraction = await extractPhotoTraits({
         asset: {
@@ -90,6 +118,15 @@ export default function CharactersScreen() {
         },
         availability: photoAvailability,
       });
+      if (
+        relationshipRef.current !== "child" ||
+        photoAttemptIdRef.current !== attemptId
+      ) {
+        setTemporaryPhotoPreviewUri(undefined);
+        setCharacterImageUri(undefined);
+        setLocalPhotoDescriptor(undefined);
+        return;
+      }
       const decision = decidePhotoCreationFlow({
         extraction,
         retryCount: photoRetryCount,
@@ -97,9 +134,27 @@ export default function CharactersScreen() {
 
       if (decision.action === "save") {
         if (!extraction.ok) return;
+        const replacement = createCartoonCharacterReplacement({
+          descriptor: decision.appearance,
+          relationship,
+        });
+        if (!replacement.ok) {
+          setTemporaryPhotoPreviewUri(undefined);
+          setCharacterImageUri(undefined);
+          setLocalPhotoDescriptor(undefined);
+          setManualFallbackVisible(true);
+          setPhotoNotice(
+            "Use a few simple details instead. The original photo was not saved.",
+          );
+          return;
+        }
         setLocalPhotoDescriptor(decision.appearance);
+        setCharacterImageUri(replacement.imageUri);
+        setTemporaryPhotoPreviewUri(undefined);
         setManualFallbackVisible(false);
-        setPhotoNotice("Photo checked locally. The original photo was not saved.");
+        setPhotoNotice(
+          "Photo checked locally. The original was replaced with a storybook character.",
+        );
         void createAnalyticsEvent("photo_check_succeeded", {
           modelVersion: extraction.modelVersion,
           platform: Platform.OS,
@@ -109,6 +164,8 @@ export default function CharactersScreen() {
       }
 
       setLocalPhotoDescriptor(undefined);
+      setTemporaryPhotoPreviewUri(undefined);
+      setCharacterImageUri(undefined);
       setPhotoNotice(decision.message);
       void createAnalyticsEvent("photo_check_failed", {
         failureCategory: extraction.ok ? "unknown" : extraction.reason,
@@ -143,6 +200,8 @@ export default function CharactersScreen() {
               source: manualFallbackVisible ? "manual" : "generic",
             })
         : undefined;
+    const childCharacterImageUri =
+      relationship === "child" ? characterImageUri : undefined;
     await addCharacter(
       name.trim(),
       undefined,
@@ -153,15 +212,19 @@ export default function CharactersScreen() {
         : manualFallbackVisible
           ? "manual"
           : "generic",
+      childCharacterImageUri,
+      childCharacterImageUri ? "generated-cartoon" : undefined,
     );
     setName("");
-    setRelationship("child");
+    changeRelationship("child");
     setPresentation("from-photo");
     setAppearanceNotes("");
     setPhotoRetryCount(0);
     setPhotoNotice(null);
     setManualFallbackVisible(false);
     setLocalPhotoDescriptor(undefined);
+    setTemporaryPhotoPreviewUri(undefined);
+    setCharacterImageUri(undefined);
     if (Platform.OS !== "web") {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
@@ -181,7 +244,7 @@ export default function CharactersScreen() {
 
       <SegmentedControl
         value={relationship}
-        onChange={setRelationship}
+        onChange={changeRelationship}
         testID="relationship"
         options={[
           { value: "child", label: "Child" },
@@ -200,21 +263,32 @@ export default function CharactersScreen() {
             cardShadow(colors.shadow),
           ]}
         >
-          <View style={styles.photoEmpty}>
-            <View
-              style={[styles.photoIcon, { backgroundColor: colors.secondary }]}
-            >
-              <Feather name="camera" color={colors.bark} size={28} />
+          {previewImageUri ? (
+            <KahaniImage
+              uri={previewImageUri}
+              style={styles.photoPreview}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.photoEmpty}>
+              <View
+                style={[
+                  styles.photoIcon,
+                  { backgroundColor: colors.secondary },
+                ]}
+              >
+                <Feather name="camera" color={colors.bark} size={28} />
+              </View>
+              <Text style={[styles.photoTitle, { color: colors.foreground }]}>
+                Upload photo
+              </Text>
+              <Text
+                style={[styles.photoCaption, { color: colors.mutedForeground }]}
+              >
+                {photoPickerCaption}
+              </Text>
             </View>
-            <Text style={[styles.photoTitle, { color: colors.foreground }]}>
-              Upload photo
-            </Text>
-            <Text
-              style={[styles.photoCaption, { color: colors.mutedForeground }]}
-            >
-              {photoPickerCaption}
-            </Text>
-          </View>
+          )}
         </Pressable>
       ) : null}
 
@@ -319,11 +393,14 @@ export default function CharactersScreen() {
               <View key={character.id} style={styles.savedCharacter}>
                 <CharacterAvatar
                   label={character.name}
+                  imageUri={character.characterImageUri}
                   selected={character.id === selectedCharacterId}
                   onPress={() => selectCharacter(character.id)}
                   testID={`saved-character-${character.name}`}
                 />
-                <Text style={[styles.relationshipLabel, { color: colors.bark }]}>
+                <Text
+                  style={[styles.relationshipLabel, { color: colors.bark }]}
+                >
                   {character.relationship ?? "child"}
                 </Text>
                 <Pressable
@@ -373,6 +450,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
+  },
+  photoPreview: {
+    width: "100%",
+    height: "100%",
   },
   photoIcon: {
     width: 62,
