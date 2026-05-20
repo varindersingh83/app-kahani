@@ -34,9 +34,7 @@ export function runCharacterConsistencyAgent(request: StoryRequest) {
   const name = request.character.name.trim();
   const appearance =
     request.character.appearance ||
-    (request.character.photoUri
-      ? "consistent child appearance based on the uploaded reference photo"
-      : "consistent child appearance based on parent-provided details");
+    "consistent child appearance based on parent-provided details";
 
   return {
     name,

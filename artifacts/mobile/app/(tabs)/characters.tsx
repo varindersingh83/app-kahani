@@ -2,10 +2,9 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Alert,
-  Image,
   Platform,
   Pressable,
   StyleSheet,
@@ -30,7 +29,11 @@ import {
   type CharacterRelationship,
 } from "@/context/StoryContext";
 import { useKahaniTheme } from "@/context/ThemeContext";
+import { createAnalyticsEvent } from "@/services/analytics";
+import { decidePhotoCreationFlow } from "@/services/characterPrivacy";
+import { getRuntimePhotoExtractionAvailability } from "@/services/photoExtractionGate";
 import { buildCharacterDescriptor } from "@/services/photoDescriptors";
+import { extractPhotoTraits } from "@/services/photoTraitExtractor";
 
 export default function CharactersScreen() {
   const { colors } = useKahaniTheme();
@@ -42,13 +45,23 @@ export default function CharactersScreen() {
     removeCharacter,
   } = useStoryStudio();
   const [name, setName] = useState("");
-  const [photoUri, setPhotoUri] = useState<string | undefined>();
   const [relationship, setRelationship] =
     useState<CharacterRelationship>("child");
   const [presentation, setPresentation] = useState<
     "from-photo" | "girl" | "boy"
   >("from-photo");
   const [appearanceNotes, setAppearanceNotes] = useState("");
+  const [photoRetryCount, setPhotoRetryCount] = useState(0);
+  const [photoNotice, setPhotoNotice] = useState<string | null>(null);
+  const [manualFallbackVisible, setManualFallbackVisible] = useState(false);
+  const [localPhotoDescriptor, setLocalPhotoDescriptor] = useState<
+    string | undefined
+  >();
+  const photoAvailability = useMemo(
+    () => getRuntimePhotoExtractionAvailability(Platform.OS),
+    [],
+  );
+  const canCheckPhotoLocally = photoAvailability.available;
 
   const pickPhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -60,12 +73,53 @@ export default function CharactersScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      base64: true,
+      base64: false,
       quality: 0.7,
     });
     if (!result.canceled) {
       const asset = result.assets[0];
-      setPhotoUri(asset ? await persistableImageUri(asset) : undefined);
+      if (!asset) return;
+
+      const extraction = await extractPhotoTraits({
+        asset: {
+          uri: asset.uri,
+          width: asset.width,
+          height: asset.height,
+        },
+        availability: photoAvailability,
+      });
+      const decision = decidePhotoCreationFlow({
+        extraction,
+        retryCount: photoRetryCount,
+      });
+
+      if (decision.action === "save") {
+        if (!extraction.ok) return;
+        setLocalPhotoDescriptor(decision.appearance);
+        setManualFallbackVisible(false);
+        setPhotoNotice("Photo checked locally. The original photo was not saved.");
+        void createAnalyticsEvent("photo_check_succeeded", {
+          modelVersion: extraction.modelVersion,
+          platform: Platform.OS,
+          retryCount: photoRetryCount,
+        });
+        return;
+      }
+
+      setLocalPhotoDescriptor(undefined);
+      setPhotoNotice(decision.message);
+      void createAnalyticsEvent("photo_check_failed", {
+        failureCategory: extraction.ok ? "unknown" : extraction.reason,
+        platform: Platform.OS,
+        retryCount: photoRetryCount,
+      });
+
+      if (decision.action === "retry") {
+        setPhotoRetryCount((count) => count + 1);
+        return;
+      }
+
+      setManualFallbackVisible(true);
     }
   };
 
@@ -74,19 +128,38 @@ export default function CharactersScreen() {
       Alert.alert("Add a name", "Enter a name before saving.");
       return;
     }
+    const appearance =
+      relationship === "child"
+        ? localPhotoDescriptor
+          ? buildCharacterDescriptor({
+              source: "local-photo",
+              notes: localPhotoDescriptor,
+            })
+          : buildCharacterDescriptor({
+              presentation,
+              notes: manualFallbackVisible ? appearanceNotes : undefined,
+              source: manualFallbackVisible ? "manual" : "generic",
+            })
+        : undefined;
     await addCharacter(
       name.trim(),
-      photoUri,
+      undefined,
       relationship,
-      relationship === "child"
-        ? buildCharacterDescriptor({ presentation, notes: appearanceNotes })
-        : undefined,
+      appearance,
+      localPhotoDescriptor
+        ? "local-photo"
+        : manualFallbackVisible
+          ? "manual"
+          : "generic",
     );
     setName("");
-    setPhotoUri(undefined);
     setRelationship("child");
     setPresentation("from-photo");
     setAppearanceNotes("");
+    setPhotoRetryCount(0);
+    setPhotoNotice(null);
+    setManualFallbackVisible(false);
+    setLocalPhotoDescriptor(undefined);
     if (Platform.OS !== "web") {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
@@ -115,22 +188,16 @@ export default function CharactersScreen() {
         ]}
       />
 
-      <Pressable
-        onPress={pickPhoto}
-        testID="character-photo-picker"
-        style={[
-          styles.photoPicker,
-          { backgroundColor: colors.card, borderColor: colors.border },
-          cardShadow(colors.shadow),
-        ]}
-      >
-        {photoUri ? (
-          <Image
-            source={{ uri: photoUri }}
-            style={styles.fill}
-            resizeMode="cover"
-          />
-        ) : (
+      {relationship === "child" && canCheckPhotoLocally ? (
+        <Pressable
+          onPress={pickPhoto}
+          testID="character-photo-picker"
+          style={[
+            styles.photoPicker,
+            { backgroundColor: colors.card, borderColor: colors.border },
+            cardShadow(colors.shadow),
+          ]}
+        >
           <View style={styles.photoEmpty}>
             <View
               style={[styles.photoIcon, { backgroundColor: colors.secondary }]}
@@ -138,11 +205,22 @@ export default function CharactersScreen() {
               <Feather name="camera" color={colors.bark} size={28} />
             </View>
             <Text style={[styles.photoTitle, { color: colors.foreground }]}>
-              Add character photo
+              Check photo locally
+            </Text>
+            <Text
+              style={[styles.photoCaption, { color: colors.mutedForeground }]}
+            >
+              The photo is processed on this device and discarded.
             </Text>
           </View>
-        )}
-      </Pressable>
+        </Pressable>
+      ) : null}
+
+      {photoNotice ? (
+        <Text style={[styles.photoNotice, { color: colors.mutedForeground }]}>
+          {photoNotice}
+        </Text>
+      ) : null}
 
       <View
         style={[
@@ -201,24 +279,26 @@ export default function CharactersScreen() {
         </View>
       </View>
 
-      <View
-        style={[
-          styles.nameInputWrap,
-          { backgroundColor: colors.card, borderColor: colors.border },
-        ]}
-      >
-        <TextInput
-          value={appearanceNotes}
-          onChangeText={setAppearanceNotes}
-          placeholder="Blonde hair, pink shirt, bright smile"
-          placeholderTextColor={colors.mutedForeground}
+      {manualFallbackVisible ? (
+        <View
           style={[
-            styles.nameInput,
-            { color: colors.foreground, outlineColor: "transparent" },
+            styles.nameInputWrap,
+            { backgroundColor: colors.card, borderColor: colors.border },
           ]}
-          returnKeyType="done"
-        />
-      </View>
+        >
+          <TextInput
+            value={appearanceNotes}
+            onChangeText={setAppearanceNotes}
+            placeholder="Brown hair, blue sweater, glasses"
+            placeholderTextColor={colors.mutedForeground}
+            style={[
+              styles.nameInput,
+              { color: colors.foreground, outlineColor: "transparent" },
+            ]}
+            returnKeyType="done"
+          />
+        </View>
+      ) : null}
 
       <KahaniButton
         label="Save character"
@@ -237,7 +317,6 @@ export default function CharactersScreen() {
               <View key={character.id} style={styles.savedCharacter}>
                 <CharacterAvatar
                   label={character.name}
-                  imageUri={character.photoUri}
                   selected={character.id === selectedCharacterId}
                   onPress={() => selectCharacter(character.id)}
                   testID={`saved-character-${character.name}`}
@@ -304,9 +383,16 @@ const styles = StyleSheet.create({
     fontFamily: tokens.typography.sansBold,
     fontSize: 17,
   },
-  fill: {
-    width: "100%",
-    height: "100%",
+  photoCaption: {
+    fontFamily: tokens.typography.sansMedium,
+    fontSize: 13,
+    textAlign: "center",
+  },
+  photoNotice: {
+    fontFamily: tokens.typography.sansMedium,
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 16,
   },
   nameInputWrap: {
     minHeight: 58,
@@ -388,30 +474,3 @@ const IDENTITY_OPTIONS = [
   { label: "Girl", value: "girl" },
   { label: "Boy", value: "boy" },
 ] as const;
-
-async function persistableImageUri(asset: ImagePicker.ImagePickerAsset) {
-  if (asset.base64) {
-    const mimeType = asset.mimeType ?? detectMimeType(asset.uri);
-    return `data:${mimeType};base64,${asset.base64}`;
-  }
-
-  if (Platform.OS !== "web" || !asset.uri.startsWith("blob:")) {
-    return asset.uri;
-  }
-
-  const response = await fetch(asset.uri);
-  const blob = await response.blob();
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(blob);
-  });
-}
-
-function detectMimeType(uri: string) {
-  const lower = uri.toLowerCase();
-  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
-  if (lower.endsWith(".webp")) return "image/webp";
-  return "image/png";
-}

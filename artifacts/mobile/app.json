@@ -14,7 +14,10 @@
       "backgroundColor": "#F8F1E7"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Kahani checks selected photos locally on this device, discards them after processing, and never sends family photos to AI providers."
+      }
     },
     "android": {},
     "web": {

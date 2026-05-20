@@ -64,6 +64,19 @@ test("Phase A character consistency agent locks the child appearance and style",
   assert.match(lock.negativePrompt, /No scary imagery/);
 });
 
+test("Phase A character consistency ignores photo URIs and uses redacted details", () => {
+  const lock = runCharacterConsistencyAgent({
+    mode: "behavior",
+    character: {
+      name: "Ava",
+      photoUri: "file:///parent/uploads/ava.jpg",
+    },
+  });
+
+  assert.match(lock.appearance, /parent-provided details/);
+  assert.doesNotMatch(lock.stylePrompt, /uploaded reference photo|file:\/\//);
+});
+
 test("Phase A setup combines the brief, character lock, and fixed 3x4 sheet slots", () => {
   const setup = buildBookSetup(
     {

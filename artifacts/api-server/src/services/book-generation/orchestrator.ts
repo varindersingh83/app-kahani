@@ -39,7 +39,7 @@ export async function runBookPipeline(request: StoryRequest, config: AiConfig): 
     theme: request.prompt,
     pageCount: PAGE_COUNT,
     characterName: childName,
-    characterPhotoUri: request.character.photoUri,
+    characterPhotoUri: undefined,
     requestJson: request as unknown as Record<string, unknown>,
   });
 
@@ -123,7 +123,6 @@ export async function runBookPipeline(request: StoryRequest, config: AiConfig): 
       run: () =>
         generateStoryboardSheetImage(config, {
           prompt: storyboardSheetPrompt,
-          referenceImageUri: request.character.photoUri,
         }),
       retryLabel: "storyboard sheet generation",
     });
