@@ -9,7 +9,6 @@ import {
   Easing,
   Platform,
   Pressable,
-  ScrollView,
   StyleProp,
   StyleSheet,
   Text,
@@ -18,6 +17,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import tokens from "@/constants/colors";
 import { useKahaniTheme } from "@/context/ThemeContext";
 
@@ -53,7 +53,14 @@ export function KahaniScreen({
 }) {
   const { colors } = useKahaniTheme();
   const insets = useSafeAreaInsets();
-  const Container = scroll ? ScrollView : View;
+  const resolvedContentStyle = [
+    styles.screenContent,
+    {
+      paddingTop: Math.max(insets.top + 24, tokens.spacing.screenTop),
+      paddingBottom: insets.bottom + tokens.spacing.screenBottom,
+    },
+    contentStyle,
+  ];
 
   return (
     <View style={[styles.screenRoot, { backgroundColor: colors.background }]}>
@@ -63,34 +70,22 @@ export function KahaniScreen({
           <LeafSprig style={styles.bottomLeaf} flip />
         </>
       )}
-      <Container
-        style={styles.screenRoot}
-        {...(scroll
-          ? {
-              contentContainerStyle: [
-                styles.screenContent,
-                {
-                  paddingTop: Math.max(insets.top + 24, tokens.spacing.screenTop),
-                  paddingBottom: insets.bottom + tokens.spacing.screenBottom,
-                },
-                contentStyle,
-              ],
-              keyboardShouldPersistTaps: "handled" as const,
-              showsVerticalScrollIndicator: false,
-            }
-          : {
-              style: [
-                styles.screenRoot,
-                {
-                  paddingTop: Math.max(insets.top + 24, tokens.spacing.screenTop),
-                  paddingBottom: insets.bottom + tokens.spacing.screenBottom,
-                },
-                contentStyle,
-              ],
-            })}
-      >
-        {children}
-      </Container>
+      {scroll ? (
+        <KeyboardAwareScrollViewCompat
+          style={styles.screenRoot}
+          contentContainerStyle={resolvedContentStyle}
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bottomOffset={24}
+        >
+          {children}
+        </KeyboardAwareScrollViewCompat>
+      ) : (
+        <View style={[styles.screenRoot, resolvedContentStyle]}>
+          {children}
+        </View>
+      )}
     </View>
   );
 }
@@ -127,7 +122,9 @@ export function KahaniHeader({
         {title} <LeafMark />
       </Text>
       {subtitle ? (
-        <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
+        <Text
+          style={[styles.headerSubtitle, { color: colors.mutedForeground }]}
+        >
           {subtitle}
         </Text>
       ) : null}
@@ -138,7 +135,9 @@ export function KahaniHeader({
 export function ThemeToggle() {
   const { colors, scheme, toggleScheme } = useKahaniTheme();
   const isDark = scheme === "dark";
-  const thumbProgress = React.useRef(new Animated.Value(isDark ? 1 : 0)).current;
+  const thumbProgress = React.useRef(
+    new Animated.Value(isDark ? 1 : 0),
+  ).current;
   const thumbTranslateX = thumbProgress.interpolate({
     inputRange: [0, 1],
     outputRange: [0, 18],
@@ -412,7 +411,9 @@ export function CharacterAvatar({
           <Feather name={icon} color={colors.bark} size={30} />
         )}
         {selected ? (
-          <View style={[styles.avatarCheck, { backgroundColor: colors.primary }]}>
+          <View
+            style={[styles.avatarCheck, { backgroundColor: colors.primary }]}
+          >
             <Feather name="check" color={colors.primaryForeground} size={13} />
           </View>
         ) : null}
@@ -452,7 +453,11 @@ export function BookCoverCard({
       ]}
     >
       {imageUri ? (
-        <Image source={{ uri: imageUri }} style={styles.fill} resizeMode="cover" />
+        <Image
+          source={{ uri: imageUri }}
+          style={styles.fill}
+          resizeMode="cover"
+        />
       ) : (
         <PlaceholderArt title={title} />
       )}
@@ -539,7 +544,11 @@ export function StoryCard({
       </View>
       {featured ? (
         <View style={[styles.cardArrow, { backgroundColor: colors.primary }]}>
-          <Feather name="chevron-right" color={colors.primaryForeground} size={26} />
+          <Feather
+            name="chevron-right"
+            color={colors.primaryForeground}
+            size={26}
+          />
         </View>
       ) : onDelete ? (
         <Pressable
@@ -677,9 +686,16 @@ export function PlaceholderArt({ title }: { title?: string }) {
       }
       style={styles.placeholderArt}
     >
-      <View style={[styles.sunDisc, { backgroundColor: night ? "#F4DEBA" : "#FFF4CB" }]} />
+      <View
+        style={[
+          styles.sunDisc,
+          { backgroundColor: night ? "#F4DEBA" : "#FFF4CB" },
+        ]}
+      />
       <View style={[styles.tree, { left: 12, backgroundColor: colors.bark }]} />
-      <View style={[styles.tree, { right: 16, backgroundColor: colors.bark }]} />
+      <View
+        style={[styles.tree, { right: 16, backgroundColor: colors.bark }]}
+      />
       <View style={[styles.childHead, { backgroundColor: "#D9A06A" }]} />
       <View style={[styles.childBody, { backgroundColor: colors.leaf }]} />
       <View style={[styles.seedling, { backgroundColor: colors.leaf }]} />

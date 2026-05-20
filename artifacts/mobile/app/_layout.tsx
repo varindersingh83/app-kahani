@@ -1,8 +1,4 @@
-import {
-  ClerkLoaded,
-  ClerkProvider,
-  useAuth,
-} from "@clerk/expo";
+import { ClerkLoaded, ClerkProvider, useAuth } from "@clerk/expo";
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -21,8 +17,10 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthScreen } from "@/components/AuthScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ErrorFallback } from "@/components/ErrorFallback";
 import { StoryProvider } from "@/context/StoryContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { getAuthRuntimeMode } from "@/services/runtimeConfig";
 
 if (Platform.OS !== "web") {
   SplashScreen.preventAutoHideAsync();
@@ -32,6 +30,11 @@ const queryClient = new QueryClient();
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 const domain = process.env.EXPO_PUBLIC_DOMAIN;
 const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+const authRuntimeMode = getAuthRuntimeMode({
+  apiBaseUrl,
+  domain,
+  clerkPublishableKey: publishableKey,
+});
 
 if (apiBaseUrl) {
   setBaseUrl(apiBaseUrl);
@@ -53,9 +56,10 @@ const InteractionRoot = ({ children }: { children: React.ReactNode }) => {
     return <View style={{ flex: 1 }}>{children}</View>;
   }
 
-  const { GestureHandlerRootView } = require("react-native-gesture-handler") as {
-    GestureHandlerRootView: React.ComponentType<ViewProps>;
-  };
+  const { GestureHandlerRootView } =
+    require("react-native-gesture-handler") as {
+      GestureHandlerRootView: React.ComponentType<ViewProps>;
+    };
   const { KeyboardProvider } = require("react-native-keyboard-controller") as {
     KeyboardProvider: React.ComponentType<{ children: React.ReactNode }>;
   };
@@ -73,7 +77,10 @@ function RootLayoutNav() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen
         name="book-reader"
-        options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
+        options={{
+          presentation: "fullScreenModal",
+          animation: "slide_from_bottom",
+        }}
       />
     </Stack>
   );
@@ -116,21 +123,33 @@ export default function RootLayout() {
 
   if (Platform.OS !== "web" && !fontsLoaded && !fontError) return null;
 
-  const app = publishableKey ? (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <ClerkLoaded>
-        <InteractionRoot>
-          <AuthenticatedRoot />
-        </InteractionRoot>
-      </ClerkLoaded>
-    </ClerkProvider>
-  ) : (
-    <InteractionRoot>
-      <StoryProvider>
-        <RootLayoutNav />
-      </StoryProvider>
-    </InteractionRoot>
-  );
+  const app =
+    authRuntimeMode === "missing-clerk-for-remote-api" ? (
+      <InteractionRoot>
+        <ErrorFallback
+          error={
+            new Error(
+              "Missing EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY for remote API build.",
+            )
+          }
+          resetError={() => undefined}
+        />
+      </InteractionRoot>
+    ) : publishableKey ? (
+      <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+        <ClerkLoaded>
+          <InteractionRoot>
+            <AuthenticatedRoot />
+          </InteractionRoot>
+        </ClerkLoaded>
+      </ClerkProvider>
+    ) : (
+      <InteractionRoot>
+        <StoryProvider>
+          <RootLayoutNav />
+        </StoryProvider>
+      </InteractionRoot>
+    );
 
   return (
     <SafeAreaProvider>
