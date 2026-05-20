@@ -18,6 +18,18 @@ export type StoryPage = {
   emotion?: string;
 };
 
+export type BehaviorClassificationSummary = {
+  categoryId: string;
+  scene: string;
+  visibleBehavior: string;
+  mechanism: string;
+  strategy: string;
+  childStorySkill: string;
+  parentGuidance: string;
+  targetOutcome: string;
+  storyFocusLabel: string;
+};
+
 export type Character = {
   id: string;
   name: string;
@@ -36,6 +48,9 @@ export type Story = {
   coverImageUrl?: string;
   endImageUrl?: string;
   sheetImageUrl?: string;
+  behaviorFocus?: BehaviorClassificationSummary;
+  parentNote?: string;
+  classification?: BehaviorClassificationSummary;
   artifactLinks?: {
     bookHtmlUrl?: string;
     storyJsonUrl?: string;

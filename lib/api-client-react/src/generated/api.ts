@@ -25,6 +25,7 @@ import type {
   HealthStatus,
   StoryGenerationJob,
   StoryGenerationStatus,
+  StoryPlanningResponse,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -123,8 +124,8 @@ export const getGenerateStoryUrl = () => {
 export const generateStory = async (
   generateStoryRequest: GenerateStoryRequest,
   options?: RequestInit,
-): Promise<StoryGenerationJob> => {
-  return customFetch<StoryGenerationJob>(getGenerateStoryUrl(), {
+): Promise<StoryGenerationJob | StoryPlanningResponse> => {
+  return customFetch<StoryGenerationJob | StoryPlanningResponse>(getGenerateStoryUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },

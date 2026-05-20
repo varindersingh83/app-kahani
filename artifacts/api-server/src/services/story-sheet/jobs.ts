@@ -2,9 +2,13 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { GenerateStoryRequest } from "@workspace/api-zod";
-import type { AiConfig, StorySheetJob } from "./types";
+import type { AiConfig, BehaviorClassificationResult, StorySheetJob } from "./types";
 import { runStorySheetGeneration } from "./generator";
-import { buildMultiIssueNotice, planStoryIssues } from "./planner";
+import {
+  buildMultiIssueNotice,
+  classifyStoryRequest,
+  planStoryIssues,
+} from "./planner";
 import { storySheetRunDir } from "./paths";
 
 const jobs = new Map<string, StorySheetJob>();
@@ -22,7 +26,11 @@ const stepMessages = {
 export async function startStorySheetJob(
   request: GenerateStoryRequest,
   config: AiConfig,
+  classification: BehaviorClassificationResult = classifyStoryRequest(request),
 ) {
+  if (classification.status !== "classified") {
+    throw new Error("Story sheet jobs require a classified story request.");
+  }
   const bookId = randomUUID();
   const outputDir = storySheetRunDir(bookId);
   const now = new Date().toISOString();
@@ -40,6 +48,9 @@ export async function startStorySheetJob(
     plannedIssues,
     activeIssue,
     issueNotice: buildMultiIssueNotice(plannedIssues),
+    classification,
+    behaviorFocus: classification.primary,
+    parentNote: classification.parentNote,
   };
 
   jobs.set(bookId, job);
@@ -82,6 +93,8 @@ async function runJob(bookId: string, config: AiConfig) {
     const result = await runStorySheetGeneration({
       bookId,
       request: job.request,
+      behaviorFocus: job.behaviorFocus,
+      parentNote: job.parentNote,
       outputDir: job.outputDir,
       config,
       onStep: async (step, message) => {

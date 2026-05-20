@@ -17,14 +17,21 @@ import { sanitizeProviderReferenceImageUris } from "../safety/providerPayloadPol
 import type {
   AiConfig,
   ApiUsage,
+  BehaviorClassificationSummary,
   SheetSliceManifestEntry,
   StorySheetInput,
   StorySheetRunResult,
 } from "./types";
 
+const MIN_STORY_PAGES = 8;
+const MAX_STORY_PAGES = 20;
+const STORYBOARD_GRID_SIZE = 5;
+
 export async function runStorySheetGeneration(input: {
   bookId: string;
   request: GenerateStoryRequest;
+  behaviorFocus?: BehaviorClassificationSummary;
+  parentNote?: string;
   outputDir: string;
   config: AiConfig;
   onStep?: (
@@ -44,7 +51,7 @@ export async function runStorySheetGeneration(input: {
     promptPath("story-json-master-prompt.txt"),
     "utf8",
   );
-  const behavior = buildBehaviorPrompt(request);
+  const behavior = buildBehaviorPrompt(request, input.behaviorFocus);
   const storyPrompt = buildStoryPrompt(
     storyPromptTemplate,
     behavior,
@@ -136,6 +143,8 @@ export async function runStorySheetGeneration(input: {
     bookId,
     story: storyJson,
     slices,
+    behaviorFocus: input.behaviorFocus,
+    parentNote: input.parentNote,
     includeArtifactLinks: process.env.NODE_ENV !== "production",
     sheetFileName: path.basename(sheetPath),
   });
@@ -156,7 +165,22 @@ export async function runStorySheetGeneration(input: {
   return { story, storyJson, slices, imageQa, usage };
 }
 
-function buildBehaviorPrompt(request: GenerateStoryRequest) {
+function buildBehaviorPrompt(
+  request: GenerateStoryRequest,
+  behaviorFocus?: BehaviorClassificationSummary,
+) {
+  if (behaviorFocus && request.mode === "behavior") {
+    return [
+      `Visible behavior: ${behaviorFocus.visibleBehavior}.`,
+      `Scene/context: ${behaviorFocus.scene}.`,
+      `Likely mechanism: ${behaviorFocus.mechanism}.`,
+      `Story strategy: ${behaviorFocus.strategy}.`,
+      `Child story skill: ${behaviorFocus.childStorySkill}.`,
+      `Target outcome: ${behaviorFocus.targetOutcome}.`,
+      "Write one focused behavior-support story around this primary issue only. Show practice and small progress, not permanent correction.",
+    ].join(" ");
+  }
+
   const plannedIssue = planStoryIssues(request)[0]?.issue;
   const prompt = plannedIssue ?? request.prompt?.trim();
   if (request.mode === "random") {
@@ -363,7 +387,7 @@ export function normalizeStoryJson(
     parent_name: story.parent_name || "Mom",
     parent_role: story.parent_role || "parent",
     behavior,
-    pages: story.pages.slice(0, 12).map((page, index) => ({
+    pages: normalizeStoryPages(story.pages).map((page, index) => ({
       page: index + 1,
       text: normalizeChildName(page.text),
       scene: normalizeChildName(page.scene),
@@ -371,6 +395,20 @@ export function normalizeStoryJson(
       emotion: page.emotion,
     })),
   };
+}
+
+function normalizeStoryPages(storyPages: StorySheetInput["pages"]) {
+  if (storyPages.length < MIN_STORY_PAGES) {
+    throw new Error(
+      `Generated story must include at least ${MIN_STORY_PAGES} pages. Got ${storyPages.length}.`,
+    );
+  }
+  if (storyPages.length > MAX_STORY_PAGES) {
+    throw new Error(
+      `Generated story must include no more than ${MAX_STORY_PAGES} pages. Got ${storyPages.length}.`,
+    );
+  }
+  return storyPages;
 }
 
 function escapeRegExp(value: string) {
@@ -442,18 +480,18 @@ async function sliceStoryboardSheet(sheetImagePath: string, outputDir: string) {
   if (width !== height) {
     throw new Error(`Storyboard sheet must be square. Got ${width}x${height}.`);
   }
-  if (width % 4 !== 0 || height % 4 !== 0) {
+  if (width % STORYBOARD_GRID_SIZE !== 0 || height % STORYBOARD_GRID_SIZE !== 0) {
     throw new Error(
-      `Storyboard sheet size must divide cleanly by 4. Got ${width}x${height}.`,
+      `Storyboard sheet size must divide cleanly by ${STORYBOARD_GRID_SIZE}. Got ${width}x${height}.`,
     );
   }
 
-  const panelWidth = width / 4;
-  const panelHeight = height / 4;
+  const panelWidth = width / STORYBOARD_GRID_SIZE;
+  const panelHeight = height / STORYBOARD_GRID_SIZE;
   const manifest: SheetSliceManifestEntry[] = [];
 
-  for (let row = 0; row < 4; row += 1) {
-    for (let col = 0; col < 4; col += 1) {
+  for (let row = 0; row < STORYBOARD_GRID_SIZE; row += 1) {
+    for (let col = 0; col < STORYBOARD_GRID_SIZE; col += 1) {
       const left = col * panelWidth;
       const top = row * panelHeight;
       const outputPath = path.join(outputDir, sliceFileName(row, col));
@@ -488,8 +526,9 @@ function sliceFileName(row: number, col: number) {
   if (row === 0 && col === 1) return "02_belongs_to.png";
   if (row === 0 && col === 2) return "03_the_end.png";
   if (row === 0 && col === 3) return "04_blank.png";
+  if (row === 0 && col === 4) return "05_blank.png";
 
-  const storyPage = (row - 1) * 4 + col + 1;
+  const storyPage = (row - 1) * STORYBOARD_GRID_SIZE + col + 1;
   return `story_page_${storyPage.toString().padStart(2, "0")}.png`;
 }
 

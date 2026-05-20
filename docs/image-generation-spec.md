@@ -24,8 +24,8 @@ Key feedback:
 
 1. Story generation produces structured story JSON.
 2. The sheet prompt injects that JSON into `sheet-master-prompt.txt`.
-3. Image generation creates one 4x4 storyboard sheet.
-4. Python slices the sheet into cover, story pages, end page, and supporting panels.
+3. Image generation creates one 5x5 storyboard sheet.
+4. The slicer cuts the sheet into cover, story pages, end page, and supporting panels.
 5. The app uses sliced image URLs in the book reader.
 
 ## Required Behavior
@@ -76,7 +76,7 @@ The image model should not use page `text` as text to render. Page text may info
 flowchart TD
   A["Structured story JSON"] --> B["Sheet prompt builder"]
   B --> C["No-text image guardrails"]
-  C --> D["Generate 4x4 storyboard sheet"]
+  C --> D["Generate 5x5 storyboard sheet"]
   D --> E["Save sheet image"]
   E --> F["Slice sheet into page images"]
   F --> G["Map slices to GeneratedStory image URLs"]

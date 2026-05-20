@@ -64,6 +64,48 @@ test("POST /stories/generate blocks high-risk safety prompts before story config
   assert.equal(body.category, "high_risk_safety");
 });
 
+test("POST /stories/generate blocks developmental red flags before story config", async () => {
+  const response = await fetch(`${baseUrl}/stories/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      mode: "behavior",
+      prompt: "My child is not speaking at age 4 and stopped saying words.",
+      character: { name: "Maya" },
+    }),
+  });
+
+  assert.equal(response.status, 400);
+  const body = (await response.json()) as {
+    code?: string;
+    category?: string;
+    message?: string;
+  };
+  assert.equal(body.code, "input_guardrail_blocked");
+  assert.equal(body.category, "developmental_or_medical_red_flag");
+  assert.match(body.message ?? "", /professional|pediatrician/i);
+});
+
+test("POST /stories/generate returns one clarification for vague behavior before consent/config", async () => {
+  const response = await fetch(`${baseUrl}/stories/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      mode: "behavior",
+      prompt: "bedtime is awful",
+      character: { name: "Maya" },
+    }),
+  });
+
+  assert.equal(response.status, 200);
+  const body = (await response.json()) as {
+    status?: string;
+    clarification?: { question?: string };
+  };
+  assert.equal(body.status, "needs_clarification");
+  assert.match(body.clarification?.question ?? "", /clearest thing/i);
+});
+
 test("POST /stories/generate keeps normal requests on the configured generation path", async () => {
   const response = await fetch(`${baseUrl}/stories/generate`, {
     method: "POST",

@@ -1,11 +1,31 @@
 import type { GenerateStoryRequest } from "@workspace/api-zod";
-import type { StorySheetPlannedIssue } from "./types";
+import {
+  findBehaviorMatches,
+  isVagueBehaviorPrompt,
+  toClassificationSummary,
+} from "./behaviorTaxonomy";
+import type {
+  BehaviorClassificationResult,
+  StorySheetPlannedIssue,
+} from "./types";
 
 const MAX_ISSUES_PER_REQUEST = 3;
 
 export function planStoryIssues(
   request: Pick<GenerateStoryRequest, "mode" | "prompt">,
 ): StorySheetPlannedIssue[] {
+  const classification = classifyStoryRequest(request);
+  if (classification.status === "classified") {
+    return [
+      classification.primary,
+      ...classification.secondary.slice(0, MAX_ISSUES_PER_REQUEST - 1),
+    ].map((summary) => ({
+      issue: summary.storyFocusLabel,
+      bookIntent: buildBookIntent(summary.storyFocusLabel, request.mode),
+      classification: summary,
+    }));
+  }
+
   const prompt = request.prompt?.trim();
   const fallback =
     request.mode === "random"
@@ -17,6 +37,75 @@ export function planStoryIssues(
     issue,
     bookIntent: buildBookIntent(issue, request.mode),
   }));
+}
+
+export function classifyStoryRequest(
+  request: Pick<GenerateStoryRequest, "mode" | "prompt"> & {
+    clarification?: { originalPrompt?: string; answer?: string };
+  },
+): BehaviorClassificationResult {
+  const input =
+    request.clarification?.answer?.trim() ||
+    [request.prompt, request.clarification?.originalPrompt]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+
+  if (request.mode === "random") {
+    return {
+      status: "classified",
+      primary: {
+        categoryId: "random_story",
+        scene: "imaginative everyday adventure",
+        visibleBehavior: "open story idea",
+        mechanism: "not behavior-classified",
+        strategy: "warm imaginative story arc",
+        childStorySkill: "notice, wonder, and try a small next step",
+        parentGuidance: "Enjoy the story together.",
+        targetOutcome: "Child gets a warm, personalized story.",
+        storyFocusLabel: request.prompt?.trim() || "warm imaginative adventure",
+      },
+      secondary: [],
+      parentNote: "Enjoy the story together.",
+      storyFocusLabel: request.prompt?.trim() || "warm imaginative adventure",
+    };
+  }
+
+  if (!input || (!request.clarification?.answer && isVagueBehaviorPrompt(input))) {
+    return {
+      status: "needs_clarification",
+      question:
+        "What is the clearest thing your child does in that moment: clings, screams, refuses to stop, runs away, hits, or something else?",
+      choices: [
+        "clings or needs me close",
+        "screams or melts down",
+        "refuses the next step",
+      ],
+    };
+  }
+
+  const matches = findBehaviorMatches(input);
+  if (matches.length === 0) {
+    return {
+      status: "needs_clarification",
+      question:
+        "What part should the story focus on: separating, transitioning, sharing, screens, mealtime, cleanup, or unsafe hands?",
+      choices: ["separating", "transitioning", "sharing"],
+    };
+  }
+
+  const primary = toClassificationSummary(matches[0].entry);
+  const secondary = matches
+    .slice(1, MAX_ISSUES_PER_REQUEST)
+    .map((match) => toClassificationSummary(match.entry));
+
+  return {
+    status: "classified",
+    primary,
+    secondary,
+    parentNote: primary.parentGuidance,
+    storyFocusLabel: primary.storyFocusLabel,
+  };
 }
 
 export function buildMultiIssueNotice(issues: StorySheetPlannedIssue[]) {

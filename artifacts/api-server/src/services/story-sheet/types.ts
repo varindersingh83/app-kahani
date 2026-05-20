@@ -77,15 +77,50 @@ export type StorySheetGeneratedStory = {
   title: string;
   pages: StorySheetGeneratedPage[];
   reflectionQuestion: string;
+  behaviorFocus?: BehaviorClassificationSummary;
+  parentNote?: string;
+  classification?: BehaviorClassificationSummary;
   coverImageUrl?: string;
   endImageUrl?: string;
   sheetImageUrl?: string;
   artifactLinks?: StorySheetArtifactLinks;
 };
 
+export type BehaviorClassificationSummary = {
+  categoryId: string;
+  scene: string;
+  visibleBehavior: string;
+  mechanism: string;
+  strategy: string;
+  childStorySkill: string;
+  parentGuidance: string;
+  targetOutcome: string;
+  storyFocusLabel: string;
+};
+
+export type BehaviorClassificationResult =
+  | {
+      status: "classified";
+      primary: BehaviorClassificationSummary;
+      secondary: BehaviorClassificationSummary[];
+      parentNote: string;
+      storyFocusLabel: string;
+    }
+  | {
+      status: "needs_clarification";
+      question: string;
+      choices?: string[];
+    }
+  | {
+      status: "blocked";
+      reasonCategory: "developmental_red_flag" | "medical_red_flag" | "out_of_scope";
+      message: string;
+    };
+
 export type StorySheetPlannedIssue = {
   issue: string;
   bookIntent: string;
+  classification?: BehaviorClassificationSummary;
 };
 
 export type StorySheetJob = {
@@ -100,6 +135,9 @@ export type StorySheetJob = {
   plannedIssues?: StorySheetPlannedIssue[];
   activeIssue?: string;
   issueNotice?: string;
+  classification?: BehaviorClassificationResult;
+  behaviorFocus?: BehaviorClassificationSummary;
+  parentNote?: string;
   story?: StorySheetGeneratedStory;
   error?: string;
 };

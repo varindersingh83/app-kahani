@@ -92,22 +92,23 @@ test("normalizeStoryJson replaces the model-invented child name with the selecte
     parent_name: "Mom",
     parent_role: "parent",
     behavior: "drawing frustration",
-    pages: [
-      {
-        page: 1,
-        text: "Leo was making a sun. It had to be a perfect circle.",
-        scene: "Leo sits at the kitchen table with a yellow crayon.",
-        composition: "Medium shot",
-        emotion: "focused",
-      },
-      {
-        page: 2,
-        text: "Leo's circle grew a bumpy chin.",
-        scene: "Leo frowns at the bumpy circle on the paper.",
-        composition: "Close-up",
-        emotion: "frustrated",
-      },
-    ],
+    pages: Array.from({ length: 8 }, (_, index) => ({
+      page: index + 1,
+      text:
+        index === 0
+          ? "Leo was making a sun. It had to be a perfect circle."
+          : index === 1
+            ? "Leo's circle grew a bumpy chin."
+            : `Leo tried again on page ${index + 1}.`,
+      scene:
+        index === 0
+          ? "Leo sits at the kitchen table with a yellow crayon."
+          : index === 1
+            ? "Leo frowns at the bumpy circle on the paper."
+            : `Leo sits near the paper on page ${index + 1}.`,
+      composition: index === 1 ? "Close-up" : "Medium shot",
+      emotion: index === 1 ? "frustrated" : "focused",
+    })),
   };
 
   const normalized = normalizeStoryJson(story, request, request.prompt ?? "");
@@ -152,4 +153,57 @@ test("normalizeStoryJson locks generated story text to the requested child name"
   assert.equal(normalized.title, "Liam and the Little Door");
   assert.equal(normalized.pages[0]?.text, "Liam said no and held the red cup.");
   assert.equal(normalized.pages[0]?.scene, "Liam stands by the kitchen chair.");
+});
+
+test("normalizeStoryJson accepts 8-page and 20-page stories without truncating", () => {
+  const request: GenerateStoryRequest = {
+    mode: "behavior",
+    character: { name: "Maya" },
+  };
+  const buildStory = (count: number): StorySheetInput => ({
+    title: "Maya and the Blocks",
+    child_name: "Maya",
+    parent_name: "Mom",
+    parent_role: "parent",
+    behavior: "sharing",
+    pages: Array.from({ length: count }, (_, index) => ({
+      page: index + 1,
+      text: `Story text ${index + 1}`,
+      scene: `Scene ${index + 1}`,
+      composition: "Medium shot",
+      emotion: "hopeful",
+    })),
+  });
+
+  assert.equal(normalizeStoryJson(buildStory(8), request, "sharing").pages.length, 8);
+  assert.equal(
+    normalizeStoryJson(buildStory(20), request, "sharing").pages.length,
+    20,
+  );
+});
+
+test("normalizeStoryJson rejects page counts outside the 8-20 contract", () => {
+  const request: GenerateStoryRequest = {
+    mode: "behavior",
+    character: { name: "Maya" },
+  };
+  const story: StorySheetInput = {
+    title: "Maya and the Blocks",
+    child_name: "Maya",
+    parent_name: "Mom",
+    parent_role: "parent",
+    behavior: "sharing",
+    pages: Array.from({ length: 7 }, (_, index) => ({
+      page: index + 1,
+      text: `Story text ${index + 1}`,
+      scene: `Scene ${index + 1}`,
+      composition: "Medium shot",
+      emotion: "hopeful",
+    })),
+  };
+
+  assert.throws(
+    () => normalizeStoryJson(story, request, "sharing"),
+    /at least 8 pages/,
+  );
 });

@@ -24,7 +24,7 @@ const sheetPlan: SheetPlan = {
   rows: 4,
   cols: 3,
   inset: 12,
-  sheetPrompt: "One watercolor sheet to be sliced into 12 pages.",
+  sheetPrompt: "One watercolor sheet to be sliced into story pages.",
   tiles: Array.from({ length: 12 }, (_, index) => {
     const pageNumber = index + 1;
     const row = Math.floor(index / 3) + 1;

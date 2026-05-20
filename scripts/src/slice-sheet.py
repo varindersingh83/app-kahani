@@ -4,12 +4,12 @@ from pathlib import Path
 import argparse
 import json
 
-GRID_COLS = 4
-GRID_ROWS = 4
+GRID_COLS = 5
+GRID_ROWS = 5
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Slice a 4x4 storyboard sheet into 16 images.")
+    parser = argparse.ArgumentParser(description="Slice a 5x5 storyboard sheet into 25 images.")
     parser.add_argument("input", nargs="?", default="storyboard.png", help="Input storyboard sheet image.")
     parser.add_argument("output_dir", nargs="?", default="sliced_pages", help="Directory for sliced pages.")
     parser.add_argument("--rows", type=int, default=GRID_ROWS, help=argparse.SUPPRESS)
@@ -34,7 +34,7 @@ def main() -> int:
         raise ValueError(f"Image must be square. Got {width}x{height}")
 
     if width % GRID_COLS != 0 or height % GRID_ROWS != 0:
-        raise ValueError(f"Image size must divide cleanly by 4. Got {width}x{height}")
+        raise ValueError(f"Image size must divide cleanly by 5. Got {width}x{height}")
 
     panel_w = width // GRID_COLS
     panel_h = height // GRID_ROWS
@@ -58,6 +58,8 @@ def main() -> int:
                 name = "03_the_end.png"
             elif row == 0 and col == 3:
                 name = "04_blank.png"
+            elif row == 0 and col == 4:
+                name = "05_blank.png"
             else:
                 story_page = ((row - 1) * GRID_COLS + col + 1)
                 name = f"story_page_{story_page:02d}.png"
@@ -80,7 +82,7 @@ def main() -> int:
             )
 
     (output_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-    print(f"Done. Saved 16 images to: {output_dir}")
+    print(f"Done. Saved 25 images to: {output_dir}")
     return 0
 
 

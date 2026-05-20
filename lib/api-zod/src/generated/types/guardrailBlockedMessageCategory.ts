@@ -12,4 +12,5 @@ export type GuardrailBlockedMessageCategory =
 export const GuardrailBlockedMessageCategory = {
   prompt_injection: "prompt_injection",
   high_risk_safety: "high_risk_safety",
+  developmental_or_medical_red_flag: "developmental_or_medical_red_flag",
 } as const;

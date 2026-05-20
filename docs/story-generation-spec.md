@@ -6,10 +6,12 @@ Improve story generation so parents get focused, high-quality picture-book text 
 
 This spec covers:
 
-- deterministic splitting of multi-issue prompts
+- behavior taxonomy classification of parent prompts
+- one-turn guided chat clarification for vague prompts
+- automatic primary behavior selection for multi-issue prompts
 - A-level story quality
 - structured story JSON
-- clear behavior when one prompt includes multiple behavior problems
+- flexible 8-20 page story output
 
 Image generation requirements live in `docs/image-generation-spec.md`.
 
@@ -23,38 +25,75 @@ Key feedback:
 
 ## Current Story Flow
 
-1. Mobile sends a single `POST /api/stories/generate` request with `mode`, `prompt`, and selected character.
-2. API starts one background story-sheet job and returns one `bookId`.
-3. Job writes one structured story JSON.
-4. Mobile polls one job until complete.
-5. Mobile fetches one generated story, saves it to the active profile library, and opens the reader.
+1. Mobile captures the parent request in a compact guided chat.
+2. API runs auth and input safety checks before behavior classification.
+3. Safe behavior prompts are mapped to a curated behavior package: scene, visible behavior, likely mechanism, strategy, child story skill, parent note, and target outcome.
+4. Vague prompts return one clarification question without starting provider-backed generation.
+5. Clear prompts start one background story-sheet job and return one `bookId`.
+6. Job writes one structured story JSON with 8-20 story pages.
+7. Story JSON is passed to image generation and slicing.
+8. Mobile polls one job until complete.
+9. Mobile fetches one generated story, saves it to the active profile library with private classification metadata, and opens the reader.
 
 ## Required Behavior
 
-### 1. Deterministic Issue Splitting
+### 1. Behavior Taxonomy Classification
 
-When a parent prompt contains multiple distinct behavior issues, the system should generate only the first issue immediately. It should not create follow-up buttons or automatically queue the other issues.
+When a parent prompt describes a common child behavior, the system should classify it into:
+
+- scene/context
+- visible behavior
+- likely mechanism
+- mainstream, non-clinical strategy
+- child story skill
+- short parent guidance
+- target outcome
+
+The classification is the source of truth for the story prompt. Raw parent text can provide context, but the generated book should focus on the selected behavior package.
+
+### 2. Clarification for Vague Prompts
+
+When a parent prompt is too vague to classify safely, Kahani asks one clarifying question in the create-story chat. It should not start a provider job until the parent answers.
 
 Example:
 
 ```text
-Meltdowns during transitions, Demanding screens constantly
+bedtime is awful
+```
+
+Expected response:
+
+```json
+{
+  "status": "needs_clarification",
+  "clarification": {
+    "question": "What is the clearest thing your child does in that moment?"
+  }
+}
+```
+
+After the answer, the API maps the combined request to the closest safe known category or declines if it remains outside scope.
+
+### 3. Multi-Issue Primary Selection
+
+When a parent prompt contains multiple distinct behavior issues, the system should generate only one focused book. The primary issue is selected by the most emotionally intense visible behavior, not by text order. Secondary issues may be saved as private metadata, but they must not become subplots.
+
+Example:
+
+```text
+won't change clothes, asks me to stay, and screams when bedtime starts
 ```
 
 Expected generation plan:
 
 ```json
 {
-  "issues": [
-    {
-      "issue": "Meltdowns during transitions",
-      "bookIntent": "Help the child move from one activity to the next with a predictable bridge ritual."
-    },
-    {
-      "issue": "Demanding screens constantly",
-      "bookIntent": "Help the child tolerate screen limits and reconnect with non-screen comfort."
-    }
-  ]
+  "primary": {
+    "scene": "bedtime",
+    "visibleBehavior": "screams or melts down when bedtime begins",
+    "mechanism": "overwhelmed transition",
+    "strategy": "co-regulation first, then one tiny bedtime step"
+  }
 }
 ```
 
@@ -68,7 +107,7 @@ Remaining issues should not be automatically generated. The parent can prompt ag
 
 Single-issue prompts should continue to produce one book.
 
-### 2. Multi-Issue Copy
+### 4. Multi-Issue Copy
 
 When more than one behavior issue is detected, show copy after starting the first story.
 
@@ -87,7 +126,7 @@ Behavior:
 - Do not automatically generate every issue in the original prompt.
 - Let the parent prompt again if they want another story.
 
-### 3. A-Level Story Quality
+### 5. A-Level Story Quality
 
 The story prompt should explicitly optimize for:
 
@@ -119,7 +158,7 @@ Story quality requirements:
 - Keep sentence rhythm suitable for read-aloud picture books.
 - Avoid generic lines like "Liam learned it was okay" unless grounded in action.
 
-### 4. Structured Story JSON
+### 6. Structured Story JSON
 
 Each generated book should produce structured JSON with:
 
@@ -127,7 +166,7 @@ Each generated book should produce structured JSON with:
 - child name
 - parent name and role
 - normalized behavior
-- 12 story pages
+- 8-20 story pages
 - each page's story text
 - each page's visual scene
 - each page's composition
@@ -139,17 +178,19 @@ The story text is the source of truth for the reader UI.
 
 ```mermaid
 flowchart TD
-  A["Parent enters prompt"] --> B["Story planner"]
-  B --> C{"How many distinct issues?"}
-  C -->|"One issue"| D["Create one story job"]
-  C -->|"Multiple issues"| E["Create story job for first issue"]
-  E --> F["Show one-issue-at-a-time copy"]
-  D --> G["Generate structured story JSON"]
-  E --> G
-  G --> H["Pass story JSON to image generation"]
-  H --> I["Build GeneratedStory"]
-  I --> J["Save book to active profile library"]
-  J --> K["Open generated book in reader"]
+  A["Parent chat message"] --> B["Safety and red-flag screen"]
+  B -->|"blocked"| C["Parent-safe guidance, no job"]
+  B -->|"safe"| D["Behavior taxonomy classifier"]
+  D -->|"vague"| E["One clarification question"]
+  E --> A
+  D -->|"classified"| F["Selected behavior package"]
+  F --> G["Create one story job"]
+  G --> H["Generate structured story JSON, 8-20 pages"]
+  H --> I["Pass story JSON to image generation"]
+  I --> J["Slice page images"]
+  J --> K["Build GeneratedStory"]
+  K --> L["Save book to active profile library with private metadata"]
+  L --> M["Open generated book in reader"]
 ```
 
 ## Implementation Plan

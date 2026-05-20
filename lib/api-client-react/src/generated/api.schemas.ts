@@ -22,6 +22,7 @@ export type GuardrailBlockedMessageCategory =
 export const GuardrailBlockedMessageCategory = {
   prompt_injection: "prompt_injection",
   high_risk_safety: "high_risk_safety",
+  developmental_or_medical_red_flag: "developmental_or_medical_red_flag",
 } as const;
 
 export type GuardrailBlockedMessage = ErrorMessage & {
@@ -84,6 +85,32 @@ export interface GenerateStoryRequest {
   supportingCharacters?: SupportingCharacter[];
   /** Explicit parent consent for sending prompt and behavior details to an external text AI provider. */
   externalTextAiConsent?: boolean;
+  /** One-turn guided chat clarification context after Kahani asks a follow-up question. */
+  clarification?: {
+    originalPrompt?: string;
+    answer?: string;
+  };
+}
+
+export interface BehaviorClassificationSummary {
+  categoryId: string;
+  scene: string;
+  visibleBehavior: string;
+  mechanism: string;
+  strategy: string;
+  childStorySkill: string;
+  parentGuidance: string;
+  targetOutcome: string;
+  storyFocusLabel: string;
+}
+
+export interface StoryPlanningResponse {
+  status: "needs_clarification";
+  message: string;
+  clarification: {
+    question: string;
+    choices?: string[];
+  };
 }
 
 export interface StoryPage {
@@ -130,6 +157,9 @@ export interface StoryGenerationJob {
   message: string;
   activeIssue?: string;
   issueNotice?: string;
+  behaviorFocus?: BehaviorClassificationSummary;
+  parentNote?: string;
+  classification?: BehaviorClassificationSummary;
 }
 
 export type StoryGenerationStatus = StoryGenerationJob & {
@@ -145,7 +175,7 @@ export interface StoryArtifactLinks {
 export interface GeneratedStory {
   title: string;
   /**
-   * @minItems 10
+   * @minItems 8
    * @maxItems 20
    */
   pages: StoryPage[];
@@ -154,7 +184,10 @@ export interface GeneratedStory {
   coverImageUrl?: string;
   /** URL of the sliced end-page illustration. */
   endImageUrl?: string;
-  /** URL of the full 4x4 storyboard sheet. */
+  /** URL of the full storyboard sheet. */
   sheetImageUrl?: string;
+  behaviorFocus?: BehaviorClassificationSummary;
+  parentNote?: string;
+  classification?: BehaviorClassificationSummary;
   artifactLinks?: StoryArtifactLinks;
 }

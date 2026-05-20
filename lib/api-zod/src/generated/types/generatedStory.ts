@@ -7,11 +7,12 @@
  */
 import type { StoryArtifactLinks } from "./storyArtifactLinks";
 import type { StoryPage } from "./storyPage";
+import type { BehaviorClassificationSummary } from "./behaviorClassificationSummary";
 
 export interface GeneratedStory {
   title: string;
   /**
-   * @minItems 10
+   * @minItems 8
    * @maxItems 20
    */
   pages: StoryPage[];
@@ -20,7 +21,10 @@ export interface GeneratedStory {
   coverImageUrl?: string;
   /** URL of the sliced end-page illustration. */
   endImageUrl?: string;
-  /** URL of the full 4x4 storyboard sheet. */
+  /** URL of the full storyboard sheet. */
   sheetImageUrl?: string;
+  behaviorFocus?: BehaviorClassificationSummary;
+  parentNote?: string;
+  classification?: BehaviorClassificationSummary;
   artifactLinks?: StoryArtifactLinks;
 }

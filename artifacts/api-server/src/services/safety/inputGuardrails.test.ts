@@ -64,6 +64,29 @@ test("blocks child medical emergency prompts", () => {
   assert.equal(result.category, "high_risk_safety");
 });
 
+test("blocks developmental red flags with referral language", () => {
+  const result = evaluateInputGuardrails({
+    mode: "behavior",
+    prompt: "My 4 year old stopped speaking and is not speaking anymore.",
+    character: { name: "Maya" },
+  });
+
+  assert.equal(result.allowed, false);
+  assert.equal(result.category, "developmental_or_medical_red_flag");
+  assert.match(inputGuardrailMessage(result) ?? "", /pediatrician|professional/i);
+});
+
+test("blocks medical eating red flags without treating them as mealtime behavior", () => {
+  const result = evaluateInputGuardrails({
+    mode: "behavior",
+    prompt: "My child won't eat and is losing weight.",
+    character: { name: "Maya" },
+  });
+
+  assert.equal(result.allowed, false);
+  assert.equal(result.category, "developmental_or_medical_red_flag");
+});
+
 test("allows ordinary behavior-support prompts", () => {
   const result = evaluateInputGuardrails({
     mode: "behavior",
