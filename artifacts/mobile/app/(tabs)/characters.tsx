@@ -61,7 +61,9 @@ export default function CharactersScreen() {
     () => getRuntimePhotoExtractionAvailability(Platform.OS),
     [],
   );
-  const canCheckPhotoLocally = photoAvailability.available;
+  const photoPickerCaption = photoAvailability.available
+    ? "The photo is processed on this device and discarded."
+    : "If the photo cannot be read locally, Kahani will ask for simple details instead.";
 
   const pickPhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -188,7 +190,7 @@ export default function CharactersScreen() {
         ]}
       />
 
-      {relationship === "child" && canCheckPhotoLocally ? (
+      {relationship === "child" ? (
         <Pressable
           onPress={pickPhoto}
           testID="character-photo-picker"
@@ -205,12 +207,12 @@ export default function CharactersScreen() {
               <Feather name="camera" color={colors.bark} size={28} />
             </View>
             <Text style={[styles.photoTitle, { color: colors.foreground }]}>
-              Check photo locally
+              Upload photo
             </Text>
             <Text
               style={[styles.photoCaption, { color: colors.mutedForeground }]}
             >
-              The photo is processed on this device and discarded.
+              {photoPickerCaption}
             </Text>
           </View>
         </Pressable>
