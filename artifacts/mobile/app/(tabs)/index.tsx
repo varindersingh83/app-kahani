@@ -146,7 +146,7 @@ export default function StudioScreen() {
         sheetImageUrl: story.sheetImageUrl ?? undefined,
         artifactLinks: story.artifactLinks,
         characterName: selectedStoryCharacter.name,
-        characterPhotoUri: selectedStoryCharacter.photoUri ?? undefined,
+        characterPhotoUri: undefined,
       });
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -183,7 +183,6 @@ export default function StudioScreen() {
           <CharacterAvatar
             key={character.id}
             label={character.name}
-            imageUri={character.photoUri}
             selected={character.id === selectedStoryCharacter?.id}
             onPress={() => selectCharacter(character.id)}
             testID={`story-character-${character.name}`}
