@@ -19,6 +19,8 @@ node_modules
 # local story generation QA artifacts
 /artifacts/story-sheet-runs/*
 /artifacts/story-text-runs/*
+/artifacts/story-generation-smoke/*
+/artifacts/story-rating-iterations/*
 
 # IDEs and editors
 /.idea

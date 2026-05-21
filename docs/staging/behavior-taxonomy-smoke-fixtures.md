@@ -24,4 +24,4 @@ Run only after staging provider caps are confirmed.
 
 ## Page Boundary Fixtures
 
-For service-level verification, use synthetic story JSON with 8, 12, and 20 pages. Expected result: all pages preserve text order and page images map to `story_page_01.png` through the matching final page number.
+For service-level verification, use synthetic story JSON with 8, 10, and 12 pages. Expected result: all pages preserve text order and page images map to `story_page_01.png` through the matching final page number. Unused 4x4 sheet cells remain blank and are not mapped to reader story pages.

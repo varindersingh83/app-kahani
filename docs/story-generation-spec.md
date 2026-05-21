@@ -11,7 +11,7 @@ This spec covers:
 - automatic primary behavior selection for multi-issue prompts
 - A-level story quality
 - structured story JSON
-- flexible 8-20 page story output
+- flexible 8-12 page story output
 
 Image generation requirements live in `docs/image-generation-spec.md`.
 
@@ -30,7 +30,7 @@ Key feedback:
 3. Safe behavior prompts are mapped to a curated behavior package: scene, visible behavior, likely mechanism, strategy, child story skill, parent note, and target outcome.
 4. Vague prompts return one clarification question without starting provider-backed generation.
 5. Clear prompts start one background story-sheet job and return one `bookId`.
-6. Job writes one structured story JSON with 8-20 story pages.
+6. Job writes one structured story JSON with 8-12 story pages.
 7. Story JSON is passed to image generation and slicing.
 8. Mobile polls one job until complete.
 9. Mobile fetches one generated story, saves it to the active profile library with private classification metadata, and opens the reader.
@@ -166,7 +166,7 @@ Each generated book should produce structured JSON with:
 - child name
 - parent name and role
 - normalized behavior
-- 8-20 story pages
+- 8-12 story pages
 - each page's story text
 - each page's visual scene
 - each page's composition
@@ -185,7 +185,7 @@ flowchart TD
   E --> A
   D -->|"classified"| F["Selected behavior package"]
   F --> G["Create one story job"]
-  G --> H["Generate structured story JSON, 8-20 pages"]
+  G --> H["Generate structured story JSON, 8-12 pages"]
   H --> I["Pass story JSON to image generation"]
   I --> J["Slice page images"]
   J --> K["Build GeneratedStory"]

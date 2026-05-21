@@ -24,7 +24,7 @@ Key feedback:
 
 1. Story generation produces structured story JSON.
 2. The sheet prompt injects that JSON into `sheet-master-prompt.txt`.
-3. Image generation creates one 5x5 storyboard sheet.
+3. Image generation creates one fixed 4x4 storyboard sheet.
 4. The slicer cuts the sheet into cover, story pages, end page, and supporting panels.
 5. The app uses sliced image URLs in the book reader.
 
@@ -70,13 +70,25 @@ Each story page image should use:
 
 The image model should not use page `text` as text to render. Page text may inform emotion and action, but must not appear inside the image.
 
+### 4. Fixed 4x4 Sheet Layout
+
+The generated sheet must stay as one square 4x4 grid with 16 equal panels:
+
+- row 1, panel 1: cover illustration
+- row 1, panel 2: ownership/opening illustration
+- row 1, panel 3: end illustration
+- row 1, panel 4: blank panel
+- rows 2-4: up to 12 story-page panels
+
+Stories may have 8-12 pages. If a story has fewer than 12 pages, the unused story-page cells remain blank soft-background panels. Do not change the grid size to match the page count; the slicer depends on the fixed 4x4 layout.
+
 ## Proposed Architecture
 
 ```mermaid
 flowchart TD
   A["Structured story JSON"] --> B["Sheet prompt builder"]
   B --> C["No-text image guardrails"]
-  C --> D["Generate 5x5 storyboard sheet"]
+  C --> D["Generate 4x4 storyboard sheet"]
   D --> E["Save sheet image"]
   E --> F["Slice sheet into page images"]
   F --> G["Map slices to GeneratedStory image URLs"]

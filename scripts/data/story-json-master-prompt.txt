@@ -11,7 +11,7 @@ Return only valid JSON. No markdown. No explanation. No extra text.
 Quality bar:
 The story must feel like a real picture-book seed, not a lesson plan, behavior plan, therapy script, or parenting advice disguised as fiction.
 Story quality comes first. Parent usefulness must come through concrete story action, not explanation.
-20 pages is the maximum, not the target. Use the fewest pages needed for a complete child-readable arc, with at least 8 pages.
+12 pages is the maximum, not the target. Use the fewest pages needed for a complete child-readable arc, with at least 8 pages.
 
 Optimize for:
 * Story quality: a coherent single arc with no filler pages.
@@ -25,24 +25,27 @@ Optimize for:
 * Sentence rhythm: varied, musical, simple enough for toddlers and preschoolers.
 * Literary quality: specific nouns and verbs, no generic self-help phrasing.
 * Parent usefulness: the parent action should be practical, calm, and non-preachy.
+* Parent practicality: the parent action must be something a real parent would recognize as likely to help the exact behavior in the prompt.
 * Child legibility: a 3-year-old should understand what happened, what changed, and what helped.
 * Re-read value: include anticipation, repetition, and one tactile/sensory image a child can look forward to hearing again.
 * Name lock: the main child must be named exactly "{{CHILD_NAME}}" in child_name, page text, scenes, and any story references. Do not invent or substitute another child name.
 * Identity lock: do not infer the main child's gender from the name. If child identity details or a reference photo are provided, preserve that gender presentation, hair, face, clothing, and overall likeness in every scene.
 
 Story design:
-* 8-20 pages. Choose the shortest page count that gives the story a complete beginning, middle, and end.
+* 8-12 pages. Choose the shortest page count that gives the story a complete beginning, middle, and end.
 * Each page text is 1-2 short lines.
 * Total story text under 360 words.
 * Use one concrete setting and one concrete story problem. Do not add a second subplot.
 * The central object or action must feel ordinary and already present in the scene, not like a gimmick, magical prop, or adult strategy.
 * The behavioral skill must emerge through story action, not explanation.
+* The child must perform one visible next-step behavior before the ending: taking the bite, putting the toy away, walking to the gate, returning the toy, using safer hands, waiting, asking again, or another concrete action that matches the prompt.
 * The ending should show small progress, safety, and connection without pretending the behavior is fixed forever.
 * Avoid a generic moral. Do not summarize the lesson at the end.
 * Page text must be polished enough to read aloud as-is. Avoid awkward phrases, clunky metaphors, and lines that only exist to explain the behavior.
 * Do not use cutesy invented object names or baby-talk words. Ordinary language should carry the poetry.
 * If there is a repeated phrase, make it sound like something a real child or family might naturally say.
 * Keep cause and effect clear: one thing happens because of the thing before it. No abrupt new props, no sudden strategy that appears from nowhere.
+* Parent choices must be logical and must both lead to the desired behavior. Bad: "basket or floor" when the toy needs to be cleaned up. Good: "drop it in or place it gently."
 * Avoid adult-subtle symbolism that a 3-year-old would miss.
 * Preserve narrative flow: every page must naturally cause the next page. No abrupt new props, no sudden strategy that appears from nowhere.
 * Deepen the emotional arc in child-legible ways: show wanting, interruption, protest or stuckness, a tiny choice, and a mixed-feeling repair.
@@ -65,13 +68,19 @@ Before finalizing, internally run a Harsh Story Rater pass. Do not include the r
 * The plot is too tidy, too adult-managed, or emotionally unearned.
 * The central image/object feels engineered rather than discovered by the child.
 * The prose is generic, bland, or not read-aloud worthy.
+* The parent accidentally rewards the problem behavior, such as giving a screen, treat, escape, or extra play because the child screamed, ran, grabbed, hit, or refused.
+* The parent turns the problem behavior into a game, such as chasing a child who runs away.
+* The parent gives a fake choice where one option avoids the actual goal.
+* The child never practices the concrete desired behavior.
+* The parent response is only symbolic, emotional, or cute, and does not move the child toward a useful next step.
 
 Behavior-specific guardrails:
 * Aggression: do not show harm. Show the unsafe impulse being stopped or redirected before anyone is hurt.
 * Anxiety and fears: do not force bravery. Let the child choose a small distance or partial participation.
-* Food-related issues: avoid pressure, shame, reward, moralizing, or making tasting the victory.
+* Food-related issues: avoid pressure, shame, and moralizing. It is acceptable to use a realistic family incentive or first/then structure when the child still makes a small concrete food-related attempt, such as sitting, touching, tasting, or taking one bite.
 * Perfectionism/frustration intolerance: stay entirely with one concrete problem, such as one drawing or one fallen object. Do not jump to a second activity.
 * Public behavior struggles: allow disappointment to remain; do not turn the ending into instant compliance.
+* Safety issues: set the safety boundary immediately before offering any choice. Stop, hold, block, carry, or move the child to safety first; never bargain while the child remains unsafe.
 
 JSON shape:
 {

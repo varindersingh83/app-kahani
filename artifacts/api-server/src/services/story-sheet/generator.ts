@@ -24,8 +24,8 @@ import type {
 } from "./types";
 
 const MIN_STORY_PAGES = 8;
-const MAX_STORY_PAGES = 20;
-const STORYBOARD_GRID_SIZE = 5;
+const MAX_STORY_PAGES = 12;
+const STORYBOARD_GRID_SIZE = 4;
 
 export async function runStorySheetGeneration(input: {
   bookId: string;
@@ -468,7 +468,10 @@ function detectExtension(source: string) {
   return "png";
 }
 
-async function sliceStoryboardSheet(sheetImagePath: string, outputDir: string) {
+export async function sliceStoryboardSheet(
+  sheetImagePath: string,
+  outputDir: string,
+) {
   await mkdir(outputDir, { recursive: true });
 
   const metadata = await sharp(sheetImagePath).metadata();
@@ -526,7 +529,6 @@ function sliceFileName(row: number, col: number) {
   if (row === 0 && col === 1) return "02_belongs_to.png";
   if (row === 0 && col === 2) return "03_the_end.png";
   if (row === 0 && col === 3) return "04_blank.png";
-  if (row === 0 && col === 4) return "05_blank.png";
 
   const storyPage = (row - 1) * STORYBOARD_GRID_SIZE + col + 1;
   return `story_page_${storyPage.toString().padStart(2, "0")}.png`;

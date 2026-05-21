@@ -48,6 +48,13 @@ test("builds a per-panel no-text QA checklist for generated slices", () => {
 test("sheet prompt keeps strict no-text guardrails", async () => {
   const prompt = await readFile(promptPath("sheet-master-prompt.txt"), "utf8");
 
+  assert.match(prompt, /4 columns x 4 rows/);
+  assert.match(prompt, /16 panels total/);
+  assert.match(prompt, /There are 12 story-page slots total/);
+  assert.match(prompt, /fewer than 12 pages/);
+  assert.doesNotMatch(prompt, /5 columns x 5 rows/);
+  assert.doesNotMatch(prompt, /25 panels total/);
+
   for (const phrase of [
     "No text is allowed anywhere in the image.",
     "Do not render the title.",
