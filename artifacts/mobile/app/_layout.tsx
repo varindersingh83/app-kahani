@@ -8,7 +8,11 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
+import {
+  setAuthTokenGetter,
+  setBaseUrl,
+  setLocalDevelopmentAuthBypass,
+} from "@workspace/api-client-react";
 import { Stack } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import * as SplashScreen from "expo-splash-screen";
@@ -52,6 +56,8 @@ const authRuntimeMode = getAuthRuntimeMode({
   domain,
   clerkPublishableKey: publishableKey,
 });
+
+setLocalDevelopmentAuthBypass(authRuntimeMode === "local-development-bypass");
 
 if (apiBaseUrl) {
   setBaseUrl(apiBaseUrl);

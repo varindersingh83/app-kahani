@@ -46,6 +46,32 @@ test("allows explicit local development bypass without Clerk env", () => {
   }
 });
 
+test("allows local development bypass header in development", () => {
+  const previousNodeEnv = process.env.NODE_ENV;
+  const previousPublishable = process.env.CLERK_PUBLISHABLE_KEY;
+  const previousSecret = process.env.CLERK_SECRET_KEY;
+  process.env.NODE_ENV = "development";
+  process.env.CLERK_PUBLISHABLE_KEY = "pk_test_example";
+  process.env.CLERK_SECRET_KEY = "sk_test_example";
+
+  try {
+    const user = requireUser({
+      get: (header: string) =>
+        header.toLowerCase() === "x-kahani-local-development-bypass"
+          ? "1"
+          : undefined,
+    } as unknown as Request);
+    assert.deepEqual(user, {
+      userId: "local_development_user",
+      isDevelopmentBypass: true,
+    });
+  } finally {
+    restoreEnv("NODE_ENV", previousNodeEnv);
+    restoreEnv("CLERK_PUBLISHABLE_KEY", previousPublishable);
+    restoreEnv("CLERK_SECRET_KEY", previousSecret);
+  }
+});
+
 test("fails closed in production without a Clerk user", () => {
   const previousNodeEnv = process.env.NODE_ENV;
   process.env.NODE_ENV = "production";

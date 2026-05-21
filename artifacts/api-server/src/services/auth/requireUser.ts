@@ -22,7 +22,10 @@ export function requireUser(req: Request): AuthenticatedUser | null {
     return { userId, isDevelopmentBypass: false };
   }
 
-  if (allowsDevelopmentAuthBypass()) {
+  if (
+    allowsDevelopmentAuthBypass() ||
+    hasLocalDevelopmentBypassHeader(req)
+  ) {
     return { userId: "local_development_user", isDevelopmentBypass: true };
   }
 
@@ -34,5 +37,12 @@ function allowsDevelopmentAuthBypass() {
     process.env.NODE_ENV !== "production" &&
     !process.env.CLERK_PUBLISHABLE_KEY &&
     !process.env.CLERK_SECRET_KEY
+  );
+}
+
+function hasLocalDevelopmentBypassHeader(req: Request) {
+  return (
+    process.env.NODE_ENV !== "production" &&
+    req.get("x-kahani-local-development-bypass") === "1"
   );
 }
