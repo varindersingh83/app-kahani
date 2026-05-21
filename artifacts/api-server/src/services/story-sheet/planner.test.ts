@@ -30,14 +30,15 @@ test("classifies bedtime transition resistance", () => {
   assert.match(result.primary.strategy, /transition/i);
 });
 
-test("asks one clarification question for vague bedtime prompts", () => {
+test("keeps vague but non-empty prompts instead of asking clarification", () => {
   const result = classifyStoryRequest({
     mode: "behavior",
     prompt: "bedtime is awful",
   });
 
-  assert.equal(result.status, "needs_clarification");
-  assert.match(result.question, /clearest thing/i);
+  assert.equal(result.status, "classified");
+  assert.equal(result.primary.categoryId, "bedtime_meltdown");
+  assert.equal(result.primary.storyFocusLabel, "bedtime meltdown recovery");
 });
 
 test("classifies plain mealtime refusal without asking for clarification", () => {
@@ -61,6 +62,17 @@ test("keeps a normal unmatched behavior prompt instead of asking category clarif
   assert.equal(result.primary.categoryId, "custom_behavior");
   assert.equal(result.primary.storyFocusLabel, "Emma not sleeping on time");
   assert.match(result.parentNote, /exact behavior/i);
+});
+
+test("keeps generic non-empty prompts as custom behavior instead of asking clarification", () => {
+  const result = classifyStoryRequest({
+    mode: "behavior",
+    prompt: "not listening",
+  });
+
+  assert.equal(result.status, "classified");
+  assert.equal(result.primary.categoryId, "custom_behavior");
+  assert.equal(result.primary.storyFocusLabel, "not listening");
 });
 
 test("uses clarification context to classify a vague prompt", () => {

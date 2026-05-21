@@ -1,7 +1,6 @@
 import type { GenerateStoryRequest } from "@workspace/api-zod";
 import {
   findBehaviorMatches,
-  isVagueBehaviorPrompt,
   toClassificationSummary,
 } from "./behaviorTaxonomy";
 import type {
@@ -71,7 +70,7 @@ export function classifyStoryRequest(
     };
   }
 
-  if (!input || (!request.clarification?.answer && isVagueBehaviorPrompt(input))) {
+  if (!input) {
     return {
       status: "needs_clarification",
       question:

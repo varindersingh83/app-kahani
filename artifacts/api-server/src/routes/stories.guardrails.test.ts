@@ -86,7 +86,7 @@ test("POST /stories/generate blocks developmental red flags before story config"
   assert.match(body.message ?? "", /professional|pediatrician/i);
 });
 
-test("POST /stories/generate returns one clarification for vague behavior before consent/config", async () => {
+test("POST /stories/generate does not ask clarification for vague non-empty behavior", async () => {
   const response = await fetch(`${baseUrl}/stories/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -97,13 +97,9 @@ test("POST /stories/generate returns one clarification for vague behavior before
     }),
   });
 
-  assert.equal(response.status, 200);
-  const body = (await response.json()) as {
-    status?: string;
-    clarification?: { question?: string };
-  };
-  assert.equal(body.status, "needs_clarification");
-  assert.match(body.clarification?.question ?? "", /clearest thing/i);
+  assert.equal(response.status, 403);
+  const body = (await response.json()) as { code?: string };
+  assert.equal(body.code, "external_text_ai_consent_required");
 });
 
 test("POST /stories/generate keeps normal requests on the configured generation path", async () => {
