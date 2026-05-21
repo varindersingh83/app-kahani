@@ -22,6 +22,25 @@ test("allows local development bypass for localhost API without Clerk", () => {
   );
 });
 
+test("allows local development bypass for LAN API without Clerk", () => {
+  for (const apiBaseUrl of [
+    "http://192.168.1.22:8080",
+    "http://10.0.0.7:8080",
+    "http://172.20.4.12:8080",
+    "http://169.254.10.2:8080",
+    "http://varinders-macbook.local:8080",
+  ]) {
+    assert.equal(
+      getAuthRuntimeMode({
+        apiBaseUrl,
+        clerkPublishableKey: "",
+      }),
+      "local-development-bypass",
+      apiBaseUrl,
+    );
+  }
+});
+
 test("blocks remote API builds that omit the mobile Clerk key", () => {
   assert.equal(
     getAuthRuntimeMode({
