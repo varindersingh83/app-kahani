@@ -130,9 +130,19 @@ function ConsentGate({ children }: { children: React.ReactNode }) {
   >("loading");
 
   useEffect(() => {
+    if (shouldAcceptConsentFromDevUrl()) {
+      AsyncStorage.setItem(
+        ONBOARDING_CONSENT_STORAGE_KEY,
+        serializeOnboardingConsent(createAcceptedConsent()),
+      ).then(() => setState("accepted"));
+      return;
+    }
+
     AsyncStorage.getItem(ONBOARDING_CONSENT_STORAGE_KEY).then((raw) => {
       const consent = parseOnboardingConsent(raw);
-      setState(hasRequiredOnboardingConsent(consent) ? "accepted" : "unanswered");
+      setState(
+        hasRequiredOnboardingConsent(consent) ? "accepted" : "unanswered",
+      );
     });
   }, []);
 
@@ -170,14 +180,31 @@ function ConsentGate({ children }: { children: React.ReactNode }) {
           photo processing, external AI generation, and metadata-only analytics.
         </Text>
       ) : null}
-      <Pressable style={styles.primaryConsentButton} onPress={accept}>
+      <Pressable
+        style={styles.primaryConsentButton}
+        onPress={accept}
+        testID="app-consent-accept-button"
+      >
         <Text style={styles.primaryConsentText}>I consent</Text>
       </Pressable>
-      <Pressable style={styles.secondaryConsentButton} onPress={decline}>
+      <Pressable
+        style={styles.secondaryConsentButton}
+        onPress={decline}
+        testID="app-consent-decline-button"
+      >
         <Text style={styles.secondaryConsentText}>I do not consent</Text>
       </Pressable>
     </View>
   );
+}
+
+function shouldAcceptConsentFromDevUrl() {
+  if (process.env.NODE_ENV === "production") return false;
+  if (Platform.OS !== "web") return false;
+  if (typeof window === "undefined" || !window.location?.href) return false;
+
+  const url = new URL(window.location.href);
+  return url.searchParams.get("e2eConsent") === "accepted";
 }
 
 export default function RootLayout() {
