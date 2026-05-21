@@ -148,6 +148,20 @@ Open `http://localhost:8081/`.
 
 ## Run The Mobile App Locally
 
+For the Expo Go path, use the helper script:
+
+```sh
+pnpm run dev:expo-go
+```
+
+The helper checks whether the local API and Expo dev server are already running. If either one is missing, it starts the missing process in the background, waits for readiness, and prints an `exp://...` URL that can be entered in Expo Go. It writes logs to `.local/logs/api.log` and `.local/logs/expo.log`.
+
+If your phone cannot connect to the printed URL, make sure the phone and computer are on the same Wi-Fi. You can override the LAN host or ports when needed:
+
+```sh
+EXPO_LAN_HOST=192.168.1.10 EXPO_PORT=8081 API_PORT=8080 pnpm run dev:expo-go
+```
+
 For the Replit-style script:
 
 ```sh
@@ -260,6 +274,9 @@ pnpm run typecheck
 
 # Start the local API server on port 8080.
 pnpm run dev:api
+
+# Start or reuse the local API plus Expo server, then print an Expo Go URL.
+pnpm run dev:expo-go
 
 # Start Expo against the local API server.
 pnpm run dev:mobile
