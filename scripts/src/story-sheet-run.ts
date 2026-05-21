@@ -59,20 +59,62 @@ type ApiUsage = {
 const execFile = promisify(execFileCallback);
 
 const repoRoot = path.resolve(import.meta.dirname, "../..");
-const behaviorPromptPath = path.join(repoRoot, "scripts", "data", "behavior-prompts.json");
-const storyPromptPath = path.join(repoRoot, "scripts", "data", "story-json-master-prompt.txt");
-const sheetPromptPath = path.join(repoRoot, "scripts", "data", "sheet-master-prompt.txt");
+const behaviorPromptPath = path.join(
+  repoRoot,
+  "scripts",
+  "data",
+  "behavior-prompts.json",
+);
+const storyPromptPath = path.join(
+  repoRoot,
+  "scripts",
+  "data",
+  "story-json-master-prompt.txt",
+);
+const sheetPromptPath = path.join(
+  repoRoot,
+  "scripts",
+  "data",
+  "sheet-master-prompt.txt",
+);
 const outputDir =
   process.env.STORY_SHEET_OUTPUT_DIR ??
-  path.join(repoRoot, "artifacts", "story-sheet-runs", new Date().toISOString().replace(/[:.]/g, "-"));
-const childrenDir = path.join(repoRoot, "artifacts", "face-test-data", "ChatGPT-Image-Apr-23--2026--10_18_36-PM", "kids");
-const adultsDir = path.join(repoRoot, "artifacts", "face-test-data", "ChatGPT-Image-Apr-23--2026--10_18_36-PM", "women");
-const childReferenceImage = process.env.STORY_SHEET_CHILD_IMAGE ?? path.join(childrenDir, "kids-01.png");
-const parentReferenceImage = process.env.STORY_SHEET_PARENT_IMAGE ?? path.join(adultsDir, "women-01.png");
+  path.join(
+    repoRoot,
+    "artifacts",
+    "story-sheet-runs",
+    new Date().toISOString().replace(/[:.]/g, "-"),
+  );
+const childrenDir = path.join(
+  repoRoot,
+  "artifacts",
+  "face-test-data",
+  "ChatGPT-Image-Apr-23--2026--10_18_36-PM",
+  "kids",
+);
+const adultsDir = path.join(
+  repoRoot,
+  "artifacts",
+  "face-test-data",
+  "ChatGPT-Image-Apr-23--2026--10_18_36-PM",
+  "women",
+);
+const childReferenceImage =
+  process.env.STORY_SHEET_CHILD_IMAGE ?? path.join(childrenDir, "kids-01.png");
+const parentReferenceImage =
+  process.env.STORY_SHEET_PARENT_IMAGE ?? path.join(adultsDir, "women-01.png");
 const childNameSeed = process.env.STORY_SHEET_CHILD_NAME ?? "";
+const childIdentitySeed = process.env.STORY_SHEET_CHILD_IDENTITY ?? "";
+const customBehaviorId = process.env.STORY_SHEET_BEHAVIOR_ID;
+const customBehaviorPrompt = process.env.STORY_SHEET_BEHAVIOR_PROMPT;
 const parentNameSeed = process.env.STORY_SHEET_PARENT_NAME ?? "Mom";
 const behaviorIndex = Number(process.env.STORY_SHEET_BEHAVIOR_INDEX ?? "0");
-const slicerScriptPath = path.join(repoRoot, "scripts", "src", "slice-sheet.py");
+const slicerScriptPath = path.join(
+  repoRoot,
+  "scripts",
+  "src",
+  "slice-sheet.py",
+);
 const pythonExecutable =
   process.env.CODEX_PYTHON_BIN ??
   "/Users/varindernagra/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3";
@@ -117,27 +159,38 @@ function headers(config: AiConfig) {
     Authorization: `Bearer ${config.apiKey}`,
     "Content-Type": "application/json",
   };
-  if (config.openRouterSiteUrl) result["HTTP-Referer"] = config.openRouterSiteUrl;
-  if (config.openRouterAppTitle) result["X-OpenRouter-Title"] = config.openRouterAppTitle;
+  if (config.openRouterSiteUrl)
+    result["HTTP-Referer"] = config.openRouterSiteUrl;
+  if (config.openRouterAppTitle)
+    result["X-OpenRouter-Title"] = config.openRouterAppTitle;
   return result;
 }
 
-async function callJsonChat(config: AiConfig, systemPrompt: string, userPrompt: string) {
-  const response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
-    method: "POST",
-    headers: headers(config),
-    body: JSON.stringify({
-      model: config.textModel,
-      max_completion_tokens: 3000,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-    }),
-  });
+async function callJsonChat(
+  config: AiConfig,
+  systemPrompt: string,
+  userPrompt: string,
+) {
+  const response = await fetch(
+    `${config.baseUrl.replace(/\/$/, "")}/chat/completions`,
+    {
+      method: "POST",
+      headers: headers(config),
+      body: JSON.stringify({
+        model: config.textModel,
+        max_completion_tokens: 3000,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+      }),
+    },
+  );
 
   if (!response.ok) {
-    throw new Error(`Story JSON request failed with ${response.status}: ${await response.text()}`);
+    throw new Error(
+      `Story JSON request failed with ${response.status}: ${await response.text()}`,
+    );
   }
 
   const data = (await response.json()) as {
@@ -170,23 +223,28 @@ async function callMultimodalImageModel(
     )),
   ];
 
-  const response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
-    method: "POST",
-    headers: headers(config),
-    body: JSON.stringify({
-      model: config.imageModel,
-      max_completion_tokens: 4000,
-      messages: [{ role: "user", content: contentParts }],
-      modalities: ["image", "text"],
-      image_config: {
-        aspect_ratio: imageConfig.aspectRatio,
-        image_size: imageConfig.imageSize,
-      },
-    }),
-  });
+  const response = await fetch(
+    `${config.baseUrl.replace(/\/$/, "")}/chat/completions`,
+    {
+      method: "POST",
+      headers: headers(config),
+      body: JSON.stringify({
+        model: config.imageModel,
+        max_completion_tokens: 4000,
+        messages: [{ role: "user", content: contentParts }],
+        modalities: ["image", "text"],
+        image_config: {
+          aspect_ratio: imageConfig.aspectRatio,
+          image_size: imageConfig.imageSize,
+        },
+      }),
+    },
+  );
 
   if (!response.ok) {
-    throw new Error(`Image request failed with ${response.status}: ${await response.text()}`);
+    throw new Error(
+      `Image request failed with ${response.status}: ${await response.text()}`,
+    );
   }
 
   return (await response.json()) as {
@@ -211,10 +269,18 @@ function extractJson(text: string) {
   return JSON.parse(text.slice(start, end + 1));
 }
 
-function buildStoryPrompt(template: string, behavior: string, parentName: string) {
+function buildStoryPrompt(
+  template: string,
+  behavior: string,
+  parentName: string,
+  childName: string,
+  childIdentity: string,
+) {
   return template
     .replaceAll("{{BEHAVIOR}}", behavior)
-    .replaceAll("{{PARENT_NAME}}", parentName);
+    .replaceAll("{{PARENT_NAME}}", parentName)
+    .replaceAll("{{CHILD_NAME}}", childName)
+    .replaceAll("{{CHILD_IDENTITY}}", childIdentity);
 }
 
 function buildSheetPrompt(template: string, story: StoryInput) {
@@ -272,7 +338,9 @@ async function saveImageAsset(source: string, destinationBasePath: string) {
     if (comma === -1) throw new Error("Invalid data URL image.");
     const metadata = source.slice(5, comma);
     const payload = source.slice(comma + 1);
-    const bytes = metadata.includes(";base64") ? Buffer.from(payload, "base64") : Buffer.from(decodeURIComponent(payload));
+    const bytes = metadata.includes(";base64")
+      ? Buffer.from(payload, "base64")
+      : Buffer.from(decodeURIComponent(payload));
     const ext = detectExtension(source);
     const destinationPath = `${destinationBasePath}.${ext}`;
     await writeFile(destinationPath, bytes);
@@ -291,7 +359,11 @@ async function saveImageAsset(source: string, destinationBasePath: string) {
       throw new Error(`Failed to fetch image: ${response.status}`);
     }
     const contentType = response.headers.get("content-type") ?? "image/png";
-    const ext = contentType.includes("jpeg") ? "jpg" : contentType.includes("webp") ? "webp" : "png";
+    const ext = contentType.includes("jpeg")
+      ? "jpg"
+      : contentType.includes("webp")
+        ? "webp"
+        : "png";
     const bytes = Buffer.from(await response.arrayBuffer());
     const destinationPath = `${destinationBasePath}.${ext}`;
     await writeFile(destinationPath, bytes);
@@ -303,7 +375,12 @@ async function saveImageAsset(source: string, destinationBasePath: string) {
 
 function detectExtension(source: string) {
   const lower = source.toLowerCase();
-  if (lower.startsWith("data:image/jpeg") || lower.startsWith("data:image/jpg") || lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+  if (
+    lower.startsWith("data:image/jpeg") ||
+    lower.startsWith("data:image/jpg") ||
+    lower.endsWith(".jpg") ||
+    lower.endsWith(".jpeg")
+  ) {
     return "jpg";
   }
   if (lower.startsWith("data:image/webp") || lower.endsWith(".webp")) {
@@ -334,10 +411,17 @@ function sumUsage(usages: Array<ApiUsage | undefined>): ApiUsage {
   const totals: ApiUsage = {};
   for (const usage of usages) {
     if (!usage) continue;
-    for (const key of ["prompt_tokens", "completion_tokens", "total_tokens", "cost", "total_cost"] as const) {
+    for (const key of [
+      "prompt_tokens",
+      "completion_tokens",
+      "total_tokens",
+      "cost",
+      "total_cost",
+    ] as const) {
       const value = usage[key];
       if (typeof value === "number") {
-        totals[key] = (typeof totals[key] === "number" ? totals[key] : 0) + value;
+        totals[key] =
+          (typeof totals[key] === "number" ? totals[key] : 0) + value;
       }
     }
   }
@@ -362,7 +446,9 @@ async function sliceStoryboardSheet(sheetImagePath: string, outputDir: string) {
   ]);
 
   const manifestPath = path.join(outputDir, "manifest.json");
-  return JSON.parse(await readFile(manifestPath, "utf8")) as SheetSliceManifestEntry[];
+  return JSON.parse(
+    await readFile(manifestPath, "utf8"),
+  ) as SheetSliceManifestEntry[];
 }
 
 function renderCarouselHtml(input: {
@@ -804,18 +890,33 @@ function renderCarouselHtml(input: {
 async function main() {
   const config = getAiConfig();
   if (!config) {
-    throw new Error("AI credentials are missing. Set AI_INTEGRATIONS_OPENROUTER_BASE_URL and AI_INTEGRATIONS_OPENROUTER_API_KEY.");
+    throw new Error(
+      "AI credentials are missing. Set AI_INTEGRATIONS_OPENROUTER_BASE_URL and AI_INTEGRATIONS_OPENROUTER_API_KEY.",
+    );
   }
 
   const behaviors = await loadBehaviorPrompts();
-  const selectedBehavior = behaviors[behaviorIndex] ?? behaviors[0];
+  const selectedBehavior = customBehaviorPrompt
+    ? {
+        id: customBehaviorId ?? "custom-behavior",
+        prompt: customBehaviorPrompt,
+      }
+    : (behaviors[behaviorIndex] ?? behaviors[0]);
   if (!selectedBehavior) {
     throw new Error("No behavior prompts found.");
   }
 
   const parentName = resolveParentName(parentReferenceImage);
+  const childName = childNameSeed.trim() || "Liam";
+  const childIdentity = childIdentitySeed.trim();
   const storyPromptTemplate = await loadTemplate(storyPromptPath);
-  const storyPrompt = buildStoryPrompt(storyPromptTemplate, selectedBehavior.prompt, parentName);
+  const storyPrompt = buildStoryPrompt(
+    storyPromptTemplate,
+    selectedBehavior.prompt,
+    parentName,
+    childName,
+    childIdentity,
+  );
   const storyResult = await callJsonChat(
     config,
     "You write exact JSON only. Follow the user's schema and return valid JSON with no markdown or explanation.",
@@ -832,9 +933,15 @@ async function main() {
   await copyFile(childReferenceImage, childCopy);
   await copyFile(parentReferenceImage, parentCopy);
 
-  await writeFile(path.join(outputDir, "behavior.json"), `${JSON.stringify(selectedBehavior, null, 2)}\n`);
+  await writeFile(
+    path.join(outputDir, "behavior.json"),
+    `${JSON.stringify(selectedBehavior, null, 2)}\n`,
+  );
   await writeFile(path.join(outputDir, "story-prompt.txt"), `${storyPrompt}\n`);
-  await writeFile(path.join(outputDir, "story.json"), `${JSON.stringify(storyJson, null, 2)}\n`);
+  await writeFile(
+    path.join(outputDir, "story.json"),
+    `${JSON.stringify(storyJson, null, 2)}\n`,
+  );
   await writeFile(path.join(outputDir, "sheet-prompt.txt"), `${sheetPrompt}\n`);
 
   const imageData = await callMultimodalImageModel(
@@ -853,13 +960,19 @@ async function main() {
     throw new Error("Storyboard sheet request returned no image.");
   }
 
-  const sheetPath = await saveImageAsset(sheetImageUrl, path.join(outputDir, "sheet"));
+  const sheetPath = await saveImageAsset(
+    sheetImageUrl,
+    path.join(outputDir, "sheet"),
+  );
   await writeFile(path.join(outputDir, "sheet-url.txt"), `${sheetImageUrl}\n`);
   await writeFile(path.join(outputDir, "sheet-path.txt"), `${sheetPath}\n`);
 
   const pagesDir = path.join(outputDir, "pages");
   const slices = await sliceStoryboardSheet(sheetPath, pagesDir);
-  await writeFile(path.join(outputDir, "slices.json"), `${JSON.stringify(slices, null, 2)}\n`);
+  await writeFile(
+    path.join(outputDir, "slices.json"),
+    `${JSON.stringify(slices, null, 2)}\n`,
+  );
   const usage = {
     textModel: config.textModel,
     imageModel: config.imageModel,
@@ -867,7 +980,10 @@ async function main() {
     sheet: imageData.usage ?? null,
     total: sumUsage([storyResult.usage, imageData.usage]),
   };
-  await writeFile(path.join(outputDir, "usage.json"), `${JSON.stringify(usage, null, 2)}\n`);
+  await writeFile(
+    path.join(outputDir, "usage.json"),
+    `${JSON.stringify(usage, null, 2)}\n`,
+  );
   await writeFile(
     path.join(outputDir, "book.html"),
     renderCarouselHtml({

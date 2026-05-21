@@ -99,6 +99,9 @@ type StoryContextValue = {
 };
 
 const STORAGE_KEY_PREFIX = "parent-story-studio";
+const DEV_LIBRARY_SEED_URL =
+  process.env.EXPO_PUBLIC_DEV_LIBRARY_SEED_URL ??
+  "/api/story-runs/ui-emma-liam-20260520/mobile-library-seed.json";
 const StoryContext = createContext<StoryContextValue | null>(null);
 
 function createId() {
@@ -131,6 +134,52 @@ function isChildCharacter(character: Pick<Character, "name" | "relationship">) {
     (character.relationship ?? "child") === "child" &&
     !isParentLikeName(character.name)
   );
+}
+
+function absolutizeStoryUrls(story: Story): Story {
+  return {
+    ...story,
+    coverImageUrl: absolutizeUrl(story.coverImageUrl),
+    endImageUrl: absolutizeUrl(story.endImageUrl),
+    sheetImageUrl: absolutizeUrl(story.sheetImageUrl),
+    characterPhotoUri: absolutizeUrl(story.characterPhotoUri),
+    artifactLinks: story.artifactLinks
+      ? {
+          bookHtmlUrl: absolutizeUrl(story.artifactLinks.bookHtmlUrl),
+          storyJsonUrl: absolutizeUrl(story.artifactLinks.storyJsonUrl),
+          usageJsonUrl: absolutizeUrl(story.artifactLinks.usageJsonUrl),
+        }
+      : undefined,
+    pages: story.pages.map((page) => ({
+      ...page,
+      imageUrl: absolutizeUrl(page.imageUrl),
+    })),
+  };
+}
+
+function absolutizeCharacterUrls(character: Character): Character {
+  return {
+    ...character,
+    characterImageUri: absolutizeUrl(character.characterImageUri),
+  };
+}
+
+function absolutizeUrl(url?: string) {
+  if (!url) return undefined;
+  if (
+    /^https?:\/\//i.test(url) ||
+    url.startsWith("file:") ||
+    url.startsWith("data:")
+  ) {
+    return url;
+  }
+
+  const baseUrl =
+    process.env.EXPO_PUBLIC_API_BASE_URL ??
+    (typeof window !== "undefined" ? window.location.origin : undefined);
+  if (!baseUrl) return url;
+
+  return new URL(url, baseUrl).toString();
 }
 
 export function StoryProvider({
@@ -181,6 +230,16 @@ export function StoryProvider({
         void seedStoryFromUrl({
           characters: nextCharacters,
           savedStories: nextSavedStories,
+          setCharacters,
+          setSavedStories,
+          setCurrentStory,
+          setSelectedCharacterId,
+          storageKey,
+        });
+        void seedDevLibraryBatch({
+          characters: nextCharacters,
+          savedStories: nextSavedStories,
+          selectedCharacterId: nextSelectedCharacterId,
           setCharacters,
           setSavedStories,
           setCurrentStory,
@@ -248,6 +307,84 @@ export function StoryProvider({
         characters: sanitizeCharactersForStorage(nextCharacters) as Character[],
         savedStories: nextStories,
         selectedCharacterId: character.id,
+      }),
+    );
+  }
+
+  async function seedDevLibraryBatch(input: {
+    characters: Character[];
+    savedStories: Story[];
+    selectedCharacterId: string | null;
+    setCharacters: React.Dispatch<React.SetStateAction<Character[]>>;
+    setSavedStories: React.Dispatch<React.SetStateAction<Story[]>>;
+    setCurrentStory: React.Dispatch<React.SetStateAction<Story | null>>;
+    setSelectedCharacterId: React.Dispatch<React.SetStateAction<string | null>>;
+    storageKey: string;
+  }) {
+    const seedUrl = absolutizeUrl(DEV_LIBRARY_SEED_URL);
+    if (!seedUrl) return;
+
+    const response = await fetch(seedUrl).catch(() => null);
+    if (!response?.ok) return;
+
+    const seed = (await response.json()) as {
+      characters?: Character[];
+      stories?: Story[];
+    };
+    const seededCharacters = (seed.characters ?? []).map(
+      absolutizeCharacterUrls,
+    );
+    const seededStories = (seed.stories ?? []).map(absolutizeStoryUrls);
+    if (seededCharacters.length === 0 && seededStories.length === 0) return;
+
+    const charactersByName = new Map(
+      input.characters.map((character) => [
+        character.name.trim().toLowerCase(),
+        character,
+      ]),
+    );
+    const nextCharacters = [...input.characters];
+    for (const seededCharacter of seededCharacters) {
+      const nameKey = seededCharacter.name.trim().toLowerCase();
+      const existingCharacter = charactersByName.get(nameKey);
+      if (existingCharacter) {
+        Object.assign(existingCharacter, seededCharacter, {
+          id: existingCharacter.id,
+        });
+      } else {
+        nextCharacters.unshift(seededCharacter);
+        charactersByName.set(nameKey, seededCharacter);
+      }
+    }
+
+    const existingStoryIds = new Set(
+      input.savedStories.map((story) => story.id),
+    );
+    const nextSeededStories = seededStories.filter(
+      (story) => !existingStoryIds.has(story.id),
+    );
+    if (nextSeededStories.length === 0 && seededCharacters.length === 0) return;
+
+    const nextStories = [...nextSeededStories, ...input.savedStories];
+    const nextSelectedCharacterId =
+      input.selectedCharacterId ??
+      nextCharacters.find((character) => character.name === "Emma")?.id ??
+      nextCharacters.find(isChildCharacter)?.id ??
+      null;
+
+    input.setCharacters(nextCharacters);
+    input.setSavedStories(nextStories);
+    input.setCurrentStory(
+      nextSeededStories[0] ?? input.savedStories[0] ?? null,
+    );
+    input.setSelectedCharacterId(nextSelectedCharacterId);
+
+    await AsyncStorage.setItem(
+      input.storageKey,
+      JSON.stringify({
+        characters: sanitizeCharactersForStorage(nextCharacters) as Character[],
+        savedStories: nextStories,
+        selectedCharacterId: nextSelectedCharacterId,
       }),
     );
   }

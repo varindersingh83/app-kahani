@@ -34,7 +34,12 @@ def main() -> int:
         raise ValueError(f"Image must be square. Got {width}x{height}")
 
     if width % GRID_COLS != 0 or height % GRID_ROWS != 0:
-        raise ValueError(f"Image size must divide cleanly by 5. Got {width}x{height}")
+        slice_width = width - (width % GRID_COLS)
+        slice_height = height - (height % GRID_ROWS)
+        if slice_width <= 0 or slice_height <= 0:
+            raise ValueError(f"Image size must divide cleanly by 5. Got {width}x{height}")
+        img = img.crop((0, 0, slice_width, slice_height))
+        width, height = img.size
 
     panel_w = width // GRID_COLS
     panel_h = height // GRID_ROWS
