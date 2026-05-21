@@ -68,7 +68,7 @@ test("book generation integration combines the brief, cover prompt, storyboard p
   assert.equal(normalizedInput.character.name, "Ava");
   assert.match(setup.brief.behaviorContext, /ask for a turn/);
   assert.match(coverPrompt, /Artwork only: no text/i);
-  assert.match(storyboardPrompt, /canonical 12-page story text in structured JSON/);
+  assert.match(storyboardPrompt, /canonical 12-page story text as separate structured JSON/);
   assert.match(storyboardPrompt, /camera\/composition words rendered anywhere in the image/);
   assert.equal(storyboardPlan.tiles.length, 12);
   assert.equal(layout.pageCount, 12);
