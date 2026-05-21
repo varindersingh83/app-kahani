@@ -186,7 +186,15 @@ export const BEHAVIOR_TAXONOMY: BehaviorTaxonomyEntry[] = [
     targetOutcome:
       "Child can remain near food calmly without tasting being the victory.",
     storyFocusLabel: "mealtime calm practice",
-    aliases: ["won't eat", "wont eat", "refuses food", "picky", "mealtime", "dinner"],
+    aliases: [
+      "won't eat",
+      "wont eat",
+      "not eating",
+      "refuses food",
+      "picky",
+      "mealtime",
+      "dinner",
+    ],
     intensity: 68,
     redFlagExclusions: ["losing weight", "weight loss", "choking", "vomiting"],
   },

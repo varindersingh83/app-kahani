@@ -40,6 +40,17 @@ test("asks one clarification question for vague bedtime prompts", () => {
   assert.match(result.question, /clearest thing/i);
 });
 
+test("classifies plain mealtime refusal without asking for clarification", () => {
+  const result = classifyStoryRequest({
+    mode: "behavior",
+    prompt: "Emma not eating her food.",
+  });
+
+  assert.equal(result.status, "classified");
+  assert.equal(result.primary.categoryId, "mealtime_pressure");
+  assert.equal(result.primary.storyFocusLabel, "mealtime calm practice");
+});
+
 test("uses clarification context to classify a vague prompt", () => {
   const result = classifyStoryRequest({
     mode: "behavior",
