@@ -14,7 +14,6 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -34,17 +33,9 @@ import {
 import tokens from "@/constants/colors";
 import { useStoryStudio, type Character } from "@/context/StoryContext";
 import { useKahaniTheme } from "@/context/ThemeContext";
-import {
-  appendClarificationMessages,
-  appendFocusMessages,
-  buildInitialStoryChat,
-  createStoryChatMessage,
-  type StoryChatMessage,
-  type StoryClarificationState,
-} from "@/services/storyChat";
 
 const BEHAVIOR_PROMPT_PLACEHOLDER =
-  "sharing toys, bedtime resistance, using gentle hands";
+  "What should the story help with?";
 
 function isChildCharacter(character: Character) {
   return (
@@ -64,23 +55,14 @@ export default function StudioScreen() {
   } = useStoryStudio();
   const [prompt, setPrompt] = useState("");
   const [isPromptFocused, setIsPromptFocused] = useState(false);
-  const [chatMessages, setChatMessages] = useState<StoryChatMessage[]>(
-    buildInitialStoryChat,
-  );
-  const [clarification, setClarification] =
-    useState<StoryClarificationState | null>(null);
   const [generationMessage, setGenerationMessage] = useState("");
-  const [generationError, setGenerationError] = useState<string | null>(null);
-  const [issueNotice, setIssueNotice] = useState<string | null>(null);
   const [hasExternalTextAiConsent, setHasExternalTextAiConsent] =
     useState(false);
   const promptPlaceholderColor =
     colors.scheme === "dark"
       ? "rgba(188, 167, 134, 0.48)"
       : "rgba(129, 113, 94, 0.48)";
-  const promptPlaceholder = clarification
-    ? "Answer the question..."
-    : BEHAVIOR_PROMPT_PLACEHOLDER;
+  const promptPlaceholder = BEHAVIOR_PROMPT_PLACEHOLDER;
 
   const mutation = useGenerateStory();
 
@@ -114,34 +96,18 @@ export default function StudioScreen() {
     if (!submittedText) return;
 
     try {
-      const storyPrompt = clarification?.originalPrompt ?? submittedText;
-      const parentMessage = createStoryChatMessage("parent", submittedText);
-      setChatMessages((messages) => [...messages, parentMessage]);
-      setIssueNotice(null);
-      setGenerationError(null);
+      const storyPrompt = submittedText;
       setGenerationMessage("Reading the behavior...");
       const response = await submitStoryGeneration({
         consent: hasExternalTextAiConsent,
         prompt: storyPrompt,
-        clarification,
       });
 
       if (isPlanningResponse(response)) {
-        setClarification({
-          originalPrompt: storyPrompt,
-          question: response.clarification.question,
-          choices: response.clarification.choices,
-        });
-        setChatMessages((messages) =>
-          appendClarificationMessages(
-            messages,
-            response.clarification.question,
-            response.clarification.choices,
-          ),
+        throw new Error(
+          response.message ||
+            "The story service needs a clearer prompt before generating.",
         );
-        setPrompt("");
-        setGenerationMessage("");
-        return;
       }
 
       await completeGeneratedJob(response);
@@ -157,25 +123,13 @@ export default function StudioScreen() {
           setGenerationMessage("Starting your book...");
           const retryResponse = await submitStoryGeneration({
             consent: true,
-            prompt: clarification?.originalPrompt ?? prompt.trim(),
-            clarification,
+            prompt: prompt.trim(),
           });
           if (isPlanningResponse(retryResponse)) {
-            setClarification({
-              originalPrompt: clarification?.originalPrompt ?? prompt.trim(),
-              question: retryResponse.clarification.question,
-              choices: retryResponse.clarification.choices,
-            });
-            setChatMessages((messages) =>
-              appendClarificationMessages(
-                messages,
-                retryResponse.clarification.question,
-                retryResponse.clarification.choices,
-              ),
+            throw new Error(
+              retryResponse.message ||
+                "The story service needs a clearer prompt before generating.",
             );
-            setPrompt("");
-            setGenerationMessage("");
-            return;
           }
           await completeGeneratedJob(retryResponse);
           return;
@@ -192,11 +146,9 @@ export default function StudioScreen() {
   const submitStoryGeneration = async ({
     consent,
     prompt: storyPrompt,
-    clarification: clarificationState,
   }: {
     consent: boolean;
     prompt: string;
-    clarification: StoryClarificationState | null;
   }) =>
     mutation.mutateAsync({
       data: {
@@ -209,27 +161,12 @@ export default function StudioScreen() {
             "Use only the parent-entered appearance description; do not infer gender from the child's name.",
         },
         externalTextAiConsent: consent || undefined,
-        clarification: clarificationState
-          ? {
-              originalPrompt: clarificationState.originalPrompt,
-              answer: prompt.trim(),
-            }
-          : undefined,
         supportingCharacters:
           supportingCharacters.length > 0 ? supportingCharacters : undefined,
       },
     });
 
   const completeGeneratedJob = async (job: StoryGenerationJob) => {
-    setIssueNotice(job.issueNotice ?? null);
-    setChatMessages((messages) =>
-      appendFocusMessages(
-        messages,
-        job.behaviorFocus?.storyFocusLabel,
-        job.parentNote,
-      ),
-    );
-    setClarification(null);
     setGenerationMessage("Starting your book...");
     const story = await waitForGeneratedStory(job.bookId, setGenerationMessage);
     const generatedStory = await createGeneratedStory({
@@ -253,10 +190,6 @@ export default function StudioScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
     setPrompt("");
-    setChatMessages((messages) => [
-      ...messages,
-      createStoryChatMessage("kahani", "Your story is ready.", "progress"),
-    ]);
     setGenerationMessage("");
     router.push({
       pathname: "/book-reader",
@@ -270,11 +203,6 @@ export default function StudioScreen() {
       error instanceof Error
         ? error.message
         : "The story service could not finish. Try again in a moment.";
-    setGenerationError(message);
-    setChatMessages((messages) => [
-      ...messages,
-      createStoryChatMessage("kahani", message, "error"),
-    ]);
     Alert.alert("Story not ready", message);
   };
 
@@ -310,58 +238,12 @@ export default function StudioScreen() {
 
       <View
         style={[
-          styles.chatPanel,
+          styles.promptPanel,
           { backgroundColor: colors.card, borderColor: colors.border },
           cardShadow(colors.shadow),
         ]}
       >
-        <ScrollView
-          style={styles.chatScroll}
-          contentContainerStyle={styles.chatContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          {chatMessages.map((message) => (
-            <View
-              key={message.id}
-              style={[
-                styles.chatBubble,
-                message.role === "parent"
-                  ? styles.parentBubble
-                  : styles.kahaniBubble,
-                {
-                  backgroundColor:
-                    message.role === "parent"
-                      ? colors.primary
-                      : colors.secondary,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.chatText,
-                  {
-                    color:
-                      message.role === "parent"
-                        ? colors.primaryForeground
-                        : message.tone === "error"
-                          ? colors.primary
-                          : colors.foreground,
-                  },
-                ]}
-              >
-                {message.text}
-              </Text>
-            </View>
-          ))}
-          {generationMessage ? (
-            <Text
-              style={[styles.progressText, { color: colors.mutedForeground }]}
-            >
-              {generationMessage}
-            </Text>
-          ) : null}
-        </ScrollView>
-        <View style={[styles.composer, { borderColor: colors.border }]}>
+        <View style={styles.composer}>
           {!prompt && !isPromptFocused ? (
             <Text
               pointerEvents="none"
@@ -402,19 +284,6 @@ export default function StudioScreen() {
         />
         {isGenerating ? (
           <ActivityIndicator style={styles.loader} color={colors.primary} />
-        ) : null}
-        {issueNotice ? (
-          <Text style={[styles.issueNotice, { color: colors.mutedForeground }]}>
-            {issueNotice}
-          </Text>
-        ) : null}
-        {generationError ? (
-          <Text
-            testID="generation-error"
-            style={[styles.generationError, { color: colors.primary }]}
-          >
-            {generationError}
-          </Text>
         ) : null}
       </View>
 
@@ -478,53 +347,15 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     marginBottom: 24,
   },
-  chatPanel: {
-    minHeight: 330,
-    maxHeight: 430,
+  promptPanel: {
     borderWidth: 1,
     borderRadius: 20,
     marginTop: 16,
     marginBottom: 16,
-    overflow: "hidden",
-  },
-  chatScroll: {
-    flexGrow: 0,
-  },
-  chatContent: {
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 10,
-  },
-  chatBubble: {
-    maxWidth: "88%",
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-  },
-  kahaniBubble: {
-    alignSelf: "flex-start",
-    borderBottomLeftRadius: 6,
-  },
-  parentBubble: {
-    alignSelf: "flex-end",
-    borderBottomRightRadius: 6,
-  },
-  chatText: {
-    fontFamily: tokens.typography.sansMedium,
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  progressText: {
-    alignSelf: "center",
-    fontFamily: tokens.typography.sansMedium,
-    fontSize: 13,
-    lineHeight: 18,
   },
   composer: {
-    borderTopWidth: 1,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 14,
     position: "relative",
   },
   promptPlaceholder: {
@@ -536,8 +367,8 @@ const styles = StyleSheet.create({
     lineHeight: 23,
   },
   promptInput: {
-    minHeight: 56,
-    maxHeight: 112,
+    minHeight: 126,
+    maxHeight: 180,
     fontFamily: tokens.typography.sansMedium,
     fontSize: 16,
     lineHeight: 23,
@@ -548,18 +379,6 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginTop: 12,
-  },
-  issueNotice: {
-    marginTop: 12,
-    fontFamily: tokens.typography.sansMedium,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  generationError: {
-    marginTop: 12,
-    fontFamily: tokens.typography.sansBold,
-    fontSize: 14,
-    lineHeight: 20,
   },
   sectionHeader: {
     flexDirection: "row",
