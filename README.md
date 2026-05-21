@@ -156,10 +156,24 @@ pnpm run dev:expo-go
 
 The helper checks whether the local API and Expo dev server are already running. If either one is missing, it starts the missing process in the background, waits for readiness, and prints an `exp://...` URL that can be entered in Expo Go. It writes logs to `.local/logs/api.log` and `.local/logs/expo.log`.
 
+After the API and Expo are ready, the helper runs a fast local QA startup gate. The gate checks API health, Metro status, consent, auth-mode config, analytics redaction, photo privacy, prompt-injection guardrails, provider-photo blocking, and story validation tests. The latest result is written to `.local/qa/status.json`, with history appended to `.local/qa/history.jsonl`.
+
 If your phone cannot connect to the printed URL, make sure the phone and computer are on the same Wi-Fi. You can override the LAN host or ports when needed:
 
 ```sh
 EXPO_LAN_HOST=192.168.1.10 EXPO_PORT=8081 API_PORT=8080 pnpm run dev:expo-go
+```
+
+To rerun only the quick local QA gate while the local app is already running:
+
+```sh
+pnpm run qa:local:once
+```
+
+To skip startup QA temporarily:
+
+```sh
+LOCAL_QA_SKIP_STARTUP=1 pnpm run dev:expo-go
 ```
 
 For the Replit-style script:
@@ -261,6 +275,7 @@ pnpm --filter @workspace/mobile run typecheck
 
 Recommended smoke tests:
 
+- Quick local QA gate: start the local app with `pnpm run dev:expo-go` or rerun `pnpm run qa:local:once`.
 - API: start the API server and `curl http://localhost:8080/api/healthz`.
 - Mockup sandbox: start Vite, open `http://localhost:8081/`, and confirm the UI renders.
 - Mobile: start Expo and confirm the app loads in a simulator, browser, or Expo Go.
@@ -277,6 +292,9 @@ pnpm run dev:api
 
 # Start or reuse the local API plus Expo server, then print an Expo Go URL.
 pnpm run dev:expo-go
+
+# Rerun the fast local QA gate against an already-running local app.
+pnpm run qa:local:once
 
 # Start Expo against the local API server.
 pnpm run dev:mobile

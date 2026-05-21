@@ -63,6 +63,16 @@ if (!expoRunning) {
   );
 }
 
+if (!isTruthy(process.env.LOCAL_QA_SKIP_STARTUP)) {
+  console.log("");
+  console.log("Running local QA startup checks...");
+  await runForegroundProcess("node", ["scripts/local-qa-smoke.mjs"], {
+    API_PORT: String(apiPort),
+    EXPO_PORT: String(expoPort),
+    EXPO_LAN_HOST: host,
+  });
+}
+
 console.log("");
 console.log("Kahani local app is running.");
 console.log(`Expo Go URL: ${expoGoUrl}`);
@@ -87,6 +97,29 @@ function startBackgroundProcess(name, args, env = {}) {
 
   child.unref();
   console.log(`Started ${name} in background. Log: ${path.relative(repoRoot, logPath)}`);
+}
+
+function runForegroundProcess(command, args, env = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        ...env,
+      },
+      stdio: "inherit",
+    });
+
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve();
+        return;
+      }
+
+      reject(new Error(`${command} ${args.join(" ")} failed with exit code ${code}`));
+    });
+  });
 }
 
 async function waitFor(check, label) {
@@ -155,4 +188,8 @@ function getLanHost() {
   }
 
   return "localhost";
+}
+
+function isTruthy(value) {
+  return /^(1|true|yes)$/i.test(value?.trim() ?? "");
 }
