@@ -86,11 +86,13 @@ export function classifyStoryRequest(
 
   const matches = findBehaviorMatches(input);
   if (matches.length === 0) {
+    const primary = buildCustomBehaviorSummary(input);
     return {
-      status: "needs_clarification",
-      question:
-        "What part should the story focus on: separating, transitioning, sharing, screens, mealtime, cleanup, or unsafe hands?",
-      choices: ["separating", "transitioning", "sharing"],
+      status: "classified",
+      primary,
+      secondary: [],
+      parentNote: primary.parentGuidance,
+      storyFocusLabel: primary.storyFocusLabel,
     };
   }
 
@@ -114,6 +116,22 @@ export function buildMultiIssueNotice(issues: StorySheetPlannedIssue[]) {
   if (!firstIssue) return undefined;
 
   return `We can generate one book for one issue at a time. Generating this book for: ${firstIssue}.`;
+}
+
+function buildCustomBehaviorSummary(input: string) {
+  return {
+    categoryId: "custom_behavior",
+    scene: "everyday family routine",
+    visibleBehavior: input,
+    mechanism: "child needs practice with a specific parent-described moment",
+    strategy: "turn the parent-described behavior into one small, repeatable step",
+    childStorySkill: "notice the moment, try one small step, and stay connected",
+    parentGuidance:
+      "Keep the story focused on the exact behavior you described and practice one small next step.",
+    targetOutcome:
+      "Child can practice the parent-described behavior with a simple, supportive script.",
+    storyFocusLabel: input,
+  };
 }
 
 function splitIssuePrompt(prompt: string) {

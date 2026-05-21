@@ -51,6 +51,18 @@ test("classifies plain mealtime refusal without asking for clarification", () =>
   assert.equal(result.primary.storyFocusLabel, "mealtime calm practice");
 });
 
+test("keeps a normal unmatched behavior prompt instead of asking category clarification", () => {
+  const result = classifyStoryRequest({
+    mode: "behavior",
+    prompt: "Emma not sleeping on time",
+  });
+
+  assert.equal(result.status, "classified");
+  assert.equal(result.primary.categoryId, "custom_behavior");
+  assert.equal(result.primary.storyFocusLabel, "Emma not sleeping on time");
+  assert.match(result.parentNote, /exact behavior/i);
+});
+
 test("uses clarification context to classify a vague prompt", () => {
   const result = classifyStoryRequest({
     mode: "behavior",
