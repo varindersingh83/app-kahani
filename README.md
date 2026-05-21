@@ -170,6 +170,12 @@ To rerun only the quick local QA gate while the local app is already running:
 pnpm run qa:local:once
 ```
 
+To run every local TypeScript test file:
+
+```sh
+pnpm run qa:local:tests
+```
+
 To skip startup QA temporarily:
 
 ```sh
@@ -295,6 +301,9 @@ pnpm run dev:expo-go
 
 # Rerun the fast local QA gate against an already-running local app.
 pnpm run qa:local:once
+
+# Run every local TypeScript test file.
+pnpm run qa:local:tests
 
 # Start Expo against the local API server.
 pnpm run dev:mobile

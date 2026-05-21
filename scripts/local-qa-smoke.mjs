@@ -28,7 +28,6 @@ const focusedTests = [
   "artifacts/api-server/src/services/safety/inputGuardrails.test.ts",
   "artifacts/api-server/src/services/safety/providerPayloadPolicy.test.ts",
   "artifacts/api-server/src/services/consent/consentService.test.ts",
-  "artifacts/api-server/src/routes/generationConsent.test.ts",
   "artifacts/api-server/src/services/story-sheet/generator.photoPrivacy.test.ts",
   "artifacts/api-server/src/services/book-generation/validation.test.ts",
 ];
