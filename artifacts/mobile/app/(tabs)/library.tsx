@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { Alert, Platform, StyleSheet, Text, View } from "react-native";
 
 import {
   KahaniScreen,
@@ -50,18 +50,21 @@ export default function LibraryScreen() {
   };
 
   const confirmDelete = (story: Story) => {
-    Alert.alert(
-      "Delete book?",
-      `Remove "${story.title}" from your library?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => removeStory(story.id),
-        },
-      ],
-    );
+    if (Platform.OS === "web") {
+      if (window.confirm(`Remove "${story.title}" from your library?`)) {
+        removeStory(story.id);
+      }
+      return;
+    }
+
+    Alert.alert("Delete book?", `Remove "${story.title}" from your library?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => removeStory(story.id),
+      },
+    ]);
   };
 
   return (

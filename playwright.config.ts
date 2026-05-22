@@ -17,7 +17,7 @@ export default defineConfig({
     video: "retain-on-failure",
   },
   webServer: {
-    command: `EXPO_PUBLIC_API_BASE_URL=http://localhost:8080 HOME=$PWD/.local/expo-home XDG_CONFIG_HOME=$PWD/.local/expo-home/.config EXPO_NO_TELEMETRY=1 pnpm --filter @workspace/mobile exec expo start --offline --web --clear --port ${port}`,
+    command: `EXPO_PUBLIC_API_BASE_URL=http://localhost:8080 HOME=$PWD/.local/expo-home XDG_CONFIG_HOME=$PWD/.local/expo-home/.config EXPO_NO_TELEMETRY=1 EXPO_NO_DEPENDENCY_VALIDATION=1 EXPO_OFFLINE=1 pnpm --filter @workspace/mobile exec expo start --localhost --web --clear --port ${port}`,
     url: baseURL,
     reuseExistingServer: true,
     timeout: 180_000,
