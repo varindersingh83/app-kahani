@@ -36,10 +36,13 @@
 - Playful, empathy-based, or moral framing is acceptable only when it causes a concrete repair action. The story still needs the child to put the toy away, return the toy, take a bite, walk to the gate, or use safer hands.
 - Avoid parent actions that train the wrong behavior, especially chasing a child who runs away, bargaining during safety risk, or turning refusal into a game that delays the target action.
 - A strong story has this chain: problem behavior -> clear parent action -> child practices the desired behavior -> happy or calm result.
+- The parent action should not be a generic "calm parent" move. It should match a mainstream expert strategy for the exact behavior: CDC/AAP-style clear direction and positive discipline, Montessori-style freedom inside limits, positive behavior replacement, or a child-behavior expert repair strategy.
+- For rude tone, the story must stay about communication repair. The parent should calmly hold the boundary, model the replacement request, and let the child retry with kind or respectful words. A story that turns rude tone into cup/sip/object compliance is bad.
 
 ## Prompt Rule Candidates
 
 - Choose one practical parent strategy before writing: logical choice, first/then, countdown, clear boundary, helper job, reward after behavior, repair action, or playful deflection with a concrete next step.
+- Choose the behavior-specific expert strategy before writing, and reject the story if the parent action does not match that strategy.
 - Reject any draft where the parent strategy would make the real-world behavior worse.
 - Reject any draft where the child never performs the desired next step.
 - Reject unsafe sensory actions such as smelling pee or food in a way that could be gross, unsafe, or pointless.

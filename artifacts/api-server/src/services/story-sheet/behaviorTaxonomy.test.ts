@@ -36,6 +36,15 @@ test("covers sharing and turn-taking", () => {
   assert.match(match.entry.childStorySkill, /turn/i);
 });
 
+test("maps parent prompts to imported Excel behavior template rows", () => {
+  const match = findBehaviorMatches("tantrum in crowded mall")[0];
+
+  assert.equal(match?.entry.sourceRow, 98);
+  assert.equal(match.entry.visibleBehavior, "Tantrum in crowded mall");
+  assert.match(match.entry.strategy, /block calmly/i);
+  assert.match(match.entry.expertSources ?? "", /CDC/);
+});
+
 test("rejects duplicate aliases across normal taxonomy entries", () => {
   const duplicated = [
     ...BEHAVIOR_TAXONOMY,

@@ -44,6 +44,21 @@ export type StorySheetInput = {
   }>;
 };
 
+export type StoryQualityReview = {
+  score: number;
+  pass: boolean;
+  issues: string[];
+  strengths?: string[];
+  rewriteInstructions: string;
+};
+
+export type StoryTextAttempt = {
+  attempt: number;
+  story: StorySheetInput;
+  review: StoryQualityReview;
+  accepted: boolean;
+};
+
 export type SheetSliceManifestEntry = {
   pageNumber: number;
   row: number;
@@ -88,6 +103,7 @@ export type StorySheetGeneratedStory = {
 
 export type BehaviorClassificationSummary = {
   categoryId: string;
+  sourceRow?: number;
   scene: string;
   visibleBehavior: string;
   mechanism: string;
@@ -96,6 +112,8 @@ export type BehaviorClassificationSummary = {
   parentGuidance: string;
   targetOutcome: string;
   storyFocusLabel: string;
+  expertSources?: string;
+  avoidDoing?: string;
 };
 
 export type BehaviorClassificationResult =
@@ -176,6 +194,7 @@ export type StorySheetRunResult = {
     textModel: string;
     imageModel: string;
     story: ApiUsage | null;
+    storyQa?: ApiUsage | null;
     sheet: ApiUsage | null;
     total: ApiUsage;
   };

@@ -1,4 +1,5 @@
 import type { BehaviorClassificationSummary } from "./types";
+import { BEHAVIOR_ISSUE_TEMPLATE } from "./behaviorIssueTemplate";
 
 export type BehaviorTaxonomyEntry = BehaviorClassificationSummary & {
   aliases: string[];
@@ -7,6 +8,37 @@ export type BehaviorTaxonomyEntry = BehaviorClassificationSummary & {
 };
 
 export const BEHAVIOR_TAXONOMY: BehaviorTaxonomyEntry[] = [
+  {
+    categoryId: "rude_tone_repair",
+    scene: "everyday family routine",
+    visibleBehavior: "uses a rude, sharp, or disrespectful tone with a parent",
+    mechanism: "communication skill under frustration",
+    strategy:
+      "calm limit with a respectful replacement phrase and one chance to try again",
+    childStorySkill: "pause, ask again with kind words, and repair the moment",
+    parentGuidance:
+      "Model the respectful phrase, hold the boundary, and respond warmly only after the child retries with a kinder voice.",
+    targetOutcome:
+      "Child can practice replacing a rude tone with a clear, respectful request.",
+    storyFocusLabel: "respectful voice repair practice",
+    aliases: [
+      "rude",
+      "rude tone",
+      "talking rude",
+      "talking in rude tone",
+      "disrespectful",
+      "talks back",
+      "talk back",
+      "sassy",
+      "sass",
+      "sharp tone",
+      "mean voice",
+      "bad tone",
+      "yells at parents",
+      "yelling at parents",
+    ],
+    intensity: 74,
+  },
   {
     categoryId: "bedtime_separation",
     scene: "bedtime",
@@ -78,6 +110,9 @@ export const BEHAVIOR_TAXONOMY: BehaviorTaxonomyEntry[] = [
       "cries",
       "crying",
       "bedtime is awful",
+      "screams when bedtime starts",
+      "meltdowns during transitions",
+      "meltdown during transitions",
     ],
     intensity: 95,
   },
@@ -253,6 +288,7 @@ export function toClassificationSummary(
 ): BehaviorClassificationSummary {
   return {
     categoryId: entry.categoryId,
+    sourceRow: entry.sourceRow,
     scene: entry.scene,
     visibleBehavior: entry.visibleBehavior,
     mechanism: entry.mechanism,
@@ -261,20 +297,28 @@ export function toClassificationSummary(
     parentGuidance: entry.parentGuidance,
     targetOutcome: entry.targetOutcome,
     storyFocusLabel: entry.storyFocusLabel,
+    expertSources: entry.expertSources,
+    avoidDoing: entry.avoidDoing,
   };
 }
 
 export function findBehaviorMatches(input: string) {
   const normalized = normalize(input);
-  return BEHAVIOR_TAXONOMY.map((entry) => {
+  return [...BEHAVIOR_ISSUE_TEMPLATE, ...BEHAVIOR_TAXONOMY].map((entry) => {
     const score = entry.aliases.reduce(
-      (total, alias) => total + (normalized.includes(normalize(alias)) ? 1 : 0),
+      (total, alias) =>
+        total + (normalized.includes(normalize(alias)) ? aliasMatchWeight(alias) : 0),
       0,
     );
     return { entry, score };
   })
     .filter((match) => match.score > 0)
-    .sort((a, b) => b.entry.intensity - a.entry.intensity || b.score - a.score);
+    .sort((a, b) => {
+      const aExact = a.score >= 3;
+      const bExact = b.score >= 3;
+      if (aExact !== bExact) return aExact ? -1 : 1;
+      return b.entry.intensity - a.entry.intensity || b.score - a.score;
+    });
 }
 
 export function isVagueBehaviorPrompt(input: string) {
@@ -292,4 +336,11 @@ export function isVagueBehaviorPrompt(input: string) {
 
 function normalize(value: string) {
   return value.toLowerCase().replace(/[\u2018\u2019']/g, "'").replace(/\s+/g, " ").trim();
+}
+
+function aliasMatchWeight(alias: string) {
+  const words = normalize(alias).split(/\s+/).filter(Boolean).length;
+  if (words >= 3) return 3;
+  if (words === 2) return 2;
+  return 1;
 }

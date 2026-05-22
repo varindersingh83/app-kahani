@@ -52,6 +52,29 @@ test("classifies plain mealtime refusal without asking for clarification", () =>
   assert.equal(result.primary.storyFocusLabel, "mealtime calm practice");
 });
 
+test("classifies rude tone as respectful communication repair", () => {
+  const result = classifyStoryRequest({
+    mode: "behavior",
+    prompt: "Emma is talking in rude tone with parents",
+  });
+
+  assert.equal(result.status, "classified");
+  assert.equal(result.primary.categoryId, "rude_tone_repair");
+  assert.match(result.primary.strategy, /replacement phrase/);
+  assert.match(result.primary.parentGuidance, /retries with a kinder voice/);
+});
+
+test("plans stories from imported behavior template metadata", () => {
+  const result = planStoryIssues({
+    mode: "behavior",
+    prompt: "tantrum in crowded mall",
+  });
+
+  assert.equal(result[0]?.classification?.sourceRow, 98);
+  assert.equal(result[0]?.classification?.storyFocusLabel, "Tantrum in crowded mall");
+  assert.match(result[0]?.classification?.parentGuidance ?? "", /Avoid:/);
+});
+
 test("keeps a normal unmatched behavior prompt instead of asking category clarification", () => {
   const result = classifyStoryRequest({
     mode: "behavior",

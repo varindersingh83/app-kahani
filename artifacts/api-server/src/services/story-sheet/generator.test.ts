@@ -6,23 +6,270 @@ import test from "node:test";
 import sharp from "sharp";
 import type { GenerateStoryRequest } from "@workspace/api-zod";
 import {
+  applyDeterministicStoryQualityRules,
+  buildStoryQaPrompt,
+  generateStoryTextWithQa,
   buildImageSpec,
   buildReferenceImageUris,
   buildSheetPrompt,
+  normalizeStoryQualityReview,
   normalizeStoryJson,
   sliceStoryboardSheet,
 } from "./generator";
 import { promptPath } from "./paths";
-import type { StorySheetInput } from "./types";
+import type { AiConfig, StorySheetInput } from "./types";
+
+const testConfig: AiConfig = {
+  baseUrl: "https://example.test",
+  apiKey: "test-key",
+  textModel: "test-text-model",
+  imageModel: "test-image-model",
+};
+
+function buildTestStory(
+  count: number,
+  input: {
+    title?: string;
+    childName?: string;
+    behavior?: string;
+    pageText?: (index: number) => string;
+  } = {},
+): StorySheetInput {
+  const childName = input.childName ?? "Maya";
+  return {
+    title: input.title ?? `${childName} and the Blocks`,
+    child_name: childName,
+    parent_name: "Mom",
+    parent_role: "parent",
+    behavior: input.behavior ?? "sharing",
+    pages: Array.from({ length: count }, (_, index) => ({
+      page: index + 1,
+      text: input.pageText?.(index) ?? `Story text ${index + 1}`,
+      scene: `Scene ${index + 1}`,
+      composition: "Medium shot",
+      emotion: "hopeful",
+    })),
+  };
+}
 
 test("story JSON prompt includes learned practical-parenting rating rules", async () => {
   const prompt = await readFile(promptPath("story-json-master-prompt.txt"), "utf8");
 
   assert.match(prompt, /Parent practicality/);
+  assert.match(prompt, /celebrated children's book author and illustrator team/);
+  assert.match(prompt, /premium, deeply engaging 12-page/);
+  assert.match(prompt, /Pages 1-2 - The Deep Immersion/);
+  assert.match(prompt, /Pages 7-8 - The Safe Harbor/);
+  assert.match(prompt, /Integrate sound effects directly into sentences/);
+  assert.match(prompt, /Expert grounding/);
   assert.match(prompt, /visible next-step behavior/);
   assert.match(prompt, /parent accidentally rewards the problem behavior/);
   assert.match(prompt, /fake choice/);
+  assert.match(prompt, /Rude\/disrespectful tone/);
+  assert.match(prompt, /modeling the replacement phrase/);
   assert.match(prompt, /Safety issues: set the safety boundary immediately/);
+});
+
+test("buildStoryQaPrompt asks the judge to reject vague non-scene behavior stories", () => {
+  const story = buildTestStory(12, {
+    title: "Emma at the Park Gate",
+    childName: "Emma",
+    behavior: "Won't leave the park",
+    pageText: (index) =>
+      index === 3
+        ? "\"Park feet to the gate,\" Mom says."
+        : `Story text ${index + 1}`,
+  });
+
+  const prompt = buildStoryQaPrompt(story, "Won't leave the park");
+
+  assert.match(prompt, /exactly 12 pages/);
+  assert.match(prompt, /Deep Immersion, Shift, Volcano, Safe Harbor, Bridge, Cozy Close/);
+  assert.match(prompt, /picture book/);
+  assert.match(prompt, /show-don't-tell/);
+  assert.match(prompt, /emotional co-regulation/);
+  assert.match(prompt, /mainstream expert strategy/);
+  assert.match(prompt, /child must practice one visible next-step behavior/i);
+  assert.match(prompt, /Reject vague parent lines like 'park feet to the gate'/);
+  assert.match(prompt, /Won't leave the park/);
+});
+
+test("buildStoryQaPrompt requires expert-aligned repair for rude tone stories", () => {
+  const story = buildTestStory(10, {
+    title: "Emma and the Morning Cup",
+    childName: "Emma",
+    behavior: "Talking in rude tone with parents",
+    pageText: (index) =>
+      [
+        "Emma wants the blue morning cup.",
+        "Mom says, \"First, sip, then we go.\"",
+        "Emma stomps one foot and talks sharp.",
+        "\"Uh-oh—stop that rude voice,\" Mom says.",
+        "Emma pushes the cup forward.",
+        "Mom points to the table mat.",
+        "Emma reaches for the cup again.",
+        "Emma makes a new sound.",
+        "Mom dips the spoon into cereal.",
+        "Emma holds the cup, still tight.",
+      ][index] ?? `Story text ${index + 1}`,
+  });
+
+  const prompt = buildStoryQaPrompt(story, "Talking in rude tone with parents");
+
+  assert.match(prompt, /rude or disrespectful tone/i);
+  assert.match(prompt, /communication boundary/i);
+  assert.match(prompt, /replacement phrase/i);
+  assert.match(prompt, /retrying with kinder or more respectful words/i);
+});
+
+test("deterministic QA fails rude tone stories without respectful replacement practice", () => {
+  const story = buildTestStory(10, {
+    title: "Emma and the Morning Cup",
+    childName: "Emma",
+    behavior: "Talking in rude tone with parents",
+    pageText: (index) =>
+      [
+        "Emma wants the blue morning cup.",
+        "Mom says, \"First, sip, then we go.\"",
+        "Emma stomps one foot and talks sharp.",
+        "\"Uh-oh—stop that rude voice,\" Mom says.",
+        "Emma pushes the cup forward.",
+        "Mom points to the table mat.",
+        "Emma reaches for the cup again.",
+        "Emma makes a new sound.",
+        "Mom dips the spoon into cereal.",
+        "Emma holds the cup, still tight.",
+      ][index] ?? `Story text ${index + 1}`,
+  });
+
+  const review = applyDeterministicStoryQualityRules(
+    {
+      score: 9,
+      pass: true,
+      issues: [],
+      strengths: ["Calm parent."],
+      rewriteInstructions: "",
+    },
+    story,
+    "Talking in rude tone with parents",
+  );
+
+  assert.equal(review.pass, false);
+  assert.equal(review.score, 5);
+  assert.match(review.issues.join(" "), /replacement phrase/);
+});
+
+test("normalizeStoryQualityReview requires score threshold even if the judge says pass", () => {
+  assert.deepEqual(
+    normalizeStoryQualityReview({
+      score: 7,
+      pass: true,
+      issues: ["Parent action is too vague."],
+      rewriteInstructions: "Use a countdown and a clear choice.",
+    }),
+    {
+      score: 7,
+      pass: false,
+      issues: ["Parent action is too vague."],
+      strengths: [],
+      rewriteInstructions: "Use a countdown and a clear choice.",
+    },
+  );
+});
+
+test("generateStoryTextWithQa rewrites a failing draft before accepting", async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "kahani-story-qa-"));
+  const request: GenerateStoryRequest = {
+    mode: "behavior",
+    prompt: "Emma will not leave the park",
+    character: { name: "Emma" },
+  };
+  const badStory = buildTestStory(12, {
+    title: "Emma at the Park Gate",
+    childName: "Emma",
+    behavior: "Emma will not leave the park",
+    pageText: (index) =>
+      index === 3
+        ? "\"Park feet to the gate,\" Mom says."
+        : `Park text ${index + 1}`,
+  });
+  const goodStory = buildTestStory(12, {
+    title: "Emma Takes Two Last Slides",
+    childName: "Emma",
+    behavior: "Emma will not leave the park",
+    pageText: (index) =>
+      [
+        "Emma climbs the slide steps while Mom waits by the bench.",
+        "\"Two more slides, then gate,\" Mom says.",
+        "Emma slides once and runs back laughing.",
+        "Mom holds up one finger. \"Last slide.\"",
+        "Emma slides again and lands on her feet.",
+        "\"Hop or stomp to the gate?\" Mom asks.",
+        "Emma stomps three big stomps on the path.",
+        "At the gate, Emma reaches for Mom's hand.",
+        "She looks back once at the slide.",
+        "Then Emma walks with Mom to the sidewalk.",
+        "Mom squeezes her hand at the curb.",
+        "Emma leans close while the park grows quiet.",
+      ][index] ?? `Park text ${index + 1}`,
+  });
+  const responses = [
+    { data: badStory, usage: { total_tokens: 10 } },
+    {
+      data: {
+        score: 5,
+        pass: false,
+        issues: ["Parent action is vague and not a real transition strategy."],
+        rewriteInstructions:
+          "Use two last turns, then a clear choice to walk to the gate.",
+      },
+      usage: { total_tokens: 5 },
+    },
+    { data: goodStory, usage: { total_tokens: 11 } },
+    {
+      data: {
+        score: 9,
+        pass: true,
+        issues: [],
+        strengths: ["Clear countdown and visible child action."],
+        rewriteInstructions: "",
+      },
+      usage: { total_tokens: 4 },
+    },
+  ];
+  const textClient = async () => {
+    const response = responses.shift();
+    if (!response) throw new Error("Unexpected text client call.");
+    return response;
+  };
+
+  try {
+    const result = await generateStoryTextWithQa({
+      config: testConfig,
+      request,
+      behavior: "Emma will not leave the park",
+      storyPrompt: "write story",
+      outputDir: tempRoot,
+      textClient,
+    });
+
+    assert.equal(result.story.title, "Emma Takes Two Last Slides");
+    assert.equal(result.attempts.length, 2);
+    assert.equal(result.attempts[0]?.accepted, false);
+    assert.equal(result.attempts[1]?.accepted, true);
+    assert.equal(result.storyUsage.total_tokens, 21);
+    assert.equal(result.qaUsage.total_tokens, 9);
+    assert.match(
+      await readFile(path.join(tempRoot, "story-rewrite-prompt-2.txt"), "utf8"),
+      /Use two last turns/,
+    );
+    assert.match(
+      await readFile(path.join(tempRoot, "story-qa-1.json"), "utf8"),
+      /not a real transition strategy/,
+    );
+  } finally {
+    await rm(tempRoot, { recursive: true, force: true });
+  }
 });
 
 test("buildImageSpec preserves descriptors without forwarding uploaded photo constraints", () => {
@@ -108,7 +355,7 @@ test("normalizeStoryJson replaces the model-invented child name with the selecte
     parent_name: "Mom",
     parent_role: "parent",
     behavior: "drawing frustration",
-    pages: Array.from({ length: 8 }, (_, index) => ({
+    pages: Array.from({ length: 12 }, (_, index) => ({
       page: index + 1,
       text:
         index === 0
@@ -171,7 +418,7 @@ test("normalizeStoryJson locks generated story text to the requested child name"
   assert.equal(normalized.pages[0]?.scene, "Liam stands by the kitchen chair.");
 });
 
-test("normalizeStoryJson accepts 8-page, 10-page, and 12-page stories without truncating", () => {
+test("normalizeStoryJson accepts exactly 12-page stories", () => {
   const request: GenerateStoryRequest = {
     mode: "behavior",
     character: { name: "Maya" },
@@ -192,20 +439,12 @@ test("normalizeStoryJson accepts 8-page, 10-page, and 12-page stories without tr
   });
 
   assert.equal(
-    normalizeStoryJson(buildStory(8), request, "sharing").pages.length,
-    8,
-  );
-  assert.equal(
-    normalizeStoryJson(buildStory(10), request, "sharing").pages.length,
-    10,
-  );
-  assert.equal(
     normalizeStoryJson(buildStory(12), request, "sharing").pages.length,
     12,
   );
 });
 
-test("normalizeStoryJson rejects page counts outside the 8-12 contract", () => {
+test("normalizeStoryJson rejects page counts outside the 12-page contract", () => {
   const request: GenerateStoryRequest = {
     mode: "behavior",
     character: { name: "Maya" },
@@ -226,8 +465,8 @@ test("normalizeStoryJson rejects page counts outside the 8-12 contract", () => {
   });
 
   assert.throws(
-    () => normalizeStoryJson(buildStory(7), request, "sharing"),
-    /at least 8 pages/,
+    () => normalizeStoryJson(buildStory(11), request, "sharing"),
+    /at least 12 pages/,
   );
   assert.throws(
     () => normalizeStoryJson(buildStory(13), request, "sharing"),

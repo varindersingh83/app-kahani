@@ -31,9 +31,11 @@ Key feedback:
 4. Vague prompts return one clarification question without starting provider-backed generation.
 5. Clear prompts start one background story-sheet job and return one `bookId`.
 6. Job writes one structured story JSON with 8-12 story pages.
-7. Story JSON is passed to image generation and slicing.
-8. Mobile polls one job until complete.
-9. Mobile fetches one generated story, saves it to the active profile library with private classification metadata, and opens the reader.
+7. API runs a structured story-quality QA pass before image generation.
+8. If QA fails, the text model rewrites the story with the QA issues; image generation does not start yet.
+9. Story JSON is passed to image generation and slicing only after QA passes.
+10. Mobile polls one job until complete.
+11. Mobile fetches one generated story, saves it to the active profile library with private classification metadata, and opens the reader.
 
 ## Required Behavior
 
@@ -96,6 +98,22 @@ Expected generation plan:
   }
 }
 ```
+
+### 4. Story QA Before Images
+
+The text stage must not trust the first model draft. Before storyboard image generation starts, the API runs a structured story-quality QA pass. The QA judge scores the story and checks whether:
+
+- the story reads like one real 5-10 minute scene where something happens
+- the parent action is practical, specific, and parent-recognizable
+- the parent action is grounded in a mainstream behavior strategy for the exact issue, such as CDC/AAP positive discipline, Montessori discipline, positive behavior support, or child-behavior expert practice
+- the child performs one visible next-step behavior that matches the prompt
+- choices are logical and both lead toward the target action
+- rewards or incentives come only after the desired behavior
+- the story avoids unsafe, gross, nonsensical, vague, or symbolic fixes
+
+The QA bar is behavior-specific, not generic. For example, rude-tone stories must show a calm communication boundary, a modeled respectful replacement phrase, and the child retrying with kinder words. Cleanup stories must put the object where it belongs. Screen-limit stories must keep the screen limit. Safety stories must block danger before choices or rewards.
+
+If the story scores below the pass threshold, the text model rewrites the story using the exact QA issues. The API may try up to three text attempts. If no attempt passes, the job fails before image generation so the app does not spend image tokens or save a bad story.
 
 The first issue should produce:
 
@@ -186,11 +204,14 @@ flowchart TD
   D -->|"classified"| F["Selected behavior package"]
   F --> G["Create one story job"]
   G --> H["Generate structured story JSON, 8-12 pages"]
-  H --> I["Pass story JSON to image generation"]
-  I --> J["Slice page images"]
-  J --> K["Build GeneratedStory"]
-  K --> L["Save book to active profile library with private metadata"]
-  L --> M["Open generated book in reader"]
+  H --> I["Story QA judge"]
+  I -->|"pass"| J["Pass story JSON to image generation"]
+  I -->|"fail, attempts remain"| H
+  I -->|"fail after max attempts"| N["Fail job before image spend"]
+  J --> K["Slice page images"]
+  K --> L["Build GeneratedStory"]
+  L --> M["Save book to active profile library with private metadata"]
+  M --> O["Open generated book in reader"]
 ```
 
 ## Implementation Plan

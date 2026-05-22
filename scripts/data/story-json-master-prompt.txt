@@ -8,16 +8,42 @@ Use this parent name: {{PARENT_NAME}}
 
 Return only valid JSON. No markdown. No explanation. No extra text.
 
+Author role:
+You are a celebrated children's book author and illustrator team in the spirit of Mo Willems, Jory John, or Oliver Jeffers.
+Your goal is to translate a specific row of positive-parenting behavioral data into a premium, deeply engaging 12-page children's picture book manuscript.
+You must strictly use the underlying behavioral science from the data row: the setting, the cause, the recommended coregulation, the choice offered, and the positive resolution.
+Completely dissolve the clinical language into story, action, warmth, humor, and visual staging.
+
 Quality bar:
 The story must feel like a real picture-book seed, not a lesson plan, behavior plan, therapy script, or parenting advice disguised as fiction.
 Story quality comes first. Parent usefulness must come through concrete story action, not explanation.
-12 pages is the maximum, not the target. Use the fewest pages needed for a complete child-readable arc, with at least 8 pages.
+The story must be exactly 12 pages.
+
+Strict 12-page literary arc:
+Pages 1-2 - The Deep Immersion: Establish the child's passion, play, or desire in their world.
+Pages 3-4 - The Shift: Introduce the gentle boundary and show the collision of worlds.
+Pages 5-6 - The Volcano: Let frustration build and peak into the big physical behavior or meltdown. Validate how massive this feels to a small child.
+Pages 7-8 - The Safe Harbor: Show the parent's coregulation through stillness, physical proximity, and safety. Keep the text incredibly sparse here.
+Pages 9-10 - The Bridge: Use the playful pivot, redirection, or choice derived from the Recommended Action column, integrated naturally.
+Pages 11-12 - The Cozy Close: Restore connection completely. The child feels successful and safe.
+
+Strict writing rules:
+* Exactly 12 numbered pages.
+* Exactly 1 to 2 short lines per page.
+* For each page, write professional book production content: THE TEXT goes in the JSON page text; THE VISUAL goes in the JSON page scene.
+* The page text is the only wording printed for the child. It must be rhythmic, warm, playful, and child-readable.
+* The page scene is a brief visual direction showing emotion, parent calm body language, sensory details, and image composition.
+* Do not let the parent sound like a clinical textbook. Translate the data points into warm, real-world parent-child interactions.
+* Integrate sound effects directly into sentences rather than leaving them on a blank line.
+
+Data-row usage:
+Treat the behavior, cause, recommended response/actions, avoid-doing, positive scenario, and source basis inside {{BEHAVIOR}} as the source of truth. Convert that row into story action. Do not quote the row or explain the recommendation.
 
 Optimize for:
 * Story quality: a coherent single arc with no filler pages.
 * Emotional truth: the child's want, loss, fear, or frustration should feel specific and earned.
 * Child language: natural toddler/preschool phrasing, not stiff adult phrasing.
-* Story structure: the page turns build an arc with tension, a small attempt, and a modest repair.
+* Story structure: follow the strict 12-page literary arc exactly.
 * Voice: warm, intimate, concrete, and read-aloud friendly.
 * Originality: include one fresh central image, object, or action that feels discovered by the child, not engineered by the parent.
 * Visual imagery: every page should give the illustrator a clear physical scene.
@@ -26,13 +52,15 @@ Optimize for:
 * Literary quality: specific nouns and verbs, no generic self-help phrasing.
 * Parent usefulness: the parent action should be practical, calm, and non-preachy.
 * Parent practicality: the parent action must be something a real parent would recognize as likely to help the exact behavior in the prompt.
+* Expert grounding: the parent action must be based on a mainstream child-development strategy, such as CDC/AAP positive discipline, Montessori discipline, positive behavior support, or behavior-expert practice. Do not invent a generic parent move.
 * Child legibility: a 3-year-old should understand what happened, what changed, and what helped.
 * Re-read value: include anticipation, repetition, and one tactile/sensory image a child can look forward to hearing again.
 * Name lock: the main child must be named exactly "{{CHILD_NAME}}" in child_name, page text, scenes, and any story references. Do not invent or substitute another child name.
 * Identity lock: do not infer the main child's gender from the name. If child identity details or a reference photo are provided, preserve that gender presentation, hair, face, clothing, and overall likeness in every scene.
+* Gendered visual flavor: only when the parent-provided identity explicitly indicates girl/feminine or boy/masculine presentation, choose familiar toys/colors that fit that presentation and the scene. Otherwise use neutral toys and colors.
 
 Story design:
-* 8-12 pages. Choose the shortest page count that gives the story a complete beginning, middle, and end.
+* Exactly 12 pages.
 * Each page text is 1-2 short lines.
 * Total story text under 360 words.
 * Use one concrete setting and one concrete story problem. Do not add a second subplot.
@@ -73,11 +101,18 @@ Before finalizing, internally run a Harsh Story Rater pass. Do not include the r
 * The parent gives a fake choice where one option avoids the actual goal.
 * The child never practices the concrete desired behavior.
 * The parent response is only symbolic, emotional, or cute, and does not move the child toward a useful next step.
+* The parent response is generic and not connected to the expert strategy implied by the behavior.
 
 Behavior-specific guardrails:
+* Rude/disrespectful tone: do not turn the story into an unrelated cup, sip, toy, or object-compliance story. Show the parent calmly holding the communication boundary, modeling the replacement phrase, and letting the child try again with kind/respectful words. The child must visibly practice the replacement request before the ending.
 * Aggression: do not show harm. Show the unsafe impulse being stopped or redirected before anyone is hurt.
 * Anxiety and fears: do not force bravery. Let the child choose a small distance or partial participation.
 * Food-related issues: avoid pressure, shame, and moralizing. It is acceptable to use a realistic family incentive or first/then structure when the child still makes a small concrete food-related attempt, such as sitting, touching, tasting, or taking one bite.
+* Refusal or transition resistance: use a predictable cue, first/then, countdown, save-the-place ritual, or two acceptable choices that both move toward the needed next step.
+* Sharing or grabbing: use a clear turn boundary, return cue, timer-like marker, or repair action. Do not reward grabbing by letting the child keep the toy.
+* Cleanup: the choice must be between two acceptable ways to complete cleanup, such as dropping the block in or placing it gently. Never let the floor be an acceptable end state when the goal is basket/bin.
+* Screen limits: preview the ending, hold the limit, and move into the next concrete activity. The screen must not return because the child protests.
+* Separation/dropoff: use a short predictable goodbye ritual and confident return language. Do not stretch the goodbye because the child escalates.
 * Perfectionism/frustration intolerance: stay entirely with one concrete problem, such as one drawing or one fallen object. Do not jump to a second activity.
 * Public behavior struggles: allow disappointment to remain; do not turn the ending into instant compliance.
 * Safety issues: set the safety boundary immediately before offering any choice. Stop, hold, block, carry, or move the child to safety first; never bargain while the child remains unsafe.
