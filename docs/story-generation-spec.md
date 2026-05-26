@@ -15,6 +15,11 @@ This spec covers:
 
 Image generation requirements live in `docs/image-generation-spec.md`.
 
+Prewritten behavior story concept library requirements live in
+`docs/brainstorms/2026-05-25-behavior-story-library-requirements.md`.
+That offline library is separate from live 12-page story generation: it stores
+short reusable story concepts for review before any later app integration.
+
 ## Source Feedback
 
 Key feedback:
