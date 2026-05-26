@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "behavior:story-library": "tsx ./src/behavior-story-library/run.ts",
     "story:sheet-run": "tsx ./src/story-sheet-run.ts",
     "slice:sheet": "python3 ./src/slice-sheet.py",
     "typecheck": "tsc -p tsconfig.json --noEmit"
