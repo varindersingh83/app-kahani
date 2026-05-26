@@ -138,6 +138,18 @@ Story generation is available at `POST /api/stories/generate`, but it requires `
 
 For persistent backend jobs, use `POST /api/books`. The created book can be fetched later with `GET /api/books/:bookId`, and the per-page progress and events live at `GET /api/books/:bookId/pages` and `GET /api/books/:bookId/events`.
 
+## Render Production Shape
+
+Production is Render-first: one web service for `@workspace/api-server`, one background worker service using `start:worker`, and one managed Postgres database. The blueprint lives in `render.yaml`.
+
+Production startup fails closed when required auth, database, encryption, private asset storage, provider, analytics, alerting, consent-version, or provider-photo-policy settings are missing. Keep staging synthetic-only; do not copy production family data into staging.
+
+Before public signup, review:
+
+- `docs/security/internal-security-review.md`
+- `docs/security/vendor-allowlist.md`
+- `docs/runbooks/production-launch.md`
+
 ## Run The Mockup Sandbox
 
 ```sh

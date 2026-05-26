@@ -8,6 +8,8 @@ import {
   bookPages,
   books,
   characters,
+  consentRecords,
+  deletionRequests,
   generationJobs,
   learningEvents,
   users,
@@ -19,6 +21,8 @@ test("exports production-readiness database tables", () => {
   assert.equal(tableName(generationJobs), "generation_jobs");
   assert.equal(tableName(assets), "assets");
   assert.equal(tableName(auditEvents), "audit_events");
+  assert.equal(tableName(consentRecords), "consent_records");
+  assert.equal(tableName(deletionRequests), "deletion_requests");
   assert.equal(tableName(books), "books");
   assert.equal(tableName(bookPages), "book_pages");
   assert.equal(tableName(bookEvents), "book_events");

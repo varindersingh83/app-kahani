@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: kahani-api-staging
+    name: kahani-api
     runtime: node
     plan: starter
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server run build
@@ -9,31 +9,47 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: 10000
       - key: DATABASE_URL
         fromDatabase:
-          name: kahani-postgres-staging
+          name: kahani-postgres
           property: connectionString
-      - key: CLERK_PUBLISHABLE_KEY
-        sync: false
-      - key: CLERK_SECRET_KEY
-        sync: false
-      - key: CORS_ALLOWED_ORIGINS
-        sync: false
+      - key: KAHANI_PROVIDER_PHOTO_POLICY
+        value: strip_family_photos
       - key: AI_INTEGRATIONS_OPENROUTER_BASE_URL
         value: https://openrouter.ai/api/v1
-      - key: AI_INTEGRATIONS_OPENROUTER_API_KEY
-        sync: false
-      - key: AI_INTEGRATIONS_OPENROUTER_MODEL
-        sync: false
-      - key: AI_INTEGRATIONS_OPENROUTER_IMAGE_MODEL
-        sync: false
       - key: OPENROUTER_SITE_URL
-        sync: false
+        value: https://kahani-storybooks.app
       - key: OPENROUTER_APP_TITLE
         value: Kahani
-
+      - fromGroup: kahani-production-secrets
+  - type: worker
+    name: kahani-worker
+    runtime: node
+    plan: starter
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server run build
+    startCommand: pnpm --filter @workspace/api-server run start:worker
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kahani-postgres
+          property: connectionString
+      - key: KAHANI_PROVIDER_PHOTO_POLICY
+        value: strip_family_photos
+      - key: AI_INTEGRATIONS_OPENROUTER_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: OPENROUTER_SITE_URL
+        value: https://kahani-storybooks.app
+      - key: OPENROUTER_APP_TITLE
+        value: Kahani
+      - fromGroup: kahani-production-secrets
 databases:
-  - name: kahani-postgres-staging
+  - name: kahani-postgres
     plan: starter
     databaseName: kahani
     user: kahani
